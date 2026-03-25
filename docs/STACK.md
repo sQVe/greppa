@@ -1,0 +1,251 @@
+# Greppa — tech stack
+
+## Runtime and tooling
+
+| Layer | Choice | Rationale |
+|---|---|---|
+| Runtime | Node.js 22 LTS | tree-sitter and better-sqlite3 are native addons — Bun's NAPI support is still maturing |
+| Monorepo | pnpm workspaces | Fastest installs, content-addressable store, symlink-based |
+| Task runner | Vite+ `vp run` | Intelligent caching with auto-inferred invalidation, single `vite.config.ts` |
+| Package bundler | Vite+ `vp pack` | Library bundling via tsdown + Rolldown with fast isolated DTS generation |
+| Linting | Vite+ `vp lint` | Oxlint |
+| Formatting | Vite+ `vp fmt` | Oxfmt |
+| Testing | Vite+ `vp test` | Vitest via `@effect/vitest` |
+
+Vite+ is an open-source (MIT) superset of Vite from VoidZero (Evan You's company). The CLI is `vp`. Unifies build, test, lint, format, and task running under one CLI and config file. Replaces Turborepo + tsup + separate lint/format tooling.
+
+## Backend — full Effect stack (v4 beta)
+
+Effect v4 (pinned to `4.0.0-beta.40`) replaces Fastify, Commander, Zod, and drizzle-orm with a unified `Effect<A, E, R>` type system. One error model, one dependency injection system, typed end-to-end from CLI entry point to database query. All `effect/unstable/*` imports may change between beta releases — pin the exact version.
+
+| Layer | Choice | Rationale |
+|---|---|---|
+| HTTP server | `effect/unstable/httpapi` | HttpApi + HttpApiBuilder + HttpRouter. Middleware, streaming responses, OpenAPI generation. Node runtime via `@effect/platform-node` |
+| Streaming reads | `HttpServerResponse.stream` | Pipes an Effect Stream (from git spawn stdout via `NodeStream.fromReadable`) directly to a chunked HTTP response. Zero transport plumbing |
+| Server push | SSE via `HttpServerResponse.stream` | `text/event-stream` content type + `EventSource` on the client. Browser handles auto-reconnect. ~15 lines of formatting glue |
+| CLI | `effect/unstable/cli` | Type-safe flags/arguments via `Flag`/`Argument`, interactive prompts, config file loading, auto-correction for misspelled flags |
+| Schema / validation | `Schema` (in `effect` core) | Encoding/decoding, validation, type inference. Shared between CLI, server, and frontend |
+| Database | `@effect/sql-sqlite-node` | Wraps better-sqlite3. Tagged template queries, transactions with SAVEPOINT nesting |
+| Migrations | `@effect/sql-sqlite-node` Migrator | `SqliteMigrator.fromFileSystem()` loads numbered `.sql` files |
+| Git | `child_process.spawn` + Effect Stream | Thin typed wrappers per git command. Effect Stream gives native backpressure for streaming large diffs |
+| Tree-sitter | node-tree-sitter (server-only) | Native performance for AST operations. Browser doesn't need it for v1 — server resolves anchor positions and sends line numbers |
+
+### Why no WebSocket
+
+The server communicates with the browser in three patterns:
+
+1. **Large streamed reads** (git diff output) — HTTP streaming via `HttpServerResponse.stream`. Client reads with `fetch` + `ReadableStream`.
+2. **Server-pushed notifications** (HEAD changed, GitHub comment synced) — SSE via `EventSource`. One-way, auto-reconnects.
+3. **Writes** (create comment, update review status) — standard HTTP POST via `HttpApi`.
+
+No pattern requires bidirectional real-time communication. WebSocket would add ~200 lines of transport plumbing (connection lifecycle, message framing, correlation IDs, reconnection logic) to solve a problem that doesn't exist. HTTP streaming + SSE achieves the same result with ~35 lines of code and all native browser APIs.
+
+### Why full Effect over partial adoption
+
+Greppa has typed errors crossing package boundaries: git spawn failures, SQLite errors, anchor relocation failures, GitHub API errors, schema validation errors. Effect's `E` channel tracks all of these at compile time. Partial adoption (Effect for domain logic, Fastify for HTTP) creates a seam where you constantly wrap/unwrap between paradigms. Full adoption means one error model from CLI entry point to database query.
+
+## Frontend
+
+| Layer | Choice | Rationale |
+|---|---|---|
+| UI framework | React 19 | Largest ecosystem. Virtualization caps mounted DOM at ~50-100 nodes, so VDOM overhead is negligible |
+| Component primitives | Radix UI | Unstyled Dialog, Menu, Tooltip, Tabs, Toast, Toggle. CSS Modules compatible. Greppa owns its visual identity |
+| File tree | React Aria Tree | Accessible `aria-tree` roles, keyboard nav (arrows, Home/End, expand/collapse), virtualization support |
+| Split pane | react-resizable-panels | Keyboard accessible, min/max constraints, localStorage persistence |
+| Virtualization | react-virtuoso | Zero-config dynamic row heights via ResizeObserver (critical for variable-size diff hunks), native sticky headers |
+| Syntax highlighting | Shiki | TextMate grammars (VS Code accuracy), singleton highlighter instance, streaming tokenization for large files |
+| Diff rendering | Custom (react-virtuoso + Shiki) | No off-the-shelf renderer supports inline comments + virtualization + side-by-side/unified toggle + sticky context headers |
+| State management | React state + custom hooks | `useState`/`useReducer` + custom hooks for shared concerns. Add Jotai or Zustand later only if cross-component state coordination becomes painful |
+| Styling | CSS Modules + CSS custom properties | `.module.css` files with scoped class names. Zero runtime. Theming via custom properties on `[data-theme]` |
+| Build tool | Vite+ (`vp`) | Drop-in Vite superset. Sub-1s cold starts, HMR, WASM plugin support for Shiki's Oniguruma binary |
+
+### Why Radix over Mantine
+
+Mantine provides 100+ pre-styled components but imposes its own visual identity. Greppa's dense, code-centric UI (tight spacing, diff-specific color tokens, gutter styling) would require overriding most of Mantine's defaults — work comparable to building the visual layer yourself. Mantine's Tree component also lacks keyboard navigation and ARIA roles, which the file tree requires.
+
+Radix provides ~6 unstyled primitives (Dialog, Menu, Tooltip, Tabs, Toast, Toggle) that handle accessibility and behavior. The rest of the UI is custom regardless — diff viewer, file tree, comment threads, split panes. With Radix, the `--gr-` token system is the only theming system. No parallel namespaces to maintain.
+
+## Design system
+
+Lives in `packages/ui`. Three-layer token architecture with `--gr-` namespace.
+
+### Token layers
+
+**Primitives** — raw color palette and raw sizes. Never referenced by components directly.
+
+**Semantic** — role-based tokens that components consume:
+
+```css
+--gr-color-bg-default
+--gr-color-bg-subtle        /* secondary panels */
+--gr-color-bg-inset         /* code blocks, gutters */
+--gr-color-text-primary
+--gr-color-text-muted
+--gr-color-border-default
+--gr-color-bg-interactive
+--gr-color-bg-interactive-hover
+```
+
+**Component** — scoped to CSS Modules, reference semantic tokens:
+
+```css
+--button-bg: var(--gr-color-bg-interactive);
+```
+
+### Diff tokens
+
+Modeled after VS Code's `diffEditor` token structure. Four layers per diff state:
+
+```css
+--gr-color-diff-added-bg           /* line background */
+--gr-color-diff-added-char-bg      /* character-level highlight */
+--gr-color-diff-gutter-added-bg    /* gutter indicator */
+--gr-color-diff-added-border       /* border/outline */
+```
+
+Same pattern for removed and modified states.
+
+### Spacing
+
+4px base, numeric scale. Dense code UIs need fine-grained increments that an 8px or t-shirt scale can't provide.
+
+```css
+--gr-space-1: 4px
+--gr-space-2: 8px
+--gr-space-3: 12px
+--gr-space-4: 16px
+/* ... through --gr-space-16: 64px */
+```
+
+### Typography
+
+Two font stacks:
+
+```css
+--gr-font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+--gr-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+```
+
+Separate code-specific tokens for the diff viewer:
+
+```css
+--gr-text-code: 0.8125rem;    /* 13px */
+--gr-leading-code: 1.5rem;    /* 24px — aligns to 4px grid */
+```
+
+### Theme switching
+
+`[data-theme]` attribute on `<html>`. Respects OS preference but allows manual override:
+
+```css
+:root, [data-theme="light"] { /* light tokens */ }
+[data-theme="dark"] { /* dark overrides */ }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { /* dark overrides */ }
+}
+```
+
+### Component API patterns
+
+Variants styled via `data-*` attributes in CSS Modules:
+
+```css
+.button[data-variant="primary"] { background: var(--gr-color-bg-interactive); }
+.button[data-variant="ghost"] { background: transparent; }
+.button[data-size="sm"] { padding: var(--gr-space-1) var(--gr-space-2); }
+```
+
+Compound dot notation for multi-part components: `CommentThread.Root`, `CommentThread.Body`, `CommentThread.ReplyForm`.
+
+## Architecture decisions
+
+| Decision | Approach |
+|---|---|
+| Diff computation | `git diff-tree --raw` for file list (sub-100ms), per-file `git diff-tree --patch` on demand. Never compute all patches upfront |
+| Diff algorithm | `--diff-algorithm=histogram` — anchors on low-frequency lines, produces the most semantically meaningful diffs for code |
+| Diff delivery | Stream per-file patches via chunked HTTP (`HttpServerResponse.stream`). Background pre-cache first N files in review-priority order |
+| Comment anchoring (primary) | Tree-sitter structural path (`nodePath`) + content hash (`nodeContentHash`). Anchor to leaf tokens for stability. Re-walk the tree on rebase to relocate |
+| Comment anchoring (fallback) | 3 context lines above/below + histogram diff matching. For languages without tree-sitter grammars |
+| GitHub API reads | GraphQL — 2k points/min rate limit, one query replaces 4-11 REST calls |
+| GitHub API writes | REST — simpler and better documented for review submission |
+| GitHub sync trigger | Webhooks if tunnel available (ngrok, Cloudflare Tunnel); conditional ETag polling (30-60s) otherwise |
+| Session persistence | Single SQLite DB, WAL mode. Tables: `reviews`, `review_files`, `comments`, `github_sync` |
+| File progress model | Google Critique pattern — file status resets from `approved` to `needs_re_review` when the file's diff changes after author pushes |
+| Tree-sitter in browser | Skip for v1. Server resolves anchor positions and sends line numbers to the frontend |
+
+## Effect patterns (v4)
+
+- **Services**: `ServiceMap.Service` class with explicit `static layer` (no auto-generated `Default`)
+- **Errors**: `Data.TaggedError` per domain (internal), `Schema.TaggedErrorClass` for serialization boundaries. Handled with `Effect.catchTag`
+- **Layers**: `Layer.mergeAll` in `Layers.ts`, provided to `NodeRuntime.runMain`
+- **Testing**: `@effect/vitest` with `it.effect()`, `Effect.provide(Service.Test)` per test for fresh state
+- **Naming**: `FooLive` for production layers, `FooTest` for test layers, `FooRepo` for repositories
+
+## Monorepo structure
+
+```
+packages/
+  core/                        # shared domain — only depends on `effect`
+    src/
+      domain/                  # Schema.Class entities (Review, Comment, File, etc.)
+      errors/                  # Data.TaggedError hierarchies per domain
+      services/                # ServiceMap.Service classes (no implementations)
+
+  ui/                          # design system — Radix primitives + custom components
+    src/
+      tokens/
+        primitives.css         # raw values — never used directly
+        semantic.css           # semantic mappings (--gr-color-bg-default, etc.)
+        diff.css               # diff-specific tokens (added/removed bg, gutter, char highlight)
+      themes/
+        light.css              # :root defaults
+        dark.css               # [data-theme="dark"] overrides
+      components/
+        Button/                # custom
+        Badge/                 # custom
+        Dialog/                # Radix Dialog wrapper + CSS Module
+        Menu/                  # Radix DropdownMenu/ContextMenu wrapper
+        Tooltip/               # Radix Tooltip wrapper
+        Tabs/                  # Radix Tabs wrapper
+        Toast/                 # Radix Toast wrapper
+        SplitPane/             # react-resizable-panels wrapper
+        FileTree/              # React Aria Tree + custom styling
+        DiffViewer/            # fully custom (react-virtuoso + Shiki)
+        CommentThread/         # fully custom
+
+  server/                      # HTTP server (streaming + SSE)
+    src/
+      main.ts                  # Layer.mergeAll(...).pipe(NodeRuntime.runMain)
+      Layers.ts                # composes all service layers into AppLive
+      Http.ts                  # HttpApiBuilder setup, middleware stack
+      Api.ts                   # HttpApi.make().add(ReviewApi).add(CommentApi)
+      Sql.ts                   # SqliteClient.layer + SqliteMigrator.layer
+      Review/                  # per domain module:
+        Api.ts                 #   HttpApiGroup with endpoint definitions
+        Http.ts                #   HttpApiBuilder.group() handlers
+        Repo.ts                #   repository service
+        Service.ts             #   ServiceMap.Service class
+      Comment/
+      Diff/
+      Git/
+      Anchor/
+      migrations/              # numbered .sql files
+
+  cli/                         # CLI entry point
+    src/
+      main.ts                  # Command.run(rootCmd).pipe(Effect.provide(NodeContext.layer), NodeRuntime.runMain)
+      commands/
+        serve.ts               # starts the server
+        review.ts              # opens a review session
+        diff.ts                # diff between refs
+
+  web/                         # React frontend (vp)
+    src/
+      components/
+        DiffViewer/
+        FileTree/
+        CommentThread/
+      hooks/                   # custom hooks for shared state
+      styles/                  # global CSS, theme imports
+```

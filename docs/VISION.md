@@ -1,6 +1,6 @@
 # Greppa — project vision
 
-*Swedish: "greppa" — to grasp, to grip. Also: grep + a.*
+_Swedish: "greppa" — to grasp, to grip. Also: grep + a._
 
 ## One-liner
 

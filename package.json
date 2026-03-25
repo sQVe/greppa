@@ -2,6 +2,17 @@
   "name": "greppa",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "vp test",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "format:check": "vp fmt --check",
+    "check": "vp check",
+    "typecheck": "tsc --noEmit",
+    "build": "vp build",
+    "prepare": "vp config",
+    "dev": "echo 'Two-process dev not yet configured — run vp dev in packages/web and packages/server separately'"
+  },
   "devDependencies": {
     "tsx": "4.21.0",
     "vite-plus": "0.1.14",

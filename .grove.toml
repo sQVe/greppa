@@ -1,0 +1,14 @@
+# Grove - Git worktree management
+# https://github.com/sqve/grove
+
+[preserve]
+patterns = [".grove.toml"]
+
+[link]
+patterns = [".beads", ".code-review-graph"]
+
+[hooks]
+add = ["pnpm install"]
+
+[autolock]
+patterns = ["main"]

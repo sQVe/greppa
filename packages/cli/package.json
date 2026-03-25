@@ -1,0 +1,14 @@
+{
+  "name": "@greppa/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@greppa/core": "workspace:*",
+    "@greppa/server": "workspace:*",
+    "effect": "4.0.0-beta.40"
+  }
+}

@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "vite-plus": "0.1.14"
+    "tsx": "4.21.0",
+    "vite-plus": "0.1.14",
+    "vitest": "4.1.1"
   },
   "engines": {
     "node": ">=22"

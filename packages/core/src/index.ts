@@ -1,1 +1,1 @@
-export const name = "@greppa/core" as const;
+export const name = '@greppa/core' as const;

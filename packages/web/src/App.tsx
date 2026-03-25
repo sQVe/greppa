@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 interface HealthResponse {
   status: string;
@@ -6,19 +6,23 @@ interface HealthResponse {
 
 export const App = () => {
   const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/health")
-      .then((response) => response.json())
-      .then((data: HealthResponse) => setHealth(data))
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Failed to fetch health"),
-      );
+    const fetchHealth = async () => {
+      try {
+        const response = await fetch('/api/health');
+        const data: HealthResponse = await response.json();
+        setHealth(data);
+      } catch (error: unknown) {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to fetch health');
+      }
+    };
+    void fetchHealth();
   }, []);
 
-  if (error != null) {
-    return <div>Error: {error}</div>;
+  if (errorMessage != null) {
+    return <div>Error: {errorMessage}</div>;
   }
 
   if (health == null) {

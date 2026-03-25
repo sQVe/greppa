@@ -119,8 +119,8 @@ Same pattern for removed and modified states.
 Two font stacks:
 
 ```css
---gr-font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
---gr-font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+--gr-font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+--gr-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
 ```
 
 Separate code-specific tokens for the diff viewer:
@@ -136,15 +136,15 @@ Separate code-specific tokens for the diff viewer:
 
 ```css
 :root,
-[data-theme="light"] {
+[data-theme='light'] {
   /* light tokens */
 }
-[data-theme="dark"] {
+[data-theme='dark'] {
   /* dark overrides */
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme='light']) {
     /* dark overrides */
   }
 }
@@ -155,13 +155,13 @@ Separate code-specific tokens for the diff viewer:
 Variants styled via `data-*` attributes in CSS Modules:
 
 ```css
-.button[data-variant="primary"] {
+.button[data-variant='primary'] {
   background: var(--gr-color-bg-interactive);
 }
-.button[data-variant="ghost"] {
+.button[data-variant='ghost'] {
   background: transparent;
 }
-.button[data-size="sm"] {
+.button[data-size='sm'] {
   padding: var(--gr-space-1) var(--gr-space-2);
 }
 ```

@@ -1,1 +1,1 @@
-export const name = "@greppa/ui" as const;
+export const name = '@greppa/ui' as const;

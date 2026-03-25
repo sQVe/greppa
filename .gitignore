@@ -1,5 +1,12 @@
-# AI.
-.beads
+# AI
 .beads/
-.code-review-graph
 .code-review-graph/
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Vite+
+*.tsbuildinfo

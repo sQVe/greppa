@@ -1,0 +1,12 @@
+{
+  "name": "greppa",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "vite-plus": "0.1.14"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

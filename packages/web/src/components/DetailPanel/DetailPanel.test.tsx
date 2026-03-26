@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { CommentThread, FileInfo } from '../fixtures/types';
+import type { CommentThread, FileInfo } from '../../fixtures/types';
 import { DetailPanel } from './DetailPanel';
 
 const threads: CommentThread[] = [

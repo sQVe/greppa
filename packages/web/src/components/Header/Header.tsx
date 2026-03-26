@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react';
 
-import { isTheme, useTheme } from '../hooks/useTheme';
+import { isTheme, useTheme } from '../../hooks/useTheme';
 
 import styles from './Header.module.css';
 

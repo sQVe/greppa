@@ -1,8 +1,14 @@
 import { Button, Collection, Tree, TreeItem, TreeItemContent } from 'react-aria-components';
 
-import type { FileNode } from '../fixtures/types';
+import type { FileNode } from '../../fixtures/types';
 
 import styles from './FileTree.module.css';
+
+interface FileTreeProps {
+  files: FileNode[];
+  selectedFilePath: string | null;
+  onSelectFile: (path: string) => void;
+}
 
 const CHANGE_TYPE_LABELS: Record<string, string> = {
   added: 'A',
@@ -10,12 +16,6 @@ const CHANGE_TYPE_LABELS: Record<string, string> = {
   deleted: 'D',
   renamed: 'R',
 };
-
-interface FileTreeProps {
-  files: FileNode[];
-  selectedFilePath: string | null;
-  onSelectFile: (path: string) => void;
-}
 
 const collectDirectoryIds = (nodes: FileNode[]): string[] =>
   nodes.flatMap((node) =>

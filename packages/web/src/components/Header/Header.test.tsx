@@ -7,7 +7,7 @@ import { Header } from './Header';
 
 const mockSetTheme = vi.fn();
 
-vi.mock('../hooks/useTheme', () => ({
+vi.mock('../../hooks/useTheme', () => ({
   isTheme: (value: string) => ['catppuccin-mocha', 'catppuccin-latte'].includes(value),
   useTheme: () => ({
     theme: 'catppuccin-mocha' as const,

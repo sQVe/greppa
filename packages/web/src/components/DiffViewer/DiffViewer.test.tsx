@@ -2,10 +2,10 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { DiffFile } from '../fixtures/types';
+import type { DiffFile } from '../../fixtures/types';
 import { DiffViewer } from './DiffViewer';
 
-vi.mock('../hooks/useTheme', () => ({
+vi.mock('../../hooks/useTheme', () => ({
   useTheme: () => ({
     theme: 'catppuccin-mocha',
     setTheme: vi.fn(),

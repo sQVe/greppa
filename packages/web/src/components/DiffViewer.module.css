@@ -78,14 +78,16 @@
   padding: 0 var(--gr-space-2);
   color: var(--gr-color-text-muted);
   text-align: right;
+  vertical-align: top;
   user-select: none;
   white-space: nowrap;
 }
 
 .content {
   padding: 0 var(--gr-space-2);
-  white-space: pre;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  vertical-align: top;
 }
 
 .divider {

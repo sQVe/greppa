@@ -88,6 +88,8 @@ Greppa should actively reduce the cognitive load of reviewing. Every interaction
 - **File-level verdicts.** Mark a file as "looks good," "needs changes," or "skipped" independently. Your progress is visible. You know exactly what's left.
 - **Sticky context.** When you're deep in a long file, the function name or class you're inside stays visible. No scrolling up to remember where you are.
 - **One-action review completion.** When you've been through every file, submitting the review should be one keystroke. Not a modal, not a dropdown, not a confirmation dialog.
+- **Editor as metaphor.** The UI should feel like a code editor, not a web app. Panel-based layout with resizable splits, a status bar showing file metadata (language, encoding, cursor position) alongside review progress, and interaction patterns borrowed from editors reviewers already use daily.
+- **Dual comment model.** Comments live in two places: inline gutter markers in the diff that expand in-place (collapsible, capped at a few replies, with a "view full thread" link), and a side panel for browsing all threads, filtering by status, and triaging across files. The diff stays clean by default; inline expansion is opt-in per thread.
 
 ## What this is not
 
@@ -128,7 +130,7 @@ Full two-way. Comments start local, push to GitHub when ready. Pull new comments
 
 - Tree-sitter integration: which bindings? node-tree-sitter vs. web-tree-sitter? How to handle grammar loading for many languages?
 - LSP connection: how to discover and connect to an already-running language server? What's the protocol for optional upgrade?
-- Diff viewer UX: side-by-side, unified, or both? What makes it feel fast and good?
+- Diff viewer UX: both side-by-side and unified, toggled in the diff header. Remaining question: what makes it feel fast and good beyond virtualized rendering?
 - How is the file list organized? By directory? By change type? By review status?
 - CLI distribution: npx, standalone binary via pkg, or both?
 - CLI interface for non-PR reviews: `greppa diff main..feature-branch`? `greppa diff HEAD`? How does this interact with uncommitted/staged changes?

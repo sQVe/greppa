@@ -8,7 +8,9 @@ try {
   // .env.local may not exist yet — fall back to defaults
 }
 
+// oxlint-disable-next-line no-process-env
 const apiPort = process.env['API_PORT'] ?? '4400';
+// oxlint-disable-next-line no-process-env
 const devPort = process.env['DEV_PORT'] ?? '5173';
 
 export default defineConfig({

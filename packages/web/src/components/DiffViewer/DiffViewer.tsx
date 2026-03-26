@@ -1,5 +1,7 @@
 import type { DiffFile } from '../../fixtures/types';
 import { useTheme } from '../../hooks/useTheme';
+import type { DiffRow } from './buildRows';
+import { buildRows } from './buildRows';
 import { HunkRows } from './HunkRows';
 import { useSyntaxHighlighting } from './useSyntaxHighlighting';
 
@@ -9,12 +11,21 @@ interface DiffViewerProps {
   diff: DiffFile | null;
 }
 
+interface HunkData {
+  header: string;
+  rows: DiffRow[];
+}
+
 const CHANGE_LABELS: Record<string, { label: string; className: string }> = {
   added: { label: 'Added', className: styles.badgeAdded ?? '' },
   deleted: { label: 'Deleted', className: styles.badgeDeleted ?? '' },
   modified: { label: 'Modified', className: styles.badgeModified ?? '' },
   renamed: { label: 'Renamed', className: styles.badgeRenamed ?? '' },
 };
+
+const SIDES = ['left', 'right'] as const;
+
+export type { HunkData };
 
 export const DiffViewer = ({ diff }: DiffViewerProps) => {
   const { theme } = useTheme();
@@ -25,6 +36,11 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
   }
 
   const badge = CHANGE_LABELS[diff.changeType];
+  const hunks: HunkData[] = diff.hunks.map((hunk) => ({
+    header: hunk.header,
+    rows: buildRows(hunk),
+  }));
+  const totalRows = hunks.reduce((sum, h) => sum + 1 + h.rows.length, 0);
 
   return (
     <div className={styles.viewer}>
@@ -35,20 +51,29 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
         <span>{diff.path}</span>
         {diff.oldPath != null ? <span>← {diff.oldPath}</span> : null}
       </div>
-      <table className={styles.table}>
-        <colgroup>
-          <col style={{ width: '3.5rem' }} />
-          <col />
-          <col style={{ width: '1px' }} />
-          <col style={{ width: '3.5rem' }} />
-          <col />
-        </colgroup>
-        <tbody>
-          {diff.hunks.map((hunk) => (
-            <HunkRows key={hunk.header} hunk={hunk} tokenMap={tokenMap} />
-          ))}
-        </tbody>
-      </table>
+      <div
+        className={styles.splitContainer}
+        style={{ gridTemplateRows: `repeat(${totalRows}, auto)` }}
+      >
+        {SIDES.map((side) => (
+          <div
+            key={side}
+            className={styles.side}
+            style={{ gridRow: `1 / span ${totalRows}` }}
+            data-side={side}
+          >
+            {hunks.map((hunk) => (
+              <HunkRows
+                key={hunk.header}
+                header={hunk.header}
+                rows={hunk.rows}
+                tokenMap={tokenMap}
+                side={side}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

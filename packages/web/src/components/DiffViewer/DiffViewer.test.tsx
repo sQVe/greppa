@@ -88,10 +88,11 @@ afterEach(() => {
   cleanup();
 });
 
-const getDataRows = () => {
-  const table = document.querySelector('table');
-  const rows = table!.querySelectorAll('tbody tr');
-  return [...rows].filter((r) => r.querySelectorAll('td').length > 1);
+const getSide = (side: 'left' | 'right') => document.querySelector(`[data-side="${side}"]`)!;
+
+const getDataRows = (side: 'left' | 'right') => {
+  const sideEl = getSide(side);
+  return [...sideEl.querySelectorAll(':scope > [class*="row"]')];
 };
 
 describe('DiffViewer', () => {
@@ -120,47 +121,51 @@ describe('DiffViewer', () => {
   });
 
   describe('hunk headers', () => {
-    it('renders the hunk range header', () => {
+    it('renders the hunk range header on both sides', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      expect(screen.getByText('@@ -1,3 +1,4 @@')).toBeDefined();
+      expect(screen.getAllByText('@@ -1,3 +1,4 @@').length).toBe(2);
     });
   });
 
   describe('line numbers', () => {
-    it('renders old line numbers for context and removed lines', () => {
+    it('renders old line numbers in the left side', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      const cells = getDataRows()[0]!.querySelectorAll('td');
-      expect(cells[0]?.textContent).toBe('1');
+      const rows = getDataRows('left');
+      const gutter = rows[0]!.querySelector('[class*="gutter"]')!;
+      expect(gutter.textContent).toBe('1');
     });
 
-    it('renders new line numbers for context and added lines', () => {
+    it('renders new line numbers in the right side', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      const cells = getDataRows()[0]!.querySelectorAll('td');
-      expect(cells[3]?.textContent).toBe('1');
+      const rows = getDataRows('right');
+      const gutter = rows[0]!.querySelector('[class*="gutter"]')!;
+      expect(gutter.textContent).toBe('1');
     });
   });
 
   describe('side-by-side pairing', () => {
-    it('pairs removed and added lines on separate rows when counts differ', () => {
+    it('renders the correct number of data rows per side', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      expect(getDataRows().length).toBeGreaterThanOrEqual(4);
+      expect(getDataRows('left').length).toBeGreaterThanOrEqual(4);
+      expect(getDataRows('right').length).toBeGreaterThanOrEqual(4);
     });
 
-    it('renders empty cells on the opposite side for unmatched lines', () => {
+    it('renders empty gutter on the left for unmatched added lines', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      const secondAddedRow = getDataRows()[2]!;
-      const leftGutter = secondAddedRow.querySelectorAll('td')[0]!;
-      expect(leftGutter.textContent).toBe('');
+      const rows = getDataRows('left');
+      const gutter = rows[2]!.querySelector('[class*="gutter"]')!;
+      expect(gutter.textContent).toBe('');
     });
 
     it('renders all removed lines on left for deleted files', () => {
       render(<DiffViewer diff={deletedDiff} />);
-      const dataRows = getDataRows();
-      expect(dataRows.length).toBe(3);
-      const firstRow = dataRows[0]!;
-      const leftGutter = firstRow.querySelectorAll('td')[0]!;
+      const leftRows = getDataRows('left');
+      expect(leftRows.length).toBe(3);
+      const leftGutter = leftRows[0]!.querySelector('[class*="gutter"]')!;
       expect(leftGutter.textContent).toBe('1');
-      const rightGutter = firstRow.querySelectorAll('td')[3]!;
+
+      const rightRows = getDataRows('right');
+      const rightGutter = rightRows[0]!.querySelector('[class*="gutter"]')!;
       expect(rightGutter.textContent).toBe('');
     });
   });
@@ -169,6 +174,17 @@ describe('DiffViewer', () => {
     it('renders code content in the content cells', () => {
       render(<DiffViewer diff={modifiedDiff} />);
       expect(screen.getAllByText("import { verify } from 'jsonwebtoken';").length).toBe(2);
+    });
+  });
+
+  describe('selection isolation', () => {
+    it('renders left and right sides as separate DOM subtrees', () => {
+      render(<DiffViewer diff={modifiedDiff} />);
+      const left = getSide('left');
+      const right = getSide('right');
+      expect(left).toBeDefined();
+      expect(right).toBeDefined();
+      expect(left.parentElement).toBe(right.parentElement);
     });
   });
 });

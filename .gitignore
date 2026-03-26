@@ -1,5 +1,6 @@
 # AI
 .beads/
+.claude/tdd-guard/data/
 .code-review-graph/
 
 # Dependencies

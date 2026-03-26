@@ -9,13 +9,16 @@
     "format:check": "vp fmt --check",
     "check": "vp check",
     "typecheck": "tsc --noEmit",
-    "build": "vp build",
+    "build": "vp run -r build",
     "prepare": "vp config",
     "env:setup": "tsx scripts/worktreeEnv.ts",
     "env:check": "test -f .env.local || pnpm run env:setup",
-    "dev": "pnpm run env:check && pnpm -r --parallel run dev"
+    "dev": "pnpm run env:check && pnpm -r --parallel run dev",
+    "ci:publish": "pnpm publish -r --access public --no-git-checks"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "0.6.0",
+    "@changesets/cli": "2.30.0",
     "@types/node": "25.5.0",
     "oxfmt": "0.42.0",
     "oxlint": "1.57.0",

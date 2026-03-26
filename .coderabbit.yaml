@@ -1,0 +1,34 @@
+language: 'en-US'
+tone_instructions: 'Be concise and direct. Flag real issues; skip nitpicks on style already enforced by oxlint and oxfmt.'
+
+reviews:
+  profile: 'assertive'
+  high_level_summary: true
+  review_status: true
+  abort_on_close: true
+
+  path_filters:
+    - '!**/dist/**'
+    - '!**/node_modules/**'
+    - '!.beads/**'
+    - '!.changeset/*.md'
+    - '!pnpm-lock.yaml'
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords: ['WIP', 'wip']
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - 'CLAUDE.md'
+  learnings:
+    scope: 'local'
+  pull_requests:
+    scope: 'local'

@@ -14,9 +14,11 @@
     "env:setup": "tsx scripts/worktreeEnv.ts",
     "env:check": "test -f .env.local || pnpm run env:setup",
     "dev": "pnpm run env:check && pnpm -r --parallel run dev",
+    "lint:rules": "ast-grep scan",
     "ci:publish": "pnpm publish -r --access public --no-git-checks"
   },
   "devDependencies": {
+    "@ast-grep/cli": "0.42.0",
     "@changesets/changelog-github": "0.6.0",
     "@changesets/cli": "2.30.0",
     "@types/node": "25.5.0",

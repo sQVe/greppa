@@ -20,7 +20,7 @@ const allFiles = collectFiles(files);
 const initialReviewed = new Set(allFiles.filter((f) => f.status === 'reviewed').map((f) => f.path));
 
 export const App = () => {
-  const { defaultLayout } = useDefaultLayout({
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: 'gr-panels',
     panelIds: PANEL_IDS,
   });
@@ -40,9 +40,10 @@ export const App = () => {
         id="gr-panels"
         orientation="horizontal"
         defaultLayout={defaultLayout}
+        onLayoutChanged={onLayoutChanged}
         className={styles.body}
       >
-        <Panel id="file-tree" defaultSize={20} minSize={10} collapsible>
+        <Panel id="file-tree" defaultSize="20%" minSize={10} collapsible>
           <FileTree
             files={files}
             selectedFilePath={selectedFilePath}
@@ -56,7 +57,7 @@ export const App = () => {
           />
         </Panel>
         <Separator className={styles.separator} />
-        <Panel id="detail-panel" defaultSize={25} minSize={15} collapsible>
+        <Panel id="detail-panel" defaultSize="25%" minSize={15} collapsible>
           <DetailPanel
             threads={
               selectedFilePath != null

@@ -6,6 +6,17 @@
     <title>Greppa</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var theme = localStorage.getItem('gr-theme');
+        if (!theme) {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'catppuccin-mocha'
+            : 'catppuccin-latte';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

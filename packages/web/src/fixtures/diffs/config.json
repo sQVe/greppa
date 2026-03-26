@@ -1,0 +1,94 @@
+{
+  "path": "src/utils/config.ts",
+  "changeType": "deleted",
+  "language": "typescript",
+  "hunks": [
+    {
+      "header": "@@ -1,18 +0,0 @@",
+      "oldStart": 1,
+      "oldCount": 18,
+      "newStart": 0,
+      "newCount": 0,
+      "lines": [
+        {
+          "lineType": "removed",
+          "oldLineNumber": 1,
+          "newLineNumber": null,
+          "content": "export const SECRET = process.env['JWT_SECRET'] ?? 'dev-secret';"
+        },
+        { "lineType": "removed", "oldLineNumber": 2, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 3,
+          "newLineNumber": null,
+          "content": "export const PORT = Number(process.env['PORT'] ?? 3000);"
+        },
+        { "lineType": "removed", "oldLineNumber": 4, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 5,
+          "newLineNumber": null,
+          "content": "export const DATABASE_URL = process.env['DATABASE_URL'] ?? '';"
+        },
+        { "lineType": "removed", "oldLineNumber": 6, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 7,
+          "newLineNumber": null,
+          "content": "export const CORS_ORIGINS = (process.env['CORS_ORIGINS'] ?? '')"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 8,
+          "newLineNumber": null,
+          "content": "  .split(',')"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 9,
+          "newLineNumber": null,
+          "content": "  .filter(Boolean);"
+        },
+        { "lineType": "removed", "oldLineNumber": 10, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 11,
+          "newLineNumber": null,
+          "content": "export const LOG_LEVEL = process.env['LOG_LEVEL'] ?? 'info';"
+        },
+        { "lineType": "removed", "oldLineNumber": 12, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 13,
+          "newLineNumber": null,
+          "content": "export const config = {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 14,
+          "newLineNumber": null,
+          "content": "  SECRET,"
+        },
+        { "lineType": "removed", "oldLineNumber": 15, "newLineNumber": null, "content": "  PORT," },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 16,
+          "newLineNumber": null,
+          "content": "  DATABASE_URL,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 17,
+          "newLineNumber": null,
+          "content": "  CORS_ORIGINS,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 18,
+          "newLineNumber": null,
+          "content": "  LOG_LEVEL,"
+        }
+      ]
+    }
+  ]
+}

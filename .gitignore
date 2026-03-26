@@ -8,5 +8,9 @@ node_modules/
 # Build
 dist/
 
+# Environment
+.env.local
+.data/
+
 # Vite+
 *.tsbuildinfo

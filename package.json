@@ -11,9 +11,14 @@
     "typecheck": "tsc --noEmit",
     "build": "vp build",
     "prepare": "vp config",
-    "dev": "echo 'Two-process dev not yet configured — run vp dev in packages/web and packages/server separately'"
+    "env:setup": "tsx scripts/worktreeEnv.ts",
+    "env:check": "test -f .env.local || pnpm run env:setup",
+    "dev": "pnpm run env:check && pnpm -r --parallel run dev"
   },
   "devDependencies": {
+    "@types/node": "25.5.0",
+    "oxfmt": "0.42.0",
+    "oxlint": "1.57.0",
     "tsx": "4.21.0",
     "vite-plus": "0.1.14",
     "vitest": "4.1.1"

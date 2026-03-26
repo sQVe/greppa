@@ -2,13 +2,13 @@
 # https://github.com/sqve/grove
 
 [preserve]
-patterns = [".grove.toml"]
+patterns = [".grove.toml", ".env.local"]
 
 [link]
 patterns = [".beads", ".code-review-graph"]
 
 [hooks]
-add = ["pnpm install"]
+add = ["pnpm install", "pnpm run env:setup"]
 
 [autolock]
 patterns = ["main"]

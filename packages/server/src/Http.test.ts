@@ -1,8 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { NodeHttpPlatform, NodeServices } from '@effect/platform-node';
 import { Layer } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
 import { layer as EtagLayer } from 'effect/unstable/http/Etag';
-import { NodeHttpPlatform, NodeServices } from '@effect/platform-node';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
 import { ApiRoutes } from './Http';
 
 const PlatformLayer = Layer.mergeAll(NodeServices.layer, NodeHttpPlatform.layer, EtagLayer);

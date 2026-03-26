@@ -1,8 +1,10 @@
-import { Effect, Layer } from 'effect';
-import { HttpApiBuilder } from 'effect/unstable/httpapi';
-import { HttpRouter } from 'effect/unstable/http';
-import { NodeHttpServer } from '@effect/platform-node';
 import { createServer } from 'node:http';
+
+import { NodeHttpServer } from '@effect/platform-node';
+import { Effect, Layer } from 'effect';
+import { HttpRouter } from 'effect/unstable/http';
+import { HttpApiBuilder } from 'effect/unstable/httpapi';
+
 import { Api } from './Api';
 
 const HealthHandlers = HttpApiBuilder.group(Api, 'health', (handlers) =>

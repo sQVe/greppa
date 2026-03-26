@@ -8,5 +8,21 @@
   "endOfLine": "lf",
   "bracketSpacing": true,
   "arrowParens": "always",
-  "ignore": ["dist/**", "coverage/**"]
+  "ignore": ["dist/**", "coverage/**"],
+  "sortImports": {
+    "newlinesBetween": true,
+    "groups": [
+      "builtin",
+      ["@greppa", "external"],
+      ["parent", "sibling", "index"],
+      "style",
+      "unknown"
+    ],
+    "customGroups": [
+      {
+        "groupName": "@greppa",
+        "elementNamePattern": ["@greppa/**"]
+      }
+    ]
+  }
 }

@@ -1,6 +1,6 @@
+import { makeHttpLayer } from '@greppa/server';
 import { Config, Effect, Layer } from 'effect';
 import { Command, Flag } from 'effect/unstable/cli';
-import { makeHttpLayer } from '@greppa/server';
 
 const port = Flag.integer('port').pipe(
   Flag.withDescription('Port to listen on'),

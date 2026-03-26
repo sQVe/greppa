@@ -1,0 +1,21 @@
+:root {
+  --gr-font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --gr-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+
+  --gr-font-weight-normal: 400;
+  --gr-font-weight-medium: 500;
+  --gr-font-weight-semibold: 600;
+  --gr-font-weight-bold: 700;
+
+  --gr-text-xs: 0.6875rem;
+  --gr-text-sm: 0.75rem;
+  --gr-text-base: 0.875rem;
+  --gr-text-lg: 1rem;
+  --gr-text-xl: 1.25rem;
+  --gr-text-code: 0.8125rem;
+
+  --gr-leading-tight: 1.25;
+  --gr-leading-normal: 1.5;
+  --gr-leading-relaxed: 1.625;
+  --gr-leading-code: 1.846;
+}

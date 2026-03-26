@@ -1,0 +1,55 @@
+:root,
+[data-theme='catppuccin-latte'] {
+  color-scheme: light;
+
+  /* Surfaces */
+  --gr-color-bg-default: #eff1f5;
+  --gr-color-bg-subtle: #e6e9ef;
+  --gr-color-bg-inset: #dce0e8;
+  --gr-color-bg-emphasis: #acb0be;
+  --gr-color-bg-surface: #ccd0da;
+  --gr-color-bg-surface-hover: #bcc0cc;
+  --gr-color-bg-surface-active: #acb0be;
+
+  /* Text */
+  --gr-color-text-primary: #4c4f69;
+  --gr-color-text-secondary: #5c5f77;
+  --gr-color-text-muted: #6c6f85;
+  --gr-color-text-on-emphasis: #eff1f5;
+
+  /* Borders */
+  --gr-color-border-default: #8c8fa1;
+  --gr-color-border-muted: #9ca0b0;
+  --gr-color-border-emphasis: #7c7f93;
+
+  /* Interactive */
+  --gr-color-bg-interactive: #7287fd;
+  --gr-color-bg-interactive-hover: #5c72e6;
+  --gr-color-text-interactive: #7287fd;
+
+  /* Status */
+  --gr-color-bg-success: rgb(64 160 43 / 15%);
+  --gr-color-text-success: #40a02b;
+  --gr-color-bg-danger: rgb(210 15 57 / 15%);
+  --gr-color-text-danger: #d20f39;
+  --gr-color-bg-warning: rgb(223 142 29 / 15%);
+  --gr-color-text-warning: #df8e1d;
+
+  /* Diff — added (green) */
+  --gr-color-diff-added-bg: rgb(64 160 43 / 15%);
+  --gr-color-diff-added-char-bg: rgb(64 160 43 / 30%);
+  --gr-color-diff-gutter-added-bg: rgb(64 160 43 / 20%);
+  --gr-color-diff-added-border: rgb(64 160 43 / 40%);
+
+  /* Diff — removed (red) */
+  --gr-color-diff-removed-bg: rgb(210 15 57 / 15%);
+  --gr-color-diff-removed-char-bg: rgb(210 15 57 / 30%);
+  --gr-color-diff-gutter-removed-bg: rgb(210 15 57 / 20%);
+  --gr-color-diff-removed-border: rgb(210 15 57 / 40%);
+
+  /* Diff — modified (yellow) */
+  --gr-color-diff-modified-bg: rgb(223 142 29 / 15%);
+  --gr-color-diff-modified-char-bg: rgb(223 142 29 / 30%);
+  --gr-color-diff-gutter-modified-bg: rgb(223 142 29 / 20%);
+  --gr-color-diff-modified-border: rgb(223 142 29 / 40%);
+}

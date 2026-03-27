@@ -16,21 +16,36 @@
           "newLineNumber": null,
           "content": "export const SECRET = process.env['JWT_SECRET'] ?? 'dev-secret';"
         },
-        { "lineType": "removed", "oldLineNumber": 2, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 2,
+          "newLineNumber": null,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 3,
           "newLineNumber": null,
           "content": "export const PORT = Number(process.env['PORT'] ?? 3000);"
         },
-        { "lineType": "removed", "oldLineNumber": 4, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 4,
+          "newLineNumber": null,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 5,
           "newLineNumber": null,
           "content": "export const DATABASE_URL = process.env['DATABASE_URL'] ?? '';"
         },
-        { "lineType": "removed", "oldLineNumber": 6, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 6,
+          "newLineNumber": null,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 7,
@@ -49,14 +64,24 @@
           "newLineNumber": null,
           "content": "  .filter(Boolean);"
         },
-        { "lineType": "removed", "oldLineNumber": 10, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 10,
+          "newLineNumber": null,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 11,
           "newLineNumber": null,
           "content": "export const LOG_LEVEL = process.env['LOG_LEVEL'] ?? 'info';"
         },
-        { "lineType": "removed", "oldLineNumber": 12, "newLineNumber": null, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 12,
+          "newLineNumber": null,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 13,
@@ -69,7 +94,12 @@
           "newLineNumber": null,
           "content": "  SECRET,"
         },
-        { "lineType": "removed", "oldLineNumber": 15, "newLineNumber": null, "content": "  PORT," },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 15,
+          "newLineNumber": null,
+          "content": "  PORT,"
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 16,

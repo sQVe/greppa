@@ -23,7 +23,12 @@
           "newLineNumber": 1,
           "content": "type LogLevel = 'debug' | 'info' | 'warn' | 'error';"
         },
-        { "lineType": "context", "oldLineNumber": 2, "newLineNumber": 2, "content": "" },
+        {
+          "lineType": "context",
+          "oldLineNumber": 2,
+          "newLineNumber": 2,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 3,
@@ -42,7 +47,12 @@
           "newLineNumber": null,
           "content": "  console.log(`[${timestamp}] ${level.toUpperCase()}: ${message}`);"
         },
-        { "lineType": "removed", "oldLineNumber": 6, "newLineNumber": null, "content": "};" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 6,
+          "newLineNumber": null,
+          "content": "};"
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -73,8 +83,18 @@
           "newLineNumber": 7,
           "content": "  error: (message: string) => void;"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 8, "content": "}" },
-        { "lineType": "context", "oldLineNumber": 7, "newLineNumber": 9, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 8,
+          "content": "}"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 7,
+          "newLineNumber": 9,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 8,
@@ -99,14 +119,24 @@
           "newLineNumber": null,
           "content": "  error: (message: string) => log('error', message),"
         },
-        { "lineType": "removed", "oldLineNumber": 12, "newLineNumber": null, "content": "};" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 12,
+          "newLineNumber": null,
+          "content": "};"
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
           "newLineNumber": 10,
           "content": "const LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 11, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 11,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -131,8 +161,18 @@
           "newLineNumber": 15,
           "content": "    console.log(`[${timestamp}] [${prefix}] ${level.toUpperCase()}: ${message}`);"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 16, "content": "  };" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 17, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 16,
+          "content": "  };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 17,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,

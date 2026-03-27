@@ -1,7 +1,8 @@
-import { describe, it } from 'vitest';
+import { NodeServices } from '@effect/platform-node';
 import { Effect } from 'effect';
 import { Command } from 'effect/unstable/cli';
-import { NodeServices } from '@effect/platform-node';
+import { describe, it } from 'vitest';
+
 import { main } from '../main';
 
 const run = Command.runWith(main, { version: '0.1.0' });

@@ -1,0 +1,13 @@
+.statusBar {
+  display: flex;
+  align-items: center;
+  padding: var(--gr-space-1) var(--gr-space-4);
+  border-top: 1px solid var(--gr-color-border-default);
+  background: var(--gr-color-bg-subtle);
+}
+
+.progress {
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-xs);
+  color: var(--gr-color-text-muted);
+}

@@ -1,0 +1,25 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gr-space-2) var(--gr-space-4);
+  border-bottom: 1px solid var(--gr-color-border-default);
+  background: var(--gr-color-bg-subtle);
+}
+
+.logo {
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-lg);
+  font-weight: var(--gr-font-weight-semibold);
+  color: var(--gr-color-text-primary);
+}
+
+.themePicker {
+  padding: var(--gr-space-1) var(--gr-space-2);
+  border: 1px solid var(--gr-color-border-default);
+  border-radius: 4px;
+  background: var(--gr-color-bg-surface);
+  color: var(--gr-color-text-primary);
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-sm);
+}

@@ -5,7 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Greppa</title>
   </head>
+
   <body>
+    <script>
+      (function () {
+        var allowed = ['catppuccin-mocha', 'catppuccin-latte'];
+        var stored = localStorage.getItem('gr-theme');
+        var theme =
+          stored && allowed.indexOf(stored) !== -1
+            ? stored
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'catppuccin-mocha'
+              : 'catppuccin-latte';
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

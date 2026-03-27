@@ -1,0 +1,59 @@
+[
+  {
+    "path": "src/auth",
+    "name": "auth",
+    "type": "directory",
+    "children": [
+      {
+        "path": "src/auth/validateToken.ts",
+        "name": "validateToken.ts",
+        "type": "file",
+        "changeType": "modified",
+        "status": "reviewed"
+      },
+      {
+        "path": "src/auth/hashPassword.ts",
+        "name": "hashPassword.ts",
+        "type": "file",
+        "changeType": "modified",
+        "status": "unreviewed"
+      }
+    ]
+  },
+  {
+    "path": "src/middleware",
+    "name": "middleware",
+    "type": "directory",
+    "children": [
+      {
+        "path": "src/middleware/rateLimiter.ts",
+        "name": "rateLimiter.ts",
+        "type": "file",
+        "changeType": "added",
+        "status": "unreviewed"
+      }
+    ]
+  },
+  {
+    "path": "src/utils",
+    "name": "utils",
+    "type": "directory",
+    "children": [
+      {
+        "path": "src/utils/createLogger.ts",
+        "name": "createLogger.ts",
+        "type": "file",
+        "changeType": "renamed",
+        "oldPath": "src/utils/logger.ts",
+        "status": "unreviewed"
+      },
+      {
+        "path": "src/utils/config.ts",
+        "name": "config.ts",
+        "type": "file",
+        "changeType": "deleted",
+        "status": "reviewed"
+      }
+    ]
+  }
+]

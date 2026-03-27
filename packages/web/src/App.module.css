@@ -1,0 +1,35 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--gr-color-bg-default);
+  color: var(--gr-color-text-primary);
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-base);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+}
+
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--gr-color-text-muted);
+  font-size: var(--gr-text-sm);
+}
+
+.separator {
+  width: 1px;
+  background: var(--gr-color-border-default);
+  transition: background 150ms;
+}
+
+.separator:hover,
+.separator[data-resize-handle-active] {
+  background: var(--gr-color-bg-interactive);
+}

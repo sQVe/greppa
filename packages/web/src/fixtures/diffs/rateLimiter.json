@@ -1,0 +1,179 @@
+{
+  "path": "src/middleware/rateLimiter.ts",
+  "changeType": "added",
+  "language": "typescript",
+  "hunks": [
+    {
+      "header": "@@ -0,0 +1,38 @@",
+      "oldStart": 0,
+      "oldCount": 0,
+      "newStart": 1,
+      "newCount": 38,
+      "lines": [
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 1,
+          "content": "import type { Request, Response, NextFunction } from 'express';"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 2, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 3,
+          "content": "interface RateLimitEntry {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 4,
+          "content": "  count: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 5,
+          "content": "  resetAt: number;"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 6, "content": "}" },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 7, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 8,
+          "content": "interface RateLimiterOptions {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 9,
+          "content": "  windowMs: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 10,
+          "content": "  maxRequests: number;"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 11, "content": "}" },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 12, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 13,
+          "content": "export const createRateLimiter = (options: RateLimiterOptions) => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 14,
+          "content": "  const { windowMs, maxRequests } = options;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 15,
+          "content": "  const store = new Map<string, RateLimitEntry>();"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 16, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 17,
+          "content": "  const cleanup = () => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 18,
+          "content": "    const now = Date.now();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 19,
+          "content": "    for (const [key, entry] of store) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 20,
+          "content": "      if (entry.resetAt <= now) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 21,
+          "content": "        store.delete(key);"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 22, "content": "      }" },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 23, "content": "    }" },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 24, "content": "  };" },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 25, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 26,
+          "content": "  return (request: Request, response: Response, next: NextFunction) => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 27,
+          "content": "    cleanup();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 28,
+          "content": "    const clientIp = request.ip ?? 'unknown';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 29,
+          "content": "    const entry = store.get(clientIp) ?? { count: 0, resetAt: Date.now() + windowMs };"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 30, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 31,
+          "content": "    entry.count += 1;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 32,
+          "content": "    store.set(clientIp, entry);"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 33, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 34,
+          "content": "    if (entry.count > maxRequests) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 35,
+          "content": "      response.status(429).json({ error: 'Too many requests' });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 36,
+          "content": "      return;"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 37, "content": "    }" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 38,
+          "content": "    next();"
+        }
+      ]
+    }
+  ]
+}

@@ -1,38 +1,56 @@
-import { useEffect, useState } from 'react';
+import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
 
-interface HealthResponse {
-  status: string;
-}
+import { DetailPanel } from './components/DetailPanel/DetailPanel';
+import { DiffViewer } from './components/DiffViewer/DiffViewer';
+import { FileTree } from './components/FileTree/FileTree';
+import { Header } from './components/Header/Header';
+import { StatusBar } from './components/StatusBar/StatusBar';
+import { comments, diffs, fileInfoMap, files } from './fixtures';
+import { useFileSelection } from './useFileSelection';
+
+import styles from './App.module.css';
+
+const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
 
 export const App = () => {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'gr-panels',
+    panelIds: PANEL_IDS,
+  });
 
-  useEffect(() => {
-    const fetchHealth = async () => {
-      try {
-        const response = await fetch('/api/health');
-        const data: HealthResponse = await response.json();
-        setHealth(data);
-      } catch (error: unknown) {
-        setErrorMessage(error instanceof Error ? error.message : 'Failed to fetch health');
-      }
-    };
-    void fetchHealth();
-  }, []);
-
-  if (errorMessage != null) {
-    return <div>Error: {errorMessage}</div>;
-  }
-
-  if (health == null) {
-    return <div>Loading...</div>;
-  }
+  const {
+    selectedFilePath,
+    selectFile,
+    reviewedCount,
+    totalCount,
+    selectedDiff,
+    selectedThreads,
+    selectedFileInfo,
+  } = useFileSelection(files, diffs, comments, fileInfoMap);
 
   return (
-    <div>
-      <h1>Greppa</h1>
-      <p>Server status: {health.status}</p>
+    <div className={styles.app}>
+      <Header />
+      <Group
+        id="gr-panels"
+        orientation="horizontal"
+        defaultLayout={defaultLayout}
+        onLayoutChanged={onLayoutChanged}
+        className={styles.body}
+      >
+        <Panel id="file-tree" defaultSize="20%" minSize={10} collapsible>
+          <FileTree files={files} selectedFilePath={selectedFilePath} onSelectFile={selectFile} />
+        </Panel>
+        <Separator className={styles.separator} />
+        <Panel id="diff-viewer" minSize={20}>
+          <DiffViewer diff={selectedDiff} />
+        </Panel>
+        <Separator className={styles.separator} />
+        <Panel id="detail-panel" defaultSize="25%" minSize={15} collapsible>
+          <DetailPanel threads={selectedThreads} fileInfo={selectedFileInfo} />
+        </Panel>
+      </Group>
+      <StatusBar reviewedCount={reviewedCount} totalCount={totalCount} />
     </div>
   );
 };

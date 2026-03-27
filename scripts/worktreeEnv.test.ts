@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { fnv1a, resolveWorktreePorts, buildEnvContent } from './worktreeEnv';
 
 describe('worktree-env', () => {

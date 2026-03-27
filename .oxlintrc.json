@@ -79,6 +79,8 @@
     "react/no-unescaped-entities": "error",
     "react/jsx-pascal-case": "error",
     "react/button-has-type": "error",
+    "react/no-multi-comp": "error",
+    "react/jsx-handler-names": "error",
     "react/no-clone-element": "error",
     "react/no-react-children": "error",
     "react/jsx-no-constructed-context-values": "error",

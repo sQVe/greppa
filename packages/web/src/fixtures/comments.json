@@ -1,0 +1,82 @@
+[
+  {
+    "id": "thread-1",
+    "filePath": "src/auth/validateToken.ts",
+    "lineNumber": 17,
+    "resolved": false,
+    "comments": [
+      {
+        "id": "comment-1a",
+        "author": "Alice Chen",
+        "timestamp": "2026-03-25T10:32:00Z",
+        "body": "Throwing here means any request with a missing env var crashes the process. Should this return null instead and log a warning?"
+      },
+      {
+        "id": "comment-1b",
+        "author": "Bob Park",
+        "timestamp": "2026-03-25T11:05:00Z",
+        "body": "Intentional — a missing secret is a deployment error, not a runtime condition. Fail-fast is safer than silently accepting all tokens."
+      },
+      {
+        "id": "comment-1c",
+        "author": "Alice Chen",
+        "timestamp": "2026-03-25T11:18:00Z",
+        "body": "Fair point. Can we at least validate at startup instead of on first request? That way the process fails immediately on boot."
+      }
+    ]
+  },
+  {
+    "id": "thread-2",
+    "filePath": "src/auth/hashPassword.ts",
+    "lineNumber": 3,
+    "resolved": true,
+    "comments": [
+      {
+        "id": "comment-2a",
+        "author": "Carol Martinez",
+        "timestamp": "2026-03-25T09:15:00Z",
+        "body": "Bumping salt rounds from 10 to 12 roughly quadruples hashing time. Have you benchmarked this on the auth service? We're already close to the 200ms p99 budget."
+      },
+      {
+        "id": "comment-2b",
+        "author": "Bob Park",
+        "timestamp": "2026-03-25T09:42:00Z",
+        "body": "Benchmarked on staging — p99 went from 85ms to 140ms. Still within budget, and OWASP recommends 12 as of 2025."
+      }
+    ]
+  },
+  {
+    "id": "thread-3",
+    "filePath": "src/middleware/rateLimiter.ts",
+    "lineNumber": 28,
+    "resolved": false,
+    "comments": [
+      {
+        "id": "comment-3a",
+        "author": "Alice Chen",
+        "timestamp": "2026-03-25T14:20:00Z",
+        "body": "request.ip can be spoofed via X-Forwarded-For if we're behind a reverse proxy. Are we trusting the proxy?"
+      },
+      {
+        "id": "comment-3b",
+        "author": "Bob Park",
+        "timestamp": "2026-03-25T14:55:00Z",
+        "body": "Good catch. We need to set `trust proxy` on the Express app. I'll add that in a follow-up since it affects the server config."
+      }
+    ]
+  },
+  {
+    "id": "thread-4",
+    "filePath": "src/utils/createLogger.ts",
+    "lineNumber": 18,
+    "resolved": false,
+    "comments": [
+      {
+        "id": "comment-4a",
+        "author": "Carol Martinez",
+        "timestamp": "2026-03-25T16:00:00Z",
+        "body": "The Object.fromEntries cast is a bit opaque. Would a plain object literal with the four methods be clearer? It's only four lines."
+      }
+    ]
+  }
+]

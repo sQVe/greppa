@@ -57,6 +57,7 @@ Greppa has typed errors crossing package boundaries: git spawn failures, SQLite 
 | Diff rendering       | Custom (react-virtuoso + Shiki)     | No off-the-shelf renderer supports inline comments + virtualization + side-by-side/unified toggle + sticky context headers                        |
 | State management     | React state + custom hooks          | `useState`/`useReducer` + custom hooks for shared concerns. Add Jotai or Zustand later only if cross-component state coordination becomes painful |
 | Styling              | CSS Modules + CSS custom properties | `.module.css` files with scoped class names. Zero runtime. Theming via custom properties on `[data-theme]`                                        |
+| Component isolation  | Ladle                               | React-only, Vite + SWC native, zero config, CSF-compatible. Sub-2s cold start. Lives in `packages/ui`                                             |
 | Build tool           | Vite+ (`vp`)                        | Drop-in Vite superset. Sub-1s cold starts, HMR, WASM plugin support for Shiki's Oniguruma binary                                                  |
 
 ### Why Radix over Mantine

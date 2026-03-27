@@ -1,7 +1,9 @@
 import { resolve } from 'node:path';
-import { Effect } from 'effect';
+
 import { NodeRuntime, NodeServices } from '@effect/platform-node';
+import { Effect } from 'effect';
 import { Command } from 'effect/unstable/cli';
+
 import { main } from './main';
 
 try {

@@ -1,0 +1,156 @@
+{
+  "path": "src/auth/validateToken.ts",
+  "changeType": "modified",
+  "language": "typescript",
+  "hunks": [
+    {
+      "header": "@@ -1,8 +1,10 @@",
+      "oldStart": 1,
+      "oldCount": 8,
+      "newStart": 1,
+      "newCount": 10,
+      "lines": [
+        {
+          "lineType": "context",
+          "oldLineNumber": 1,
+          "newLineNumber": 1,
+          "content": "import { verify } from 'jsonwebtoken';"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 2,
+          "newLineNumber": null,
+          "content": "import { SECRET } from '../utils/config';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 2,
+          "content": "import type { JwtPayload } from 'jsonwebtoken';"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 3, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 4,
+          "content": "const SECRET = process.env['JWT_SECRET'] ?? '';"
+        },
+        { "lineType": "context", "oldLineNumber": 3, "newLineNumber": 5, "content": "" },
+        {
+          "lineType": "context",
+          "oldLineNumber": 4,
+          "newLineNumber": 6,
+          "content": "export interface TokenPayload {"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 5,
+          "newLineNumber": 7,
+          "content": "  userId: string;"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 6,
+          "newLineNumber": 8,
+          "content": "  role: string;"
+        }
+      ]
+    },
+    {
+      "header": "@@ -12,9 +14,14 @@",
+      "oldStart": 12,
+      "oldCount": 9,
+      "newStart": 14,
+      "newCount": 14,
+      "lines": [
+        { "lineType": "context", "oldLineNumber": 12, "newLineNumber": 14, "content": "" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 13,
+          "newLineNumber": null,
+          "content": "export const validateToken = (token: string): TokenPayload | null => {"
+        },
+        { "lineType": "removed", "oldLineNumber": 14, "newLineNumber": null, "content": "  try {" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 15,
+          "newLineNumber": null,
+          "content": "    return verify(token, SECRET) as TokenPayload;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 16,
+          "newLineNumber": null,
+          "content": "  } catch {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 17,
+          "newLineNumber": null,
+          "content": "    return null;"
+        },
+        { "lineType": "removed", "oldLineNumber": 18, "newLineNumber": null, "content": "  }" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 15,
+          "content": "export const validateToken = (token: string): TokenPayload | null => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 16,
+          "content": "  if (SECRET === '') {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 17,
+          "content": "    throw new Error('JWT_SECRET is not configured');"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 18, "content": "  }" },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 19, "content": "" },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 20, "content": "  try {" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 21,
+          "content": "    const decoded = verify(token, SECRET) as JwtPayload & TokenPayload;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 22,
+          "content": "    if (decoded.exp != null && decoded.exp < Date.now() / 1000) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 23,
+          "content": "      return null;"
+        },
+        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 24, "content": "    }" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 25,
+          "content": "    return { userId: decoded.userId, role: decoded.role };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 26,
+          "content": "  } catch {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 27,
+          "content": "    return null;"
+        },
+        { "lineType": "context", "oldLineNumber": 19, "newLineNumber": 28, "content": "  }" },
+        { "lineType": "context", "oldLineNumber": 20, "newLineNumber": 29, "content": "};" }
+      ]
+    }
+  ]
+}

@@ -64,7 +64,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
           >
             {hunks.map((hunk, index) => (
               <HunkRows
-                key={index}
+                key={`${index}-${hunk.header}`}
                 header={hunk.header}
                 rows={hunk.rows}
                 tokenMap={tokenMap}

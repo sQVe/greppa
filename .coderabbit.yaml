@@ -26,7 +26,7 @@ reviews:
     - '!pnpm-lock.yaml'
 
   auto_review:
-    enabled: true
+    enabled: false
     auto_incremental_review: false
     drafts: false
     ignore_title_keywords: ['WIP', 'wip']

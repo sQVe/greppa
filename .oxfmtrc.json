@@ -8,7 +8,7 @@
   "endOfLine": "lf",
   "bracketSpacing": true,
   "arrowParens": "always",
-  "ignore": ["dist/**", "coverage/**"],
+  "ignorePatterns": ["dist/**", "coverage/**", "**/*.json", "**/*.css"],
   "sortImports": {
     "newlinesBetween": true,
     "groups": [

@@ -4,11 +4,11 @@ severity: error
 message: Type and interface declarations must appear before runtime code.
 note: Move this declaration above all const/let/function statements.
 files:
-  - "packages/**/*.ts"
-  - "packages/**/*.tsx"
+  - 'packages/**/*.ts'
+  - 'packages/**/*.tsx'
 ignores:
-  - "**/*.test.ts"
-  - "**/*.test.tsx"
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
 rule:
   any:
     - all:

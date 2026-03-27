@@ -35,6 +35,7 @@ export const HunkRows = ({ header, rows, tokenMap, side }: HunkRowsProps) => (
         <div
           key={`${row.left?.lineNumber ?? ''}-${row.right?.lineNumber ?? ''}`}
           className={`${styles.row} ${rowClass}`}
+          data-testid="diff-row"
         >
           <div className={styles.gutter}>{data?.lineNumber}</div>
           <div className={styles.content}>

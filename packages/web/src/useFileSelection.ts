@@ -13,13 +13,10 @@ export const useFileSelection = (
 ) => {
   const allFiles = useMemo(() => collectFiles(files), [files]);
 
-  const initialReviewed = useMemo(
-    () => new Set(allFiles.filter((f) => f.status === 'reviewed').map((f) => f.path)),
-    [allFiles],
-  );
-
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(() => initialReviewed);
+  const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(
+    () => new Set(allFiles.filter((f) => f.status === 'reviewed').map((f) => f.path)),
+  );
 
   const selectFile = useCallback((path: string) => {
     setSelectedFilePath(path);

@@ -9,9 +9,13 @@ export const isTheme = (value: string): value is Theme =>
   (THEMES as readonly string[]).includes(value);
 
 const getSnapshot = (): Theme => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored != null && isTheme(stored)) {
-    return stored;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored != null && isTheme(stored)) {
+      return stored;
+    }
+  } catch {
+    // Ignore storage errors (private browsing, quota exceeded).
   }
   return globalThis.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'catppuccin-mocha'

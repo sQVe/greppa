@@ -18,6 +18,9 @@ const getOrCreateHighlighter = () => {
   highlighterPromise ??= createHighlighter({
     themes: ['catppuccin-mocha', 'catppuccin-latte'],
     langs: ['typescript'],
+  }).catch((error: unknown) => {
+    highlighterPromise = null;
+    throw error;
   });
 
   return highlighterPromise;
@@ -59,7 +62,7 @@ const useHighlighter = () => {
 
 const buildTokenMap = (diff: DiffFile, highlighter: Highlighter, theme: string) => {
   const { oldEntries, newEntries } = buildTokenEntries(diff);
-  // oxlint-disable-next-line no-unsafe-type-assertion -- fixture language strings are valid Shiki language IDs
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, oxlint/no-unsafe-type-assertion -- fixture language strings are valid Shiki language IDs
   const lang = diff.language as BundledLanguage;
   const oldTokenLines = highlighter.codeToTokens(
     oldEntries.map((e) => e.content).join('\n') || ' ',

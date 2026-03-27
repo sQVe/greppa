@@ -92,7 +92,7 @@ const getSide = (side: 'left' | 'right') => document.querySelector(`[data-side="
 
 const getDataRows = (side: 'left' | 'right') => {
   const sideEl = getSide(side);
-  return [...sideEl.querySelectorAll(':scope > [class*="row"]')];
+  return [...sideEl.querySelectorAll(':scope > [data-testid="diff-row"]')];
 };
 
 describe('DiffViewer', () => {

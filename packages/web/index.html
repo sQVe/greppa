@@ -10,12 +10,14 @@
 <body>
   <script>
     (function () {
-      var theme = localStorage.getItem('gr-theme');
-      if (!theme) {
-        theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'catppuccin-mocha'
-          : 'catppuccin-latte';
-      }
+      var allowed = ['catppuccin-mocha', 'catppuccin-latte'];
+      var stored = localStorage.getItem('gr-theme');
+      var theme =
+        stored && allowed.indexOf(stored) !== -1
+          ? stored
+          : window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'catppuccin-mocha'
+            : 'catppuccin-latte';
       document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>

@@ -24,11 +24,11 @@ export const FileInfoContent = ({ fileInfo }: FileInfoContentProps) => {
       </div>
       <div className={styles.infoRow}>
         <span className={styles.infoLabel}>Authors</span>
-        <span className={styles.infoValue}>
+        <div className={styles.infoValue}>
           {fileInfo.authors.map((author) => (
-            <div key={author}>{author}</div>
+            <span key={author}>{author}</span>
           ))}
-        </span>
+        </div>
       </div>
       <div className={styles.infoRow}>
         <span className={styles.infoLabel}>Related PRs</span>

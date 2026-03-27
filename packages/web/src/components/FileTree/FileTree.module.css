@@ -70,17 +70,17 @@
 
 .badgeA {
   background: var(--gr-color-diff-added-bg);
-  color: var(--gr-color-success-text);
+  color: var(--gr-color-text-success);
 }
 
 .badgeM {
   background: var(--gr-color-diff-modified-bg);
-  color: var(--gr-color-warning-text);
+  color: var(--gr-color-text-warning);
 }
 
 .badgeD {
   background: var(--gr-color-diff-removed-bg);
-  color: var(--gr-color-danger-text);
+  color: var(--gr-color-text-danger);
 }
 
 .badgeR {

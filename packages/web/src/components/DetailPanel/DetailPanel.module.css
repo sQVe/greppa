@@ -42,6 +42,7 @@
 
 .tabContent {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: var(--gr-space-3);
 }

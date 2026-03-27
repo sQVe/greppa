@@ -17,7 +17,12 @@ export const Header = () => {
   return (
     <header className={styles.header}>
       <span className={styles.logo}>Greppa</span>
-      <select className={styles.themePicker} value={theme} onChange={handleChange}>
+      <select
+        aria-label="Theme"
+        className={styles.themePicker}
+        value={theme}
+        onChange={handleChange}
+      >
         {themes.map((t) => (
           <option key={t} value={t}>
             {t}

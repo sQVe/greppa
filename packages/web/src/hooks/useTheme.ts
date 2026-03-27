@@ -39,7 +39,11 @@ export const useTheme = () => {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const setTheme = useCallback((next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Ignore storage errors (private browsing, quota exceeded).
+    }
     document.documentElement.setAttribute('data-theme', next);
     emitChange();
   }, []);

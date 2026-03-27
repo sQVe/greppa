@@ -3,7 +3,7 @@ tone_instructions: 'Be concise and direct. Flag real issues; skip nitpicks on st
 
 reviews:
   profile: 'assertive'
-  high_level_summary: true
+  high_level_summary: false
   collapse_walkthrough: true
   review_status: true
   abort_on_close: true

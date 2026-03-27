@@ -12,11 +12,16 @@
 | Formatting      | Vite+ `vp fmt`  | Oxfmt                                                                                   |
 | Testing         | Vite+ `vp test` | Vitest via `@effect/vitest`                                                             |
 
-Vite+ is an open-source (MIT) superset of Vite from VoidZero (Evan You's company). The CLI is `vp`. Unifies build, test, lint, format, and task running under one CLI and config file. Replaces Turborepo + tsup + separate lint/format tooling.
+Vite+ is an open-source (MIT) superset of Vite from VoidZero (Evan You's company). The CLI is `vp`.
+Unifies build, test, lint, format, and task running under one CLI and config file. Replaces
+Turborepo + tsup + separate lint/format tooling.
 
 ## Backend — full Effect stack (v4 beta)
 
-Effect v4 (pinned to `4.0.0-beta.40`) replaces Fastify, Commander, Zod, and drizzle-orm with a unified `Effect<A, E, R>` type system. One error model, one dependency injection system, typed end-to-end from CLI entry point to database query. All `effect/unstable/*` imports may change between beta releases — pin the exact version.
+Effect v4 (pinned to `4.0.0-beta.40`) replaces Fastify, Commander, Zod, and drizzle-orm with a
+unified `Effect<A, E, R>` type system. One error model, one dependency injection system, typed
+end-to-end from CLI entry point to database query. All `effect/unstable/*` imports may change
+between beta releases — pin the exact version.
 
 | Layer               | Choice                                | Rationale                                                                                                                                 |
 | ------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,15 +39,24 @@ Effect v4 (pinned to `4.0.0-beta.40`) replaces Fastify, Commander, Zod, and driz
 
 The server communicates with the browser in three patterns:
 
-1. **Large streamed reads** (git diff output) — HTTP streaming via `HttpServerResponse.stream`. Client reads with `fetch` + `ReadableStream`.
-2. **Server-pushed notifications** (HEAD changed, GitHub comment synced) — SSE via `EventSource`. One-way, auto-reconnects.
+1. **Large streamed reads** (git diff output) — HTTP streaming via `HttpServerResponse.stream`.
+   Client reads with `fetch` + `ReadableStream`.
+2. **Server-pushed notifications** (HEAD changed, GitHub comment synced) — SSE via `EventSource`.
+   One-way, auto-reconnects.
 3. **Writes** (create comment, update review status) — standard HTTP POST via `HttpApi`.
 
-No pattern requires bidirectional real-time communication. WebSocket would add ~200 lines of transport plumbing (connection lifecycle, message framing, correlation IDs, reconnection logic) to solve a problem that doesn't exist. HTTP streaming + SSE achieves the same result with ~35 lines of code and all native browser APIs.
+No pattern requires bidirectional real-time communication. WebSocket would add ~200 lines of
+transport plumbing (connection lifecycle, message framing, correlation IDs, reconnection logic) to
+solve a problem that doesn't exist. HTTP streaming + SSE achieves the same result with ~35 lines of
+code and all native browser APIs.
 
 ### Why full Effect over partial adoption
 
-Greppa has typed errors crossing package boundaries: git spawn failures, SQLite errors, anchor relocation failures, GitHub API errors, schema validation errors. Effect's `E` channel tracks all of these at compile time. Partial adoption (Effect for domain logic, Fastify for HTTP) creates a seam where you constantly wrap/unwrap between paradigms. Full adoption means one error model from CLI entry point to database query.
+Greppa has typed errors crossing package boundaries: git spawn failures, SQLite errors, anchor
+relocation failures, GitHub API errors, schema validation errors. Effect's `E` channel tracks all of
+these at compile time. Partial adoption (Effect for domain logic, Fastify for HTTP) creates a seam
+where you constantly wrap/unwrap between paradigms. Full adoption means one error model from CLI
+entry point to database query.
 
 ## Frontend
 
@@ -62,9 +76,15 @@ Greppa has typed errors crossing package boundaries: git spawn failures, SQLite 
 
 ### Why Radix over Mantine
 
-Mantine provides 100+ pre-styled components but imposes its own visual identity. Greppa's dense, code-centric UI (tight spacing, diff-specific color tokens, gutter styling) would require overriding most of Mantine's defaults — work comparable to building the visual layer yourself. Mantine's Tree component also lacks keyboard navigation and ARIA roles, which the file tree requires.
+Mantine provides 100+ pre-styled components but imposes its own visual identity. Greppa's dense,
+code-centric UI (tight spacing, diff-specific color tokens, gutter styling) would require overriding
+most of Mantine's defaults — work comparable to building the visual layer yourself. Mantine's Tree
+component also lacks keyboard navigation and ARIA roles, which the file tree requires.
 
-Radix provides ~6 unstyled primitives (Dialog, Menu, Tooltip, Tabs, Toast, Toggle) that handle accessibility and behavior. The rest of the UI is custom regardless — diff viewer, file tree, comment threads, split panes. With Radix, the `--gr-` token system is the only theming system. No parallel namespaces to maintain.
+Radix provides ~6 unstyled primitives (Dialog, Menu, Tooltip, Tabs, Toast, Toggle) that handle
+accessibility and behavior. The rest of the UI is custom regardless — diff viewer, file tree,
+comment threads, split panes. With Radix, the `--gr-` token system is the only theming system. No
+parallel namespaces to maintain.
 
 ## Design system
 
@@ -108,7 +128,8 @@ Same pattern for removed and modified states.
 
 ### Spacing
 
-4px base, numeric scale. Dense code UIs need fine-grained increments that an 8px or t-shirt scale can't provide.
+4px base, numeric scale. Dense code UIs need fine-grained increments that an 8px or t-shirt scale
+can't provide.
 
 ```css
 --gr-space-1: 4px --gr-space-2: 8px --gr-space-3: 12px --gr-space-4: 16px
@@ -167,7 +188,8 @@ Variants styled via `data-*` attributes in CSS Modules:
 }
 ```
 
-Compound dot notation for multi-part components: `CommentThread.Root`, `CommentThread.Body`, `CommentThread.ReplyForm`.
+Compound dot notation for multi-part components: `CommentThread.Root`, `CommentThread.Body`,
+`CommentThread.ReplyForm`.
 
 ## Architecture decisions
 
@@ -187,10 +209,13 @@ Compound dot notation for multi-part components: `CommentThread.Root`, `CommentT
 
 ## Effect patterns (v4)
 
-- **Services**: `ServiceMap.Service` class with explicit `static layer` (no auto-generated `Default`)
-- **Errors**: `Data.TaggedError` per domain (internal), `Schema.TaggedErrorClass` for serialization boundaries. Handled with `Effect.catchTag`
+- **Services**: `ServiceMap.Service` class with explicit `static layer` (no auto-generated
+  `Default`)
+- **Errors**: `Data.TaggedError` per domain (internal), `Schema.TaggedErrorClass` for serialization
+  boundaries. Handled with `Effect.catchTag`
 - **Layers**: `Layer.mergeAll` in `Layers.ts`, provided to `NodeRuntime.runMain`
-- **Testing**: `@effect/vitest` with `it.effect()`, `Effect.provide(Service.Test)` per test for fresh state
+- **Testing**: `@effect/vitest` with `it.effect()`, `Effect.provide(Service.Test)` per test for
+  fresh state
 - **Naming**: `FooLive` for production layers, `FooTest` for test layers, `FooRepo` for repositories
 
 ## Monorepo structure

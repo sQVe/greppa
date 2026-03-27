@@ -28,14 +28,24 @@
           "newLineNumber": 2,
           "content": "import type { JwtPayload } from 'jsonwebtoken';"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 3, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 3,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
           "newLineNumber": 4,
           "content": "const SECRET = process.env['JWT_SECRET'] ?? '';"
         },
-        { "lineType": "context", "oldLineNumber": 3, "newLineNumber": 5, "content": "" },
+        {
+          "lineType": "context",
+          "oldLineNumber": 3,
+          "newLineNumber": 5,
+          "content": ""
+        },
         {
           "lineType": "context",
           "oldLineNumber": 4,
@@ -63,14 +73,24 @@
       "newStart": 14,
       "newCount": 14,
       "lines": [
-        { "lineType": "context", "oldLineNumber": 12, "newLineNumber": 14, "content": "" },
+        {
+          "lineType": "context",
+          "oldLineNumber": 12,
+          "newLineNumber": 14,
+          "content": ""
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 13,
           "newLineNumber": null,
           "content": "export const validateToken = (token: string): TokenPayload | null => {"
         },
-        { "lineType": "removed", "oldLineNumber": 14, "newLineNumber": null, "content": "  try {" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 14,
+          "newLineNumber": null,
+          "content": "  try {"
+        },
         {
           "lineType": "removed",
           "oldLineNumber": 15,
@@ -89,7 +109,12 @@
           "newLineNumber": null,
           "content": "    return null;"
         },
-        { "lineType": "removed", "oldLineNumber": 18, "newLineNumber": null, "content": "  }" },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 18,
+          "newLineNumber": null,
+          "content": "  }"
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -108,9 +133,24 @@
           "newLineNumber": 17,
           "content": "    throw new Error('JWT_SECRET is not configured');"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 18, "content": "  }" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 19, "content": "" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 20, "content": "  try {" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 18,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 19,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 20,
+          "content": "  try {"
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -129,7 +169,12 @@
           "newLineNumber": 23,
           "content": "      return null;"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 24, "content": "    }" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 24,
+          "content": "    }"
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -148,8 +193,18 @@
           "newLineNumber": 27,
           "content": "    return null;"
         },
-        { "lineType": "context", "oldLineNumber": 19, "newLineNumber": 28, "content": "  }" },
-        { "lineType": "context", "oldLineNumber": 20, "newLineNumber": 29, "content": "};" }
+        {
+          "lineType": "context",
+          "oldLineNumber": 19,
+          "newLineNumber": 28,
+          "content": "  }"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 20,
+          "newLineNumber": 29,
+          "content": "};"
+        }
       ]
     }
   ]

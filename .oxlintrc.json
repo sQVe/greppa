@@ -1,5 +1,13 @@
 {
-  "plugins": ["typescript", "react", "unicorn", "oxc", "import", "vitest", "node"],
+  "plugins": [
+    "typescript",
+    "react",
+    "unicorn",
+    "oxc",
+    "import",
+    "vitest",
+    "node"
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "error",

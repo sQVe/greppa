@@ -16,7 +16,12 @@
           "newLineNumber": 1,
           "content": "import type { Request, Response, NextFunction } from 'express';"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 2, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 2,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -35,8 +40,18 @@
           "newLineNumber": 5,
           "content": "  resetAt: number;"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 6, "content": "}" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 7, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 6,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 7,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -55,8 +70,18 @@
           "newLineNumber": 10,
           "content": "  maxRequests: number;"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 11, "content": "}" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 12, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 11,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 12,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -75,7 +100,12 @@
           "newLineNumber": 15,
           "content": "  const store = new Map<string, RateLimitEntry>();"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 16, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 16,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -106,10 +136,30 @@
           "newLineNumber": 21,
           "content": "        store.delete(key);"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 22, "content": "      }" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 23, "content": "    }" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 24, "content": "  };" },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 25, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 22,
+          "content": "      }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 23,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 24,
+          "content": "  };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 25,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -134,7 +184,12 @@
           "newLineNumber": 29,
           "content": "    const entry = store.get(clientIp) ?? { count: 0, resetAt: Date.now() + windowMs };"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 30, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 30,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -147,7 +202,12 @@
           "newLineNumber": 32,
           "content": "    store.set(clientIp, entry);"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 33, "content": "" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 33,
+          "content": ""
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,
@@ -166,7 +226,12 @@
           "newLineNumber": 36,
           "content": "      return;"
         },
-        { "lineType": "added", "oldLineNumber": null, "newLineNumber": 37, "content": "    }" },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 37,
+          "content": "    }"
+        },
         {
           "lineType": "added",
           "oldLineNumber": null,

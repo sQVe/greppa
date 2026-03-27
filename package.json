@@ -9,8 +9,8 @@
     "dev": "pnpm run env:check && pnpm -r --parallel run dev",
     "env:check": "test -f .env.local || pnpm run env:setup",
     "env:setup": "tsx scripts/worktreeEnv.ts",
-    "format": "vp fmt",
-    "format:check": "vp fmt --check",
+    "format": "vp fmt && prettier --write .",
+    "format:check": "vp fmt --check && prettier --check .",
     "lint": "vp lint",
     "lint:rules": "ast-grep scan",
     "prepare": "vp config",
@@ -24,6 +24,7 @@
     "@types/node": "25.5.0",
     "oxfmt": "0.42.0",
     "oxlint": "1.57.0",
+    "prettier": "3.8.1",
     "tsx": "4.21.0",
     "vite-plus": "0.1.14",
     "vitest": "4.1.1"

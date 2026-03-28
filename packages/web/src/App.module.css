@@ -6,7 +6,7 @@
   background: var(--gr-color-bg-default);
   color: var(--gr-color-text-primary);
   font-family: var(--gr-font-ui);
-  font-size: var(--gr-text-base);
+  font-size: var(--gr-text-md);
 }
 
 .body {

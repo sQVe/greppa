@@ -1,7 +1,7 @@
 .tree {
   height: 100%;
   overflow: auto;
-  padding: var(--gr-space-2) 0;
+  padding: var(--gr-space-md) 0;
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-sm);
   outline: none;
@@ -10,8 +10,8 @@
 .treeItem {
   display: flex;
   align-items: center;
-  gap: var(--gr-space-1);
-  padding: var(--gr-space-1) var(--gr-space-2);
+  gap: var(--gr-space-sm);
+  padding: var(--gr-space-sm) var(--gr-space-md);
   cursor: pointer;
   outline: none;
   border-radius: 2px;
@@ -60,7 +60,7 @@
 
 .badge {
   flex-shrink: 0;
-  padding: 0 var(--gr-space-1);
+  padding: 0 var(--gr-space-sm);
   border-radius: 2px;
   font-family: var(--gr-font-mono);
   font-size: var(--gr-text-xs);

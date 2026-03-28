@@ -24,7 +24,7 @@
 }
 
 .tab {
-  padding: var(--gr-space-2) var(--gr-space-3);
+  padding: var(--gr-space-md) var(--gr-space-lg);
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -32,7 +32,7 @@
   cursor: pointer;
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-sm);
-  font-weight: var(--gr-weight-medium);
+  font-weight: var(--gr-font-weight-medium);
 }
 
 .tab[data-state='active'] {
@@ -44,11 +44,11 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: var(--gr-space-3);
+  padding: var(--gr-space-lg);
 }
 
 .thread {
-  padding: var(--gr-space-2) 0;
+  padding: var(--gr-space-md) 0;
   border-bottom: 1px solid var(--gr-color-border-muted);
 }
 
@@ -59,15 +59,15 @@
 .threadHeader {
   display: flex;
   align-items: center;
-  gap: var(--gr-space-2);
-  margin-bottom: var(--gr-space-2);
+  gap: var(--gr-space-md);
+  margin-bottom: var(--gr-space-md);
   font-size: var(--gr-text-xs);
   color: var(--gr-color-text-muted);
 }
 
 .comment {
-  padding: var(--gr-space-2);
-  margin-bottom: var(--gr-space-1);
+  padding: var(--gr-space-md);
+  margin-bottom: var(--gr-space-sm);
   border-radius: 4px;
   background: var(--gr-color-bg-surface);
 }
@@ -79,13 +79,13 @@
 .commentHeader {
   display: flex;
   align-items: center;
-  gap: var(--gr-space-2);
-  margin-bottom: var(--gr-space-1);
+  gap: var(--gr-space-md);
+  margin-bottom: var(--gr-space-sm);
   font-size: var(--gr-text-xs);
 }
 
 .author {
-  font-weight: var(--gr-weight-semibold);
+  font-weight: var(--gr-font-weight-semibold);
   color: var(--gr-color-text-primary);
 }
 
@@ -103,13 +103,13 @@
   color: var(--gr-color-text-muted);
   font-size: var(--gr-text-sm);
   text-align: center;
-  padding: var(--gr-space-4);
+  padding: var(--gr-space-xl);
 }
 
 .infoRow {
   display: flex;
   justify-content: space-between;
-  padding: var(--gr-space-2) 0;
+  padding: var(--gr-space-md) 0;
   border-bottom: 1px solid var(--gr-color-border-muted);
   font-size: var(--gr-text-sm);
 }
@@ -120,7 +120,7 @@
 
 .infoLabel {
   color: var(--gr-color-text-muted);
-  font-weight: var(--gr-weight-medium);
+  font-weight: var(--gr-font-weight-medium);
 }
 
 .infoValue {
@@ -129,5 +129,5 @@
 
 .prList {
   display: flex;
-  gap: var(--gr-space-1);
+  gap: var(--gr-space-sm);
 }

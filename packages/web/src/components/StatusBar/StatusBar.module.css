@@ -1,7 +1,7 @@
 .statusBar {
   display: flex;
   align-items: center;
-  padding: var(--gr-space-1) var(--gr-space-4);
+  padding: var(--gr-space-sm) var(--gr-space-xl);
   border-top: 1px solid var(--gr-color-border-default);
   background: var(--gr-color-bg-subtle);
 }

@@ -22,21 +22,21 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: var(--gr-space-2);
-  padding: var(--gr-space-2) var(--gr-space-3);
+  gap: var(--gr-space-md);
+  padding: var(--gr-space-md) var(--gr-space-lg);
   background: var(--gr-color-bg-subtle);
   border-bottom: 1px solid var(--gr-color-border-muted);
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-sm);
-  font-weight: var(--gr-weight-medium);
+  font-weight: var(--gr-font-weight-medium);
   color: var(--gr-color-text-primary);
 }
 
 .changeBadge {
-  padding: 0 var(--gr-space-1);
+  padding: 0 var(--gr-space-sm);
   border-radius: 3px;
   font-size: var(--gr-text-xs);
-  font-weight: var(--gr-weight-semibold);
+  font-weight: var(--gr-font-weight-semibold);
 }
 
 .badgeAdded {
@@ -74,7 +74,7 @@
 }
 
 .hunkHeader {
-  padding: var(--gr-space-1) var(--gr-space-3);
+  padding: var(--gr-space-sm) var(--gr-space-lg);
   background: var(--gr-color-bg-surface);
   color: var(--gr-color-text-muted);
   font-size: var(--gr-text-xs);
@@ -87,7 +87,7 @@
 }
 
 .gutter {
-  padding: 0 var(--gr-space-2);
+  padding: 0 var(--gr-space-md);
   color: var(--gr-color-text-muted);
   text-align: right;
   user-select: none;
@@ -95,7 +95,7 @@
 }
 
 .content {
-  padding: 0 var(--gr-space-2);
+  padding: 0 var(--gr-space-md);
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }

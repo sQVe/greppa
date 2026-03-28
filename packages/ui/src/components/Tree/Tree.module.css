@@ -1,33 +1,33 @@
-.tree {
+.root {
   height: 100%;
   overflow: auto;
-  padding: var(--gr-space-2) 0;
+  padding: var(--gr-space-md) 0;
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-sm);
   outline: none;
 }
 
-.treeItem {
+.item {
   display: flex;
   align-items: center;
-  gap: var(--gr-space-1);
-  padding: var(--gr-space-1) var(--gr-space-2);
+  gap: var(--gr-space-sm);
+  padding: var(--gr-space-sm) var(--gr-space-md);
   cursor: pointer;
   outline: none;
-  border-radius: 2px;
+  border-radius: var(--gr-radius-sm);
 }
 
-.treeItem[data-selected] {
+.item[data-selected] {
   background: var(--gr-color-bg-interactive);
   color: var(--gr-color-text-on-interactive);
 }
 
-.treeItem[data-focused] {
+.item[data-focused] {
   outline: 2px solid var(--gr-color-bg-interactive);
   outline-offset: -2px;
 }
 
-.treeItem[data-hovered]:not([data-selected]) {
+.item[data-hovered]:not([data-selected]) {
   background: var(--gr-color-bg-surface-hover);
 }
 
@@ -56,34 +56,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.badge {
-  flex-shrink: 0;
-  padding: 0 var(--gr-space-1);
-  border-radius: 2px;
-  font-family: var(--gr-font-mono);
-  font-size: var(--gr-text-xs);
-  font-weight: var(--gr-font-weight-medium);
-  line-height: 1.4;
-}
-
-.badgeA {
-  background: var(--gr-color-diff-added-bg);
-  color: var(--gr-color-text-success);
-}
-
-.badgeM {
-  background: var(--gr-color-diff-modified-bg);
-  color: var(--gr-color-text-warning);
-}
-
-.badgeD {
-  background: var(--gr-color-diff-removed-bg);
-  color: var(--gr-color-text-danger);
-}
-
-.badgeR {
-  background: var(--gr-color-bg-surface);
-  color: var(--gr-color-text-muted);
 }

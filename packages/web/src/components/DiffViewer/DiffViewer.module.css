@@ -6,57 +6,20 @@
   line-height: var(--gr-leading-code);
 }
 
-.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--gr-color-text-muted);
-  font-family: var(--gr-font-ui);
-  font-size: var(--gr-text-sm);
-}
-
 .fileHeader {
   position: sticky;
   top: 0;
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: var(--gr-space-2);
-  padding: var(--gr-space-2) var(--gr-space-3);
+  gap: var(--gr-space-md);
+  padding: var(--gr-space-md) var(--gr-space-lg);
   background: var(--gr-color-bg-subtle);
   border-bottom: 1px solid var(--gr-color-border-muted);
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-sm);
-  font-weight: var(--gr-weight-medium);
+  font-weight: var(--gr-font-weight-medium);
   color: var(--gr-color-text-primary);
-}
-
-.changeBadge {
-  padding: 0 var(--gr-space-1);
-  border-radius: 3px;
-  font-size: var(--gr-text-xs);
-  font-weight: var(--gr-weight-semibold);
-}
-
-.badgeAdded {
-  background: var(--gr-color-bg-success);
-  color: var(--gr-color-text-success);
-}
-
-.badgeDeleted {
-  background: var(--gr-color-bg-danger);
-  color: var(--gr-color-text-danger);
-}
-
-.badgeModified {
-  background: var(--gr-color-bg-warning);
-  color: var(--gr-color-text-warning);
-}
-
-.badgeRenamed {
-  background: var(--gr-color-bg-warning);
-  color: var(--gr-color-text-warning);
 }
 
 .splitContainer {
@@ -74,7 +37,7 @@
 }
 
 .hunkHeader {
-  padding: var(--gr-space-1) var(--gr-space-3);
+  padding: var(--gr-space-sm) var(--gr-space-lg);
   background: var(--gr-color-bg-surface);
   color: var(--gr-color-text-muted);
   font-size: var(--gr-text-xs);
@@ -87,7 +50,7 @@
 }
 
 .gutter {
-  padding: 0 var(--gr-space-2);
+  padding: 0 var(--gr-space-md);
   color: var(--gr-color-text-muted);
   text-align: right;
   user-select: none;
@@ -95,7 +58,7 @@
 }
 
 .content {
-  padding: 0 var(--gr-space-2);
+  padding: 0 var(--gr-space-md);
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }

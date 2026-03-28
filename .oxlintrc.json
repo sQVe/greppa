@@ -258,6 +258,12 @@
         "eslint/no-empty-function": "off",
         "eslint/max-nested-callbacks": "off"
       }
+    },
+    {
+      "files": ["packages/ui/src/**/*.tsx"],
+      "rules": {
+        "react/no-multi-comp": "off"
+      }
     }
   ]
 }

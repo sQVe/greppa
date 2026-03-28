@@ -1,0 +1,18 @@
+id: no-direct-react-aria-import
+language: Tsx
+severity: error
+message: Import react-aria-components from @greppa/ui instead of using it directly.
+note: All React Aria primitives must be re-exported through packages/ui.
+files:
+  - 'packages/**/*.ts'
+  - 'packages/**/*.tsx'
+ignores:
+  - 'packages/ui/**'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+rule:
+  kind: import_statement
+  has:
+    stopBy: end
+    kind: string_fragment
+    regex: ^react-aria-components$

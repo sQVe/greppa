@@ -1,0 +1,9 @@
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--gr-color-text-muted);
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-sm);
+}

@@ -1,8 +1,6 @@
-import { Button, Collection, Tree, TreeItem, TreeItemContent } from 'react-aria-components';
+import { Badge, Tree } from '@greppa/ui';
 
-import type { FileNode } from '../../fixtures/types';
-
-import styles from './FileTree.module.css';
+import type { ChangeType, FileNode } from '../../fixtures/types';
 
 interface FileTreeProps {
   files: FileNode[];
@@ -10,7 +8,7 @@ interface FileTreeProps {
   onSelectFile: (path: string) => void;
 }
 
-const CHANGE_TYPE_LABELS: Record<string, string> = {
+const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
   added: 'A',
   modified: 'M',
   deleted: 'D',
@@ -24,23 +22,21 @@ const collectDirectoryIds = (nodes: FileNode[]): string[] =>
 
 const renderItem = (node: FileNode) => {
   const isDirectory = node.type === 'directory';
-  const badge = node.changeType != null ? CHANGE_TYPE_LABELS[node.changeType] : null;
+  const { changeType } = node;
 
   return (
-    <TreeItem key={node.path} id={node.path} textValue={node.name} className={styles.treeItem}>
-      <TreeItemContent>
-        {isDirectory ? (
-          <Button slot="chevron" className={styles.chevron}>
-            ▸
-          </Button>
+    <Tree.Item key={node.path} id={node.path} textValue={node.name}>
+      <Tree.ItemContent>
+        {isDirectory ? <Tree.Chevron /> : null}
+        <Tree.Label>{node.name}</Tree.Label>
+        {changeType != null ? (
+          <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
         ) : null}
-        <span className={styles.label}>{node.name}</span>
-        {badge != null ? (
-          <span className={`${styles.badge} ${styles[`badge${badge}`] ?? ''}`}>{badge}</span>
-        ) : null}
-      </TreeItemContent>
-      {isDirectory ? <Collection items={node.children ?? []}>{renderItem}</Collection> : null}
-    </TreeItem>
+      </Tree.ItemContent>
+      {isDirectory ? (
+        <Tree.Collection items={node.children ?? []}>{renderItem}</Tree.Collection>
+      ) : null}
+    </Tree.Item>
   );
 };
 
@@ -48,9 +44,8 @@ export const FileTree = ({ files, selectedFilePath, onSelectFile }: FileTreeProp
   const expandedKeys = collectDirectoryIds(files);
 
   return (
-    <Tree
+    <Tree.Root
       aria-label="File tree"
-      className={styles.tree}
       selectionMode="single"
       selectedKeys={selectedFilePath != null ? [selectedFilePath] : []}
       defaultExpandedKeys={expandedKeys}
@@ -64,7 +59,7 @@ export const FileTree = ({ files, selectedFilePath, onSelectFile }: FileTreeProp
         }
       }}
     >
-      <Collection items={files}>{renderItem}</Collection>
-    </Tree>
+      <Tree.Collection items={files}>{renderItem}</Tree.Collection>
+    </Tree.Root>
   );
 };

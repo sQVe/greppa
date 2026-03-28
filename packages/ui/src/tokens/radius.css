@@ -1,0 +1,6 @@
+:root {
+  --gr-radius-sm: 2px;
+  --gr-radius-md: 4px;
+  --gr-radius-lg: 8px;
+  --gr-radius-full: 9999px;
+}

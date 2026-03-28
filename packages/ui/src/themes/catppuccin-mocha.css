@@ -25,6 +25,7 @@
   --gr-color-bg-interactive: #b4befe;
   --gr-color-bg-interactive-hover: #c3c8f0;
   --gr-color-text-interactive: #b4befe;
+  --gr-color-text-on-interactive: #1e1e2e;
 
   /* Status */
   --gr-color-bg-success: rgb(166 227 161 / 15%);
@@ -81,6 +82,7 @@
     --gr-color-bg-interactive: #b4befe;
     --gr-color-bg-interactive-hover: #c3c8f0;
     --gr-color-text-interactive: #b4befe;
+    --gr-color-text-on-interactive: #1e1e2e;
 
     /* Status */
     --gr-color-bg-success: rgb(166 227 161 / 15%);

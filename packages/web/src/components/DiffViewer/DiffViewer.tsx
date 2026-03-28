@@ -1,4 +1,6 @@
-import type { DiffFile } from '../../fixtures/types';
+import { Badge, EmptyState } from '@greppa/ui';
+
+import type { ChangeType, DiffFile } from '../../fixtures/types';
 import { useTheme } from '../../hooks/useTheme';
 import type { DiffRow } from './buildRows';
 import { buildRows } from './buildRows';
@@ -13,14 +15,15 @@ interface DiffViewerProps {
 
 interface HunkData {
   header: string;
+  key: string;
   rows: DiffRow[];
 }
 
-const CHANGE_LABELS: Record<string, { label: string; className: string }> = {
-  added: { label: 'Added', className: styles.badgeAdded ?? '' },
-  deleted: { label: 'Deleted', className: styles.badgeDeleted ?? '' },
-  modified: { label: 'Modified', className: styles.badgeModified ?? '' },
-  renamed: { label: 'Renamed', className: styles.badgeRenamed ?? '' },
+const CHANGE_LABELS: Record<ChangeType, string> = {
+  added: 'Added',
+  deleted: 'Deleted',
+  modified: 'Modified',
+  renamed: 'Renamed',
 };
 
 const SIDES = ['left', 'right'] as const;
@@ -32,12 +35,13 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
   const tokenMap = useSyntaxHighlighting(diff, theme);
 
   if (diff == null) {
-    return <div className={styles.empty}>Select a file to view diff</div>;
+    return <EmptyState>Select a file to view diff</EmptyState>;
   }
 
-  const badge = CHANGE_LABELS[diff.changeType];
-  const hunks: HunkData[] = diff.hunks.map((hunk) => ({
+  const label = CHANGE_LABELS[diff.changeType];
+  const hunks: HunkData[] = diff.hunks.map((hunk, index) => ({
     header: hunk.header,
+    key: `${index}-${hunk.header}`,
     rows: buildRows(hunk),
   }));
   const totalRows = hunks.reduce((sum, h) => sum + 1 + h.rows.length, 0);
@@ -45,9 +49,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
   return (
     <div className={styles.viewer}>
       <div className={styles.fileHeader}>
-        {badge != null ? (
-          <span className={`${styles.changeBadge} ${badge.className}`}>{badge.label}</span>
-        ) : null}
+        <Badge variant={diff.changeType}>{label}</Badge>
         <span>{diff.path}</span>
         {diff.oldPath != null ? <span>← {diff.oldPath}</span> : null}
       </div>
@@ -62,9 +64,9 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
             style={{ gridRow: `1 / span ${totalRows}` }}
             data-side={side}
           >
-            {hunks.map((hunk, index) => (
+            {hunks.map((hunk) => (
               <HunkRows
-                key={`${index}-${hunk.header}`}
+                key={hunk.key}
                 header={hunk.header}
                 rows={hunk.rows}
                 tokenMap={tokenMap}

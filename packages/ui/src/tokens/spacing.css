@@ -1,13 +1,9 @@
 :root {
-  --gr-scaling: 1;
-
-  --gr-space-1: calc(4px * var(--gr-scaling));
-  --gr-space-2: calc(8px * var(--gr-scaling));
-  --gr-space-3: calc(12px * var(--gr-scaling));
-  --gr-space-4: calc(16px * var(--gr-scaling));
-  --gr-space-5: calc(24px * var(--gr-scaling));
-  --gr-space-6: calc(32px * var(--gr-scaling));
-  --gr-space-7: calc(40px * var(--gr-scaling));
-  --gr-space-8: calc(48px * var(--gr-scaling));
-  --gr-space-9: calc(64px * var(--gr-scaling));
+  --gr-space-xs: 2px;
+  --gr-space-sm: 4px;
+  --gr-space-md: 8px;
+  --gr-space-lg: 12px;
+  --gr-space-xl: 16px;
+  --gr-space-2xl: 24px;
+  --gr-space-3xl: 32px;
 }

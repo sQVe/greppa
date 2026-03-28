@@ -27,15 +27,19 @@ export const fnv1a = (input: string): number => {
   return hash >>> 0;
 };
 
-export const resolveWorktreePorts = (name: string): { apiPort: number; devPort: number } => {
+export const resolveWorktreePorts = (
+  name: string,
+): { apiPort: number; devPort: number; playgroundPort: number } => {
   if (name === 'main') {
-    return { apiPort: 4400, devPort: 5173 };
+    return { apiPort: 4400, devPort: 5173, playgroundPort: 5174 };
   }
 
   const hash = fnv1a(name);
+  const devPort = DEV_PORT_MIN + (hash % DEV_PORT_RANGE);
   return {
     apiPort: API_PORT_MIN + (hash % API_PORT_RANGE),
-    devPort: DEV_PORT_MIN + (hash % DEV_PORT_RANGE),
+    devPort,
+    playgroundPort: devPort + 1,
   };
 };
 
@@ -48,8 +52,7 @@ const getWorktreeRoot = (): string =>
 const main = () => {
   const worktreeRoot = getWorktreeRoot();
   const name = basename(worktreeRoot);
-  const { apiPort, devPort } = resolveWorktreePorts(name);
-  const playgroundPort = devPort + 1;
+  const { apiPort, devPort, playgroundPort } = resolveWorktreePorts(name);
   const dbPath = join(worktreeRoot, '.data', 'app.db');
 
   const content = buildEnvContent({ apiPort, devPort, playgroundPort, dbPath });

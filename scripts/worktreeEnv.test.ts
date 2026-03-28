@@ -25,7 +25,7 @@ describe('worktree-env', () => {
   describe('resolveWorktreePorts', () => {
     it('returns API 4400 and DEV 5173 for "main"', () => {
       const ports = resolveWorktreePorts('main');
-      expect(ports).toEqual({ apiPort: 4400, devPort: 5173 });
+      expect(ports).toEqual({ apiPort: 4400, devPort: 5173, playgroundPort: 5174 });
     });
 
     it('returns API port in range 3100-3999 for non-main names', () => {

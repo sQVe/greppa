@@ -6,16 +6,6 @@
   line-height: var(--gr-leading-code);
 }
 
-.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--gr-color-text-muted);
-  font-family: var(--gr-font-ui);
-  font-size: var(--gr-text-sm);
-}
-
 .fileHeader {
   position: sticky;
   top: 0;
@@ -30,33 +20,6 @@
   font-size: var(--gr-text-sm);
   font-weight: var(--gr-font-weight-medium);
   color: var(--gr-color-text-primary);
-}
-
-.changeBadge {
-  padding: 0 var(--gr-space-sm);
-  border-radius: 3px;
-  font-size: var(--gr-text-xs);
-  font-weight: var(--gr-font-weight-semibold);
-}
-
-.badgeAdded {
-  background: var(--gr-color-bg-success);
-  color: var(--gr-color-text-success);
-}
-
-.badgeDeleted {
-  background: var(--gr-color-bg-danger);
-  color: var(--gr-color-text-danger);
-}
-
-.badgeModified {
-  background: var(--gr-color-bg-warning);
-  color: var(--gr-color-text-warning);
-}
-
-.badgeRenamed {
-  background: var(--gr-color-bg-warning);
-  color: var(--gr-color-text-warning);
 }
 
 .splitContainer {

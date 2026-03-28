@@ -5,16 +5,6 @@
   overflow: hidden;
 }
 
-.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--gr-color-text-muted);
-  font-family: var(--gr-font-ui);
-  font-size: var(--gr-text-sm);
-}
-
 .thread {
   padding: var(--gr-space-md) 0;
   border-bottom: 1px solid var(--gr-color-border-muted);
@@ -36,7 +26,7 @@
 .comment {
   padding: var(--gr-space-md);
   margin-bottom: var(--gr-space-sm);
-  border-radius: 4px;
+  border-radius: var(--gr-radius-md);
   background: var(--gr-color-bg-surface);
 }
 

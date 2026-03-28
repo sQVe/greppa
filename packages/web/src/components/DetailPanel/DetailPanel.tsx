@@ -1,4 +1,4 @@
-import { Tabs } from '@greppa/ui';
+import { EmptyState, Tabs } from '@greppa/ui';
 
 import type { CommentThread, FileInfo } from '../../fixtures/types';
 import { CommentsContent } from './CommentsContent';
@@ -13,7 +13,7 @@ interface DetailPanelProps {
 
 export const DetailPanel = ({ threads, fileInfo }: DetailPanelProps) => {
   if (threads.length === 0 && fileInfo == null) {
-    return <div className={styles.empty}>Select a file to view details</div>;
+    return <EmptyState>Select a file to view details</EmptyState>;
   }
 
   return (

@@ -1,6 +1,7 @@
+import { Badge } from '@greppa/ui';
 import { Button, Collection, Tree, TreeItem, TreeItemContent } from 'react-aria-components';
 
-import type { FileNode } from '../../fixtures/types';
+import type { ChangeType, FileNode } from '../../fixtures/types';
 
 import styles from './FileTree.module.css';
 
@@ -10,7 +11,7 @@ interface FileTreeProps {
   onSelectFile: (path: string) => void;
 }
 
-const CHANGE_TYPE_LABELS: Record<string, string> = {
+const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
   added: 'A',
   modified: 'M',
   deleted: 'D',
@@ -24,7 +25,7 @@ const collectDirectoryIds = (nodes: FileNode[]): string[] =>
 
 const renderItem = (node: FileNode) => {
   const isDirectory = node.type === 'directory';
-  const badge = node.changeType != null ? CHANGE_TYPE_LABELS[node.changeType] : null;
+  const { changeType } = node;
 
   return (
     <TreeItem key={node.path} id={node.path} textValue={node.name} className={styles.treeItem}>
@@ -35,8 +36,8 @@ const renderItem = (node: FileNode) => {
           </Button>
         ) : null}
         <span className={styles.label}>{node.name}</span>
-        {badge != null ? (
-          <span className={`${styles.badge} ${styles[`badge${badge}`] ?? ''}`}>{badge}</span>
+        {changeType != null ? (
+          <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
         ) : null}
       </TreeItemContent>
       {isDirectory ? <Collection items={node.children ?? []}>{renderItem}</Collection> : null}

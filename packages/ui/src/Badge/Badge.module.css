@@ -1,0 +1,28 @@
+.badge {
+  flex-shrink: 0;
+  padding: 0 var(--gr-space-sm);
+  border-radius: var(--gr-radius-sm);
+  font-size: var(--gr-text-xs);
+  font-weight: var(--gr-font-weight-semibold);
+  line-height: 1.4;
+}
+
+.added {
+  background: var(--gr-color-bg-success);
+  color: var(--gr-color-text-success);
+}
+
+.deleted {
+  background: var(--gr-color-bg-danger);
+  color: var(--gr-color-text-danger);
+}
+
+.modified {
+  background: var(--gr-color-bg-warning);
+  color: var(--gr-color-text-warning);
+}
+
+.renamed {
+  background: var(--gr-color-bg-surface);
+  color: var(--gr-color-text-muted);
+}

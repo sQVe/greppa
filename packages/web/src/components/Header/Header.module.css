@@ -17,7 +17,7 @@
 .themePicker {
   padding: var(--gr-space-sm) var(--gr-space-md);
   border: 1px solid var(--gr-color-border-default);
-  border-radius: 4px;
+  border-radius: var(--gr-radius-md);
   background: var(--gr-color-bg-surface);
   color: var(--gr-color-text-primary);
   font-family: var(--gr-font-ui);

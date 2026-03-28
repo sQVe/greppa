@@ -47,9 +47,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
   return (
     <div className={styles.viewer}>
       <div className={styles.fileHeader}>
-        {label != null ? (
-          <Badge variant={diff.changeType}>{label}</Badge>
-        ) : null}
+        <Badge variant={diff.changeType}>{label}</Badge>
         <span>{diff.path}</span>
         {diff.oldPath != null ? <span>← {diff.oldPath}</span> : null}
       </div>

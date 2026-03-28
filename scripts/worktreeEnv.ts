@@ -5,6 +5,7 @@ import { basename, join } from 'node:path';
 interface EnvConfig {
   apiPort: number;
   devPort: number;
+  playgroundPort: number;
   dbPath: string;
 }
 
@@ -38,8 +39,8 @@ export const resolveWorktreePorts = (name: string): { apiPort: number; devPort: 
   };
 };
 
-export const buildEnvContent = ({ apiPort, devPort, dbPath }: EnvConfig): string =>
-  `API_PORT=${apiPort}\nDEV_PORT=${devPort}\nDB_PATH=${dbPath}\n`;
+export const buildEnvContent = ({ apiPort, devPort, playgroundPort, dbPath }: EnvConfig): string =>
+  `API_PORT=${apiPort}\nDEV_PORT=${devPort}\nPLAYGROUND_PORT=${playgroundPort}\nDB_PATH=${dbPath}\n`;
 
 const getWorktreeRoot = (): string =>
   execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
@@ -48,13 +49,14 @@ const main = () => {
   const worktreeRoot = getWorktreeRoot();
   const name = basename(worktreeRoot);
   const { apiPort, devPort } = resolveWorktreePorts(name);
+  const playgroundPort = devPort + 1;
   const dbPath = join(worktreeRoot, '.data', 'app.db');
 
-  const content = buildEnvContent({ apiPort, devPort, dbPath });
+  const content = buildEnvContent({ apiPort, devPort, playgroundPort, dbPath });
   const envPath = join(worktreeRoot, '.env.local');
   writeFileSync(envPath, content);
 
-  const summary = `wrote ${envPath}\n  API_PORT=${apiPort}\n  DEV_PORT=${devPort}\n  DB_PATH=${dbPath}\n`;
+  const summary = `wrote ${envPath}\n  API_PORT=${apiPort}\n  DEV_PORT=${devPort}\n  PLAYGROUND_PORT=${playgroundPort}\n  DB_PATH=${dbPath}\n`;
   process.stdout.write(summary);
 };
 

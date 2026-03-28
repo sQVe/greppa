@@ -54,15 +54,22 @@ describe('worktree-env', () => {
   });
 
   describe('buildEnvContent', () => {
-    it('formats .env.local content with API_PORT, DEV_PORT, and DB_PATH', () => {
+    it('formats .env.local content with all port and path variables', () => {
       const content = buildEnvContent({
         apiPort: 3200,
         devPort: 5200,
+        playgroundPort: 5201,
         dbPath: '/tmp/worktree/.data/app.db',
       });
 
       expect(content).toBe(
-        ['API_PORT=3200', 'DEV_PORT=5200', 'DB_PATH=/tmp/worktree/.data/app.db', ''].join('\n'),
+        [
+          'API_PORT=3200',
+          'DEV_PORT=5200',
+          'PLAYGROUND_PORT=5201',
+          'DB_PATH=/tmp/worktree/.data/app.db',
+          '',
+        ].join('\n'),
       );
     });
   });

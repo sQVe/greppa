@@ -4,11 +4,10 @@ import { userEvent } from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Tabs } from '.';
-import type { List } from './List';
+import { Tabs } from './Tabs';
 
 const renderTabs = (
-  props?: Partial<Parameters<typeof List>[0]> & { children?: ReactNode },
+  props?: Partial<Parameters<typeof Tabs.List>[0]> & { children?: ReactNode },
 ) => {
   const { children, ...listProps } = props ?? {};
   render(

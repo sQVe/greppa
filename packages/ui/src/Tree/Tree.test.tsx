@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Tree } from '.';
+import { Tree } from './Tree';
 
 const renderTree = (rootProps?: Partial<Parameters<typeof Tree.Root>[0]>) =>
   render(

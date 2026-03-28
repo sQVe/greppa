@@ -17,6 +17,11 @@
   font-weight: var(--gr-font-weight-medium);
 }
 
+.trigger:focus-visible {
+  outline: 2px solid var(--gr-color-bg-interactive);
+  outline-offset: -2px;
+}
+
 .trigger[data-state='active'] {
   color: var(--gr-color-text-interactive);
   border-bottom-color: var(--gr-color-bg-interactive);

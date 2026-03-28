@@ -64,9 +64,9 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
             style={{ gridRow: `1 / span ${totalRows}` }}
             data-side={side}
           >
-            {hunks.map((hunk, index) => (
+            {hunks.map((hunk) => (
               <HunkRows
-                key={`${index}-${hunk.header}`}
+                key={hunk.header}
                 header={hunk.header}
                 rows={hunk.rows}
                 tokenMap={tokenMap}

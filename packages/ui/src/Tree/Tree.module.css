@@ -1,4 +1,4 @@
-.tree {
+.root {
   height: 100%;
   overflow: auto;
   padding: var(--gr-space-md) 0;
@@ -7,7 +7,7 @@
   outline: none;
 }
 
-.treeItem {
+.item {
   display: flex;
   align-items: center;
   gap: var(--gr-space-sm);
@@ -17,17 +17,17 @@
   border-radius: var(--gr-radius-sm);
 }
 
-.treeItem[data-selected] {
+.item[data-selected] {
   background: var(--gr-color-bg-interactive);
   color: var(--gr-color-text-on-interactive);
 }
 
-.treeItem[data-focused] {
+.item[data-focused] {
   outline: 2px solid var(--gr-color-bg-interactive);
   outline-offset: -2px;
 }
 
-.treeItem[data-hovered]:not([data-selected]) {
+.item[data-hovered]:not([data-selected]) {
   background: var(--gr-color-bg-surface-hover);
 }
 

@@ -10,8 +10,6 @@ ignores:
   - 'packages/ui/**'
   - '**/*.test.ts'
   - '**/*.test.tsx'
-  # Known violation — will be migrated to @greppa/ui Tree component
-  - 'packages/web/src/components/FileTree/FileTree.tsx'
 rule:
   kind: import_statement
   has:

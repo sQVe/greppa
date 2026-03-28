@@ -60,19 +60,19 @@ entry point to database query.
 
 ## Frontend
 
-| Layer                | Choice                              | Rationale                                                                                                                                         |
-| -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| UI framework         | React 19                            | Largest ecosystem. Virtualization caps mounted DOM at ~50-100 nodes, so VDOM overhead is negligible                                               |
-| Component primitives | Radix UI                            | Unstyled Dialog, Menu, Tooltip, Tabs, Toast, Toggle. CSS Modules compatible. Greppa owns its visual identity                                      |
-| File tree            | React Aria Tree                     | Accessible `aria-tree` roles, keyboard nav (arrows, Home/End, expand/collapse), virtualization support                                            |
-| Split pane           | react-resizable-panels              | Keyboard accessible, min/max constraints, localStorage persistence                                                                                |
-| Virtualization       | react-virtuoso                      | Zero-config dynamic row heights via ResizeObserver (critical for variable-size diff hunks), native sticky headers                                 |
-| Syntax highlighting  | Shiki                               | TextMate grammars (VS Code accuracy), singleton highlighter instance, streaming tokenization for large files                                      |
-| Diff rendering       | Custom (react-virtuoso + Shiki)     | No off-the-shelf renderer supports inline comments + virtualization + side-by-side/unified toggle + sticky context headers                        |
-| State management     | React state + custom hooks          | `useState`/`useReducer` + custom hooks for shared concerns. Add Jotai or Zustand later only if cross-component state coordination becomes painful |
-| Styling              | CSS Modules + CSS custom properties | `.module.css` files with scoped class names. Zero runtime. Theming via custom properties on `[data-theme]`                                        |
-| Component isolation  | Ladle                               | React-only, Vite + SWC native, zero config, CSF-compatible. Sub-2s cold start. Lives in `packages/ui`                                             |
-| Build tool           | Vite+ (`vp`)                        | Drop-in Vite superset. Sub-1s cold starts, HMR, WASM plugin support for Shiki's Oniguruma binary                                                  |
+| Layer                | Choice                                      | Rationale                                                                                                                                         |
+| -------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI framework         | React 19                                    | Largest ecosystem. Virtualization caps mounted DOM at ~50-100 nodes, so VDOM overhead is negligible                                               |
+| Component primitives | Radix UI                                    | Unstyled Dialog, Menu, Tooltip, Tabs, Toast, Toggle. CSS Modules compatible. Greppa owns its visual identity                                      |
+| File tree            | React Aria Tree                             | Accessible `aria-tree` roles, keyboard nav (arrows, Home/End, expand/collapse), virtualization support                                            |
+| Split pane           | react-resizable-panels                      | Keyboard accessible, min/max constraints, localStorage persistence                                                                                |
+| Virtualization       | react-virtuoso                              | Zero-config dynamic row heights via ResizeObserver (critical for variable-size diff hunks), native sticky headers                                 |
+| Syntax highlighting  | Shiki                                       | TextMate grammars (VS Code accuracy), singleton highlighter instance, streaming tokenization for large files                                      |
+| Diff rendering       | Custom (react-virtuoso + Shiki)             | No off-the-shelf renderer supports inline comments + virtualization + side-by-side/unified toggle + sticky context headers                        |
+| State management     | React state + custom hooks                  | `useState`/`useReducer` + custom hooks for shared concerns. Add Jotai or Zustand later only if cross-component state coordination becomes painful |
+| Styling              | CSS Modules + CSS custom properties         | `.module.css` files with scoped class names. Zero runtime. Theming via custom properties on `[data-theme]`                                        |
+| Component isolation  | Vite playground (`packages/ui/playground/`) | Co-located `*.preview.tsx` files auto-discovered via `import.meta.glob`. No external tool needed                                                  |
+| Build tool           | Vite+ (`vp`)                                | Drop-in Vite superset. Sub-1s cold starts, HMR, WASM plugin support for Shiki's Oniguruma binary                                                  |
 
 ### Why Radix over Mantine
 

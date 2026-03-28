@@ -1,0 +1,93 @@
+.layout {
+  display: grid;
+  grid-template-areas:
+    'toolbar toolbar'
+    'sidebar preview';
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+}
+
+.toolbar {
+  grid-area: toolbar;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gr-space-md) var(--gr-space-xl);
+  border-bottom: 1px solid var(--gr-color-border-default);
+  background: var(--gr-color-bg-subtle);
+}
+
+.logo {
+  font-size: var(--gr-text-lg);
+  font-weight: var(--gr-font-weight-semibold);
+  color: var(--gr-color-text-primary);
+}
+
+.themePicker {
+  padding: var(--gr-space-sm) var(--gr-space-md);
+  border: 1px solid var(--gr-color-border-default);
+  border-radius: var(--gr-radius-md);
+  background: var(--gr-color-bg-surface);
+  color: var(--gr-color-text-primary);
+  font-size: var(--gr-text-sm);
+}
+
+.sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gr-space-xs);
+  padding: var(--gr-space-sm);
+  border-right: 1px solid var(--gr-color-border-default);
+  background: var(--gr-color-bg-subtle);
+  overflow-y: auto;
+}
+
+.sidebarButton {
+  padding: var(--gr-space-xs) var(--gr-space-sm);
+  border: none;
+  border-radius: var(--gr-radius-sm);
+  background: transparent;
+  color: var(--gr-color-text-secondary);
+  font-size: var(--gr-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebarButton:hover {
+  background: var(--gr-color-bg-surface-hover);
+}
+
+.sidebarButtonActive {
+  background: var(--gr-color-bg-surface);
+  color: var(--gr-color-text-primary);
+  font-weight: var(--gr-font-weight-semibold);
+}
+
+.preview {
+  grid-area: preview;
+  padding: var(--gr-space-xl);
+  overflow: auto;
+  background: var(--gr-color-bg-default);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gr-space-lg);
+}
+
+.sectionLabel {
+  font-size: var(--gr-text-xs);
+  font-weight: var(--gr-font-weight-semibold);
+  color: var(--gr-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sectionDivider {
+  border: none;
+  border-top: 1px solid var(--gr-color-border-muted);
+  margin: var(--gr-space-md) 0;
+}

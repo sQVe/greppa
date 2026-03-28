@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 import {
   Button,
   Collection,
+  composeRenderProps,
   Tree as RACTree,
   TreeItem,
   TreeItemContent,
@@ -11,19 +12,35 @@ import {
 import styles from './Tree.module.css';
 
 const Root = ({ className, ...props }: ComponentProps<typeof RACTree>) => (
-  <RACTree className={clsx(styles.root, className)} {...props} />
+  <RACTree
+    {...props}
+    className={composeRenderProps(className, (resolved) =>
+      clsx(styles.root, resolved),
+    )}
+  />
 );
 
 const Item = ({ className, ...props }: ComponentProps<typeof TreeItem>) => (
-  <TreeItem className={clsx(styles.item, className)} {...props} />
+  <TreeItem
+    {...props}
+    className={composeRenderProps(className, (resolved) =>
+      clsx(styles.item, resolved),
+    )}
+  />
 );
 
 const Chevron = ({
   className,
   children = '▸',
   ...props
-}: ComponentProps<typeof Button>) => (
-  <Button slot="chevron" className={clsx(styles.chevron, className)} {...props}>
+}: Omit<ComponentProps<typeof Button>, 'slot'>) => (
+  <Button
+    {...props}
+    slot="chevron"
+    className={composeRenderProps(className, (resolved) =>
+      clsx(styles.chevron, resolved),
+    )}
+  >
     {children}
   </Button>
 );

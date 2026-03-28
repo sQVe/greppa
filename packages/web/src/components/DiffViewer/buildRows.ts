@@ -13,7 +13,7 @@ export interface DiffRow {
   right: RowSide | null;
 }
 
-export const buildRows = (hunk: DiffHunk): DiffRow[] => {
+export const buildRows = (hunk: DiffHunk) => {
   const rows: DiffRow[] = [];
   let pendingRemoved: DiffLine[] = [];
   let pendingAdded: DiffLine[] = [];

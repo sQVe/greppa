@@ -1,6 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { fnv1a, resolveWorktreePorts, buildEnvContent } from './worktreeEnv';
+import {
+  fnv1a,
+  resolveWorktreePorts,
+  buildEnvContent,
+  buildCaddySnippet,
+  resolveCaddyDomain,
+  writeCaddySnippet,
+  writeCaddyfile,
+  reloadCaddy,
+} from './worktreeEnv';
 
 describe('worktree-env', () => {
   describe('fnv1a', () => {
@@ -56,12 +68,13 @@ describe('worktree-env', () => {
   });
 
   describe('buildEnvContent', () => {
-    it('formats .env.local content with all port and path variables', () => {
+    it('formats .env.local content with all port, path, and domain variables', () => {
       const content = buildEnvContent({
         apiPort: 3200,
         devPort: 5200,
         playgroundPort: 5201,
         dbPath: '/tmp/worktree/.data/app.db',
+        caddyDomain: 'feat-auth.greppa.localhost',
       });
 
       expect(content).toBe(
@@ -70,6 +83,142 @@ describe('worktree-env', () => {
           'DEV_PORT=5200',
           'PLAYGROUND_PORT=5201',
           'DB_PATH=/tmp/worktree/.data/app.db',
+          'CADDY_DOMAIN=feat-auth.greppa.localhost',
+          '',
+        ].join('\n'),
+      );
+    });
+  });
+
+  describe('writeCaddySnippet', () => {
+    let tempDir: string;
+
+    beforeEach(() => {
+      tempDir = mkdtempSync(join(tmpdir(), 'caddy-test-'));
+    });
+
+    afterEach(() => {
+      rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('writes snippet file to the given directory', () => {
+      writeCaddySnippet({
+        name: 'main',
+        apiPort: 4400,
+        devPort: 5173,
+        playgroundPort: 5174,
+        caddyDir: tempDir,
+      });
+
+      const snippetPath = join(tempDir, 'main.caddy');
+      expect(existsSync(snippetPath)).toBe(true);
+      expect(readFileSync(snippetPath, 'utf-8')).toContain('greppa.localhost');
+    });
+
+    it('creates the directory if it does not exist', () => {
+      const nestedDir = join(tempDir, 'nested', 'dir');
+      writeCaddySnippet({
+        name: 'feat-auth',
+        apiPort: 3200,
+        devPort: 5200,
+        playgroundPort: 5201,
+        caddyDir: nestedDir,
+      });
+
+      expect(existsSync(join(nestedDir, 'feat-auth.caddy'))).toBe(true);
+    });
+  });
+
+  describe('writeCaddyfile', () => {
+    let tempDir: string;
+
+    beforeEach(() => {
+      tempDir = mkdtempSync(join(tmpdir(), 'caddy-test-'));
+    });
+
+    afterEach(() => {
+      rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('creates Caddyfile with import glob', () => {
+      writeCaddyfile(tempDir);
+
+      const caddyfilePath = join(tempDir, 'Caddyfile');
+      expect(readFileSync(caddyfilePath, 'utf-8')).toBe('import ./*.caddy\n');
+    });
+
+    it('does not overwrite existing Caddyfile', () => {
+      const caddyfilePath = join(tempDir, 'Caddyfile');
+      writeFileSync(caddyfilePath, 'custom content\n');
+
+      writeCaddyfile(tempDir);
+
+      expect(readFileSync(caddyfilePath, 'utf-8')).toBe('custom content\n');
+    });
+  });
+
+  describe('reloadCaddy', () => {
+    it('does not throw when caddy is not installed', () => {
+      expect(() =>{  reloadCaddy('/nonexistent/path/Caddyfile'); }).not.toThrow();
+    });
+  });
+
+  describe('resolveCaddyDomain', () => {
+    it('returns greppa.localhost for main worktree', () => {
+      expect(resolveCaddyDomain('main')).toBe('greppa.localhost');
+    });
+
+    it('returns prefixed domain for non-main worktree', () => {
+      expect(resolveCaddyDomain('feat-auth')).toBe('feat-auth.greppa.localhost');
+    });
+  });
+
+  describe('buildCaddySnippet', () => {
+    it('generates Caddy config for main worktree', () => {
+      const snippet = buildCaddySnippet({
+        name: 'main',
+        apiPort: 4400,
+        devPort: 5173,
+        playgroundPort: 5174,
+      });
+
+      expect(snippet).toBe(
+        [
+          'greppa.localhost {',
+          '  handle /api/* {',
+          '    reverse_proxy localhost:4400',
+          '  }',
+          '  reverse_proxy localhost:5173',
+          '}',
+          '',
+          'playground.greppa.localhost {',
+          '  reverse_proxy localhost:5174',
+          '}',
+          '',
+        ].join('\n'),
+      );
+    });
+
+    it('generates Caddy config for non-main worktree', () => {
+      const snippet = buildCaddySnippet({
+        name: 'feat-auth',
+        apiPort: 3200,
+        devPort: 5200,
+        playgroundPort: 5201,
+      });
+
+      expect(snippet).toBe(
+        [
+          'feat-auth.greppa.localhost {',
+          '  handle /api/* {',
+          '    reverse_proxy localhost:3200',
+          '  }',
+          '  reverse_proxy localhost:5200',
+          '}',
+          '',
+          'playground.feat-auth.greppa.localhost {',
+          '  reverse_proxy localhost:5201',
+          '}',
           '',
         ].join('\n'),
       );

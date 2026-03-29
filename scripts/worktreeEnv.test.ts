@@ -34,10 +34,12 @@ describe('worktree-env', () => {
       expect(apiPort).toBeLessThanOrEqual(3999);
     });
 
-    it('returns DEV port in range 5100-5999 for non-main names', () => {
-      const { devPort } = resolveWorktreePorts('feature-auth');
+    it('returns non-overlapping DEV and PLAYGROUND port pair for non-main names', () => {
+      const { devPort, playgroundPort } = resolveWorktreePorts('feature-auth');
       expect(devPort).toBeGreaterThanOrEqual(5100);
-      expect(devPort).toBeLessThanOrEqual(5999);
+      expect(devPort).toBeLessThanOrEqual(5998);
+      expect(devPort % 2).toBe(0);
+      expect(playgroundPort).toBe(devPort + 1);
     });
 
     it('produces identical ports for the same name', () => {

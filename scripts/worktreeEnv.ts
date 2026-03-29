@@ -35,11 +35,11 @@ export const resolveWorktreePorts = (
   }
 
   const hash = fnv1a(name);
-  const devPort = DEV_PORT_MIN + (hash % DEV_PORT_RANGE);
+  const pairBase = DEV_PORT_MIN + (hash % Math.floor(DEV_PORT_RANGE / 2)) * 2;
   return {
     apiPort: API_PORT_MIN + (hash % API_PORT_RANGE),
-    devPort,
-    playgroundPort: devPort + 1,
+    devPort: pairBase,
+    playgroundPort: pairBase + 1,
   };
 };
 

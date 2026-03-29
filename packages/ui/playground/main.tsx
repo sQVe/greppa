@@ -8,10 +8,12 @@ import '../src/tokens.css';
 import { App } from './App';
 
 const root = document.getElementById('root');
-if (root != null) {
-  createRoot(root).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
+if (root == null) {
+  throw new Error('Missing #root mount element');
 }
+
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

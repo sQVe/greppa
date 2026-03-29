@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--gr-space-lg);
   padding: var(--gr-space-md) var(--gr-space-xl);
   background: var(--gr-color-bg-subtle);
 }
@@ -17,17 +18,20 @@
   display: flex;
   align-items: center;
   gap: var(--gr-space-md);
+  min-width: 0;
+  font-family: var(--gr-font-mono);
+  font-size: var(--gr-text-sm);
 }
 
 .filePath {
-  font-family: var(--gr-font-mono);
-  font-size: var(--gr-text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--gr-color-text-primary);
 }
 
 .oldPath {
-  font-family: var(--gr-font-mono);
-  font-size: var(--gr-text-sm);
+  flex-shrink: 0;
   color: var(--gr-color-text-muted);
 }
 

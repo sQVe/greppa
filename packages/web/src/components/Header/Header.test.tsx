@@ -68,9 +68,14 @@ describe('Header', () => {
       expect(screen.getByText('← src/old.ts')).toBeDefined();
     });
 
-    it('does not render file info when no filePath is provided', () => {
-      render(<Header />);
-      expect(screen.queryByText('Modified')).toBeNull();
+    it('does not render file info when no props are provided', () => {
+      const { container } = render(<Header />);
+      expect(container.querySelector('[class*="fileInfo"]')).toBeNull();
+    });
+
+    it('does not render file info when changeType is provided without filePath', () => {
+      const { container } = render(<Header changeType="modified" />);
+      expect(container.querySelector('[class*="fileInfo"]')).toBeNull();
     });
   });
 });

@@ -52,6 +52,8 @@ const testFileInfoMap = new Map<string, FileInfo>([
     'src/a.ts',
     {
       path: 'src/a.ts',
+      language: 'TypeScript',
+      encoding: 'UTF-8',
       lastModified: '2026-01-01T00:00:00Z',
       changeFrequency: 5,
       authors: ['alice'],

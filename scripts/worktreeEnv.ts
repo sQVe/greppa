@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -91,9 +91,19 @@ export const writeCaddySnippet = ({ name, apiPort, devPort, playgroundPort, cadd
 
 export const reloadCaddy = (caddyfilePath: string) => {
   try {
-    execSync(`caddy reload --config ${caddyfilePath}`, { stdio: 'ignore' });
-  } catch {
-    // caddy not installed or not running — skip
+    execFileSync('caddy', ['reload', '--config', caddyfilePath], {
+      stdio: 'ignore',
+    });
+  } catch (error: unknown) {
+    const code =
+      error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+    if (code === 'ENOENT') {
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.warn(
+      `caddy reload failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 };
 

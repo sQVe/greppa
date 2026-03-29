@@ -48,4 +48,29 @@ describe('Header', () => {
     await userEvent.selectOptions(select, 'catppuccin-latte');
     expect(mockSetTheme).toHaveBeenCalledWith('catppuccin-latte');
   });
+
+  describe('file info', () => {
+    it('renders file path when filePath is provided', () => {
+      render(<Header filePath="src/auth/validateToken.ts" changeType="modified" />);
+      expect(screen.getByText('src/auth/validateToken.ts')).toBeDefined();
+    });
+
+    it('renders change type badge when changeType is provided', () => {
+      render(<Header filePath="src/auth/validateToken.ts" changeType="modified" />);
+      expect(screen.getByText('Modified')).toBeDefined();
+    });
+
+    it('renders old path for renamed files', () => {
+      render(
+        <Header filePath="src/new.ts" oldPath="src/old.ts" changeType="renamed" />,
+      );
+      expect(screen.getByText('src/new.ts')).toBeDefined();
+      expect(screen.getByText('← src/old.ts')).toBeDefined();
+    });
+
+    it('does not render file info when no filePath is provided', () => {
+      render(<Header />);
+      expect(screen.queryByText('Modified')).toBeNull();
+    });
+  });
 });

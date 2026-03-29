@@ -20,20 +20,28 @@ Runs all packages in parallel. Each worktree gets stable ports derived from its 
 
 ## Caddy reverse proxy
 
-Caddy gives each worktree predictable `*.greppa.localhost` domains with no DNS config (RFC 6761).
+Caddy gives each worktree predictable `*.greppa.localhost` domains with automatic HTTPS. It starts
+automatically with `pnpm dev`.
 
-Install Caddy, then start it with the generated config:
+One-time setup to trust Caddy's local CA in your browser:
 
 ```sh
-caddy run --config ~/.config/caddy/greppa/Caddyfile
+caddy trust
 ```
+
+On Linux, Chrome uses its own certificate store. Install the CA there too:
+
+```sh
+certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "Caddy Local Authority" \
+  -i ~/.local/share/caddy/pki/authorities/local/root.crt
+```
+
+Restart your browser after running this.
 
 | Worktree | Web app                     | API                               | Playground                             |
 | -------- | --------------------------- | --------------------------------- | -------------------------------------- |
 | main     | `greppa.localhost`          | `greppa.localhost/api/*`          | `playground.greppa.localhost`          |
 | feat-foo | `feat-foo.greppa.localhost` | `feat-foo.greppa.localhost/api/*` | `playground.feat-foo.greppa.localhost` |
-
-`pnpm run env:setup` regenerates the snippet and reloads Caddy automatically.
 
 ## Pull requests
 

@@ -21,6 +21,20 @@
     ]
   },
   {
+    "path": "src/events",
+    "name": "events",
+    "type": "directory",
+    "children": [
+      {
+        "path": "src/events/eventEmitter.ts",
+        "name": "eventEmitter.ts",
+        "type": "file",
+        "changeType": "modified",
+        "status": "unreviewed"
+      }
+    ]
+  },
+  {
     "path": "src/middleware",
     "name": "middleware",
     "type": "directory",
@@ -30,6 +44,20 @@
         "name": "rateLimiter.ts",
         "type": "file",
         "changeType": "added",
+        "status": "unreviewed"
+      }
+    ]
+  },
+  {
+    "path": "src/services",
+    "name": "services",
+    "type": "directory",
+    "children": [
+      {
+        "path": "src/services/userService.ts",
+        "name": "userService.ts",
+        "type": "file",
+        "changeType": "modified",
         "status": "unreviewed"
       }
     ]

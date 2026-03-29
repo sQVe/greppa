@@ -159,7 +159,9 @@ describe('worktree-env', () => {
 
   describe('reloadCaddy', () => {
     it('does not throw when caddy is not installed', () => {
-      expect(() =>{  reloadCaddy('/nonexistent/path/Caddyfile'); }).not.toThrow();
+      expect(() => {
+        reloadCaddy('/nonexistent/path/Caddyfile');
+      }).not.toThrow();
     });
   });
 

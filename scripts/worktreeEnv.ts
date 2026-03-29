@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 
 interface EnvConfig {
@@ -7,6 +8,7 @@ interface EnvConfig {
   devPort: number;
   playgroundPort: number;
   dbPath: string;
+  caddyDomain: string;
 }
 
 const FNV_OFFSET_BASIS = 2166136261;
@@ -43,8 +45,66 @@ export const resolveWorktreePorts = (
   };
 };
 
-export const buildEnvContent = ({ apiPort, devPort, playgroundPort, dbPath }: EnvConfig): string =>
-  `API_PORT=${apiPort}\nDEV_PORT=${devPort}\nPLAYGROUND_PORT=${playgroundPort}\nDB_PATH=${dbPath}\n`;
+export const resolveCaddyDomain = (name: string): string =>
+  name === 'main' ? 'greppa.localhost' : `${name}.greppa.localhost`;
+
+interface CaddySnippetConfig {
+  name: string;
+  apiPort: number;
+  devPort: number;
+  playgroundPort: number;
+}
+
+export const buildCaddySnippet = ({ name, apiPort, devPort, playgroundPort }: CaddySnippetConfig): string => {
+  const domain = resolveCaddyDomain(name);
+  return [
+    `${domain} {`,
+    `  handle /api/* {`,
+    `    reverse_proxy localhost:${apiPort}`,
+    `  }`,
+    `  reverse_proxy localhost:${devPort}`,
+    `}`,
+    '',
+    `playground.${domain} {`,
+    `  reverse_proxy localhost:${playgroundPort}`,
+    `}`,
+    '',
+  ].join('\n');
+};
+
+export const buildEnvContent = ({ apiPort, devPort, playgroundPort, dbPath, caddyDomain }: EnvConfig): string =>
+  `API_PORT=${apiPort}\nDEV_PORT=${devPort}\nPLAYGROUND_PORT=${playgroundPort}\nDB_PATH=${dbPath}\nCADDY_DOMAIN=${caddyDomain}\n`;
+
+interface WriteCaddySnippetConfig {
+  name: string;
+  apiPort: number;
+  devPort: number;
+  playgroundPort: number;
+  caddyDir: string;
+}
+
+export const writeCaddySnippet = ({ name, apiPort, devPort, playgroundPort, caddyDir }: WriteCaddySnippetConfig) => {
+  mkdirSync(caddyDir, { recursive: true });
+  const snippet = buildCaddySnippet({ name, apiPort, devPort, playgroundPort });
+  writeFileSync(join(caddyDir, `${name}.caddy`), snippet);
+};
+
+export const reloadCaddy = (caddyfilePath: string) => {
+  try {
+    execSync(`caddy reload --config ${caddyfilePath}`, { stdio: 'ignore' });
+  } catch {
+    // caddy not installed or not running — skip
+  }
+};
+
+export const writeCaddyfile = (caddyDir: string) => {
+  const caddyfilePath = join(caddyDir, 'Caddyfile');
+  if (existsSync(caddyfilePath)) {
+    return;
+  }
+
+  writeFileSync(caddyfilePath, 'import ./*.caddy\n');
+};
 
 const getWorktreeRoot = (): string =>
   execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
@@ -54,12 +114,18 @@ const main = () => {
   const name = basename(worktreeRoot);
   const { apiPort, devPort, playgroundPort } = resolveWorktreePorts(name);
   const dbPath = join(worktreeRoot, '.data', 'app.db');
+  const caddyDomain = resolveCaddyDomain(name);
 
-  const content = buildEnvContent({ apiPort, devPort, playgroundPort, dbPath });
+  const content = buildEnvContent({ apiPort, devPort, playgroundPort, dbPath, caddyDomain });
   const envPath = join(worktreeRoot, '.env.local');
   writeFileSync(envPath, content);
 
-  const summary = `wrote ${envPath}\n  API_PORT=${apiPort}\n  DEV_PORT=${devPort}\n  PLAYGROUND_PORT=${playgroundPort}\n  DB_PATH=${dbPath}\n`;
+  const caddyDir = join(homedir(), '.config', 'caddy', 'greppa');
+  writeCaddySnippet({ name, apiPort, devPort, playgroundPort, caddyDir });
+  writeCaddyfile(caddyDir);
+  reloadCaddy(join(caddyDir, 'Caddyfile'));
+
+  const summary = `wrote ${envPath}\n  API_PORT=${apiPort}\n  DEV_PORT=${devPort}\n  PLAYGROUND_PORT=${playgroundPort}\n  DB_PATH=${dbPath}\n  CADDY_DOMAIN=${caddyDomain}\nwrote ${join(caddyDir, `${name}.caddy`)}\n`;
   process.stdout.write(summary);
 };
 

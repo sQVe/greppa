@@ -25,7 +25,7 @@ describe('worktree-env', () => {
   describe('resolveWorktreePorts', () => {
     it('returns API 4400 and DEV 5173 for "main"', () => {
       const ports = resolveWorktreePorts('main');
-      expect(ports).toEqual({ apiPort: 4400, devPort: 5173 });
+      expect(ports).toEqual({ apiPort: 4400, devPort: 5173, playgroundPort: 5174 });
     });
 
     it('returns API port in range 3100-3999 for non-main names', () => {
@@ -34,10 +34,12 @@ describe('worktree-env', () => {
       expect(apiPort).toBeLessThanOrEqual(3999);
     });
 
-    it('returns DEV port in range 5100-5999 for non-main names', () => {
-      const { devPort } = resolveWorktreePorts('feature-auth');
+    it('returns non-overlapping DEV and PLAYGROUND port pair for non-main names', () => {
+      const { devPort, playgroundPort } = resolveWorktreePorts('feature-auth');
       expect(devPort).toBeGreaterThanOrEqual(5100);
-      expect(devPort).toBeLessThanOrEqual(5999);
+      expect(devPort).toBeLessThanOrEqual(5998);
+      expect(devPort % 2).toBe(0);
+      expect(playgroundPort).toBe(devPort + 1);
     });
 
     it('produces identical ports for the same name', () => {
@@ -54,15 +56,22 @@ describe('worktree-env', () => {
   });
 
   describe('buildEnvContent', () => {
-    it('formats .env.local content with API_PORT, DEV_PORT, and DB_PATH', () => {
+    it('formats .env.local content with all port and path variables', () => {
       const content = buildEnvContent({
         apiPort: 3200,
         devPort: 5200,
+        playgroundPort: 5201,
         dbPath: '/tmp/worktree/.data/app.db',
       });
 
       expect(content).toBe(
-        ['API_PORT=3200', 'DEV_PORT=5200', 'DB_PATH=/tmp/worktree/.data/app.db', ''].join('\n'),
+        [
+          'API_PORT=3200',
+          'DEV_PORT=5200',
+          'PLAYGROUND_PORT=5201',
+          'DB_PATH=/tmp/worktree/.data/app.db',
+          '',
+        ].join('\n'),
       );
     });
   });

@@ -2,8 +2,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--gr-space-lg);
   padding: var(--gr-space-md) var(--gr-space-xl);
-  border-bottom: 1px solid var(--gr-color-border-default);
   background: var(--gr-color-bg-subtle);
 }
 
@@ -14,9 +14,29 @@
   color: var(--gr-color-text-primary);
 }
 
+.fileInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--gr-space-md);
+  min-width: 0;
+  font-family: var(--gr-font-mono);
+  font-size: var(--gr-text-sm);
+}
+
+.filePath {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gr-color-text-primary);
+}
+
+.oldPath {
+  flex-shrink: 0;
+  color: var(--gr-color-text-muted);
+}
+
 .themePicker {
   padding: var(--gr-space-sm) var(--gr-space-md);
-  border: 1px solid var(--gr-color-border-default);
   border-radius: var(--gr-radius-md);
   background: var(--gr-color-bg-surface);
   color: var(--gr-color-text-primary);

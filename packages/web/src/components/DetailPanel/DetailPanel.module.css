@@ -7,11 +7,6 @@
 
 .thread {
   padding: var(--gr-space-md) 0;
-  border-bottom: 1px solid var(--gr-color-border-muted);
-}
-
-.thread:last-child {
-  border-bottom: none;
 }
 
 .threadHeader {
@@ -68,12 +63,7 @@
   display: flex;
   justify-content: space-between;
   padding: var(--gr-space-md) 0;
-  border-bottom: 1px solid var(--gr-color-border-muted);
   font-size: var(--gr-text-sm);
-}
-
-.infoRow:last-child {
-  border-bottom: none;
 }
 
 .infoLabel {

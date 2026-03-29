@@ -54,6 +54,8 @@ export interface CommentThread {
 
 export interface FileInfo {
   path: string;
+  language: string;
+  encoding: string;
   lastModified: string;
   changeFrequency: number;
   authors: string[];

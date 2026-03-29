@@ -21,6 +21,8 @@ const threads: CommentThread[] = [
 
 const fileInfo: FileInfo = {
   path: 'src/auth/validateToken.ts',
+  language: 'TypeScript',
+  encoding: 'UTF-8',
   lastModified: '2026-03-25T10:00:00Z',
   changeFrequency: 8,
   authors: ['Bob Park', 'Alice Chen'],

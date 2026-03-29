@@ -1,6 +1,5 @@
 .list {
   display: flex;
-  border-bottom: 1px solid var(--gr-color-border-default);
   background: var(--gr-color-bg-subtle);
   flex-shrink: 0;
 }

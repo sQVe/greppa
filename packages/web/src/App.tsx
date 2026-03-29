@@ -30,7 +30,11 @@ export const App = () => {
 
   return (
     <div className={styles.app}>
-      <Header />
+      <Header
+        filePath={selectedDiff?.path}
+        oldPath={selectedDiff?.oldPath}
+        changeType={selectedDiff?.changeType}
+      />
       <Group
         id="gr-panels"
         orientation="horizontal"
@@ -50,7 +54,12 @@ export const App = () => {
           <DetailPanel threads={selectedThreads} fileInfo={selectedFileInfo} />
         </Panel>
       </Group>
-      <StatusBar reviewedCount={reviewedCount} totalCount={totalCount} />
+      <StatusBar
+        reviewedCount={reviewedCount}
+        totalCount={totalCount}
+        language={selectedFileInfo?.language}
+        encoding={selectedFileInfo?.encoding}
+      />
     </div>
   );
 };

@@ -1,6 +1,8 @@
 [
   {
     "path": "src/auth/validateToken.ts",
+    "language": "TypeScript",
+    "encoding": "UTF-8",
     "lastModified": "2026-03-25T10:00:00Z",
     "changeFrequency": 8,
     "authors": ["Bob Park", "Alice Chen"],
@@ -8,6 +10,8 @@
   },
   {
     "path": "src/auth/hashPassword.ts",
+    "language": "TypeScript",
+    "encoding": "UTF-8",
     "lastModified": "2026-03-24T15:30:00Z",
     "changeFrequency": 3,
     "authors": ["Bob Park"],
@@ -15,6 +19,8 @@
   },
   {
     "path": "src/middleware/rateLimiter.ts",
+    "language": "TypeScript",
+    "encoding": "UTF-8",
     "lastModified": "2026-03-25T14:00:00Z",
     "changeFrequency": 1,
     "authors": ["Bob Park"],
@@ -22,6 +28,8 @@
   },
   {
     "path": "src/utils/createLogger.ts",
+    "language": "TypeScript",
+    "encoding": "UTF-8",
     "lastModified": "2026-03-25T12:00:00Z",
     "changeFrequency": 5,
     "authors": ["Carol Martinez", "Bob Park"],
@@ -29,6 +37,8 @@
   },
   {
     "path": "src/utils/config.ts",
+    "language": "TypeScript",
+    "encoding": "UTF-8",
     "lastModified": "2026-01-10T09:00:00Z",
     "changeFrequency": 12,
     "authors": ["Alice Chen", "Carol Martinez", "Bob Park"],

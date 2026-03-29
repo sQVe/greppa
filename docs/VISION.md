@@ -134,6 +134,10 @@ against the reviewer.
   with resizable splits, a status bar showing file metadata (language, encoding, cursor position)
   alongside review progress, and interaction patterns borrowed from editors reviewers already use
   daily.
+- **Tonal separation over borders.** Distinguish regions through background shade differences
+  (`--gr-color-bg-subtle`, `--gr-color-bg-surface`, `--gr-color-bg-default`), not 1px solid borders.
+  Borders add visual noise and fight the editor aesthetic; layered backgrounds create hierarchy
+  without clutter.
 - **Dual comment model.** Comments live in two places: inline gutter markers in the diff that expand
   in-place (collapsible, capped at a few replies, with a "view full thread" link), and a side panel
   for browsing all threads, filtering by status, and triaging across files. The diff stays clean by

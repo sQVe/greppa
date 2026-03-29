@@ -25,7 +25,7 @@
 
 .separator {
   width: 1px;
-  background: var(--gr-color-border-default);
+  background: var(--gr-color-bg-subtle);
   transition: background 150ms;
 }
 

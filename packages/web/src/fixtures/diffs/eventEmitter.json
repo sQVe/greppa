@@ -1,0 +1,1684 @@
+{
+  "path": "src/events/eventEmitter.ts",
+  "changeType": "modified",
+  "language": "typescript",
+  "hunks": [
+    {
+      "header": "@@ -1,10 +1,30 @@",
+      "oldStart": 1,
+      "oldCount": 10,
+      "newStart": 1,
+      "newCount": 30,
+      "lines": [
+        {
+          "lineType": "removed",
+          "oldLineNumber": 1,
+          "newLineNumber": null,
+          "content": "import { logger } from '../utils/createLogger';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 1,
+          "content": "import { logger } from '../utils/createLogger';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 2,
+          "content": "import { metrics } from '../monitoring/metrics';"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 2,
+          "newLineNumber": 3,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 3,
+          "newLineNumber": null,
+          "content": "type EventHandler = (...args: unknown[]) => void;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 4,
+          "content": "type EventPayload = Record<string, unknown>;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 5,
+          "content": "type EventHandler<T extends EventPayload = EventPayload> = (payload: T) => void | Promise<void>;"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 4,
+          "newLineNumber": 6,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 5,
+          "newLineNumber": null,
+          "content": "interface EventMap {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 6,
+          "newLineNumber": null,
+          "content": "  [event: string]: EventHandler[];"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 7,
+          "newLineNumber": null,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 7,
+          "content": "interface EventOptions {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 8,
+          "content": "  once?: boolean;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 9,
+          "content": "  priority?: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 10,
+          "content": "  timeout?: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 11,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 12,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 13,
+          "content": "interface ListenerEntry {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 14,
+          "content": "  handler: EventHandler;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 15,
+          "content": "  options: Required<EventOptions>;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 16,
+          "content": "  addedAt: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 17,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 18,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 19,
+          "content": "type WildcardPattern = `${string}.*` | '*';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 20,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 21,
+          "content": "interface EmitResult {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 22,
+          "content": "  event: string;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 23,
+          "content": "  listenerCount: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 24,
+          "content": "  errors: Error[];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 25,
+          "content": "  durationMs: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 26,
+          "content": "}"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 8,
+          "newLineNumber": 27,
+          "content": ""
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 9,
+          "newLineNumber": 28,
+          "content": "const MAX_LISTENERS = 100;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 29,
+          "content": "const DEFAULT_TIMEOUT = 5000;"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 10,
+          "newLineNumber": 30,
+          "content": ""
+        }
+      ]
+    },
+    {
+      "header": "@@ -12,23 +32,53 @@",
+      "oldStart": 12,
+      "oldCount": 23,
+      "newStart": 32,
+      "newCount": 53,
+      "lines": [
+        {
+          "lineType": "removed",
+          "oldLineNumber": 12,
+          "newLineNumber": null,
+          "content": "class EventEmitter {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 13,
+          "newLineNumber": null,
+          "content": "  private events: EventMap = {};"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 32,
+          "content": "class EventEmitter {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 33,
+          "content": "  private listeners = new Map<string, ListenerEntry[]>();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 34,
+          "content": "  private wildcardListeners = new Map<WildcardPattern, ListenerEntry[]>();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 35,
+          "content": "  private emitCount = 0;"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 14,
+          "newLineNumber": 36,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 15,
+          "newLineNumber": null,
+          "content": "  on(event: string, handler: EventHandler): void {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 16,
+          "newLineNumber": null,
+          "content": "    if (!this.events[event]) {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 17,
+          "newLineNumber": null,
+          "content": "      this.events[event] = [];"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 18,
+          "newLineNumber": null,
+          "content": "    }"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 19,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 20,
+          "newLineNumber": null,
+          "content": "    if (this.events[event].length >= MAX_LISTENERS) {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 21,
+          "newLineNumber": null,
+          "content": "      logger.warn('Max listeners exceeded', { event });"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 22,
+          "newLineNumber": null,
+          "content": "      return;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 23,
+          "newLineNumber": null,
+          "content": "    }"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 24,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 25,
+          "newLineNumber": null,
+          "content": "    this.events[event].push(handler);"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 26,
+          "newLineNumber": null,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 37,
+          "content": "  on<T extends EventPayload>(event: string, handler: EventHandler<T>, options: EventOptions = {}): () => void {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 38,
+          "content": "    const entry: ListenerEntry = {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 39,
+          "content": "      handler: handler as EventHandler,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 40,
+          "content": "      options: {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 41,
+          "content": "        once: options.once ?? false,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 42,
+          "content": "        priority: options.priority ?? 0,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 43,
+          "content": "        timeout: options.timeout ?? DEFAULT_TIMEOUT,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 44,
+          "content": "      },"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 45,
+          "content": "      addedAt: Date.now(),"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 46,
+          "content": "    };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 47,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 48,
+          "content": "    const isWildcard = event.endsWith(\".*\") || event === \"*\";"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 49,
+          "content": "    const store = isWildcard"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 50,
+          "content": "      ? this.wildcardListeners"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 51,
+          "content": "      : this.listeners;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 52,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 53,
+          "content": "    const existing = store.get(event) ?? [];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 54,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 55,
+          "content": "    if (existing.length >= MAX_LISTENERS) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 56,
+          "content": "      logger.warn('Max listeners exceeded', { event, count: existing.length });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 57,
+          "content": "      throw new Error(`Max listeners (${MAX_LISTENERS}) exceeded for event: ${event}`);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 58,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 59,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 60,
+          "content": "    existing.push(entry);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 61,
+          "content": "    existing.sort((a, b) => b.options.priority - a.options.priority);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 62,
+          "content": "    store.set(event, existing);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 63,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 64,
+          "content": "    metrics.increment('events.listeners.added', { event });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 65,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 66,
+          "content": "    return () => this.off(event, handler);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 67,
+          "content": "  }"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 27,
+          "newLineNumber": 68,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 28,
+          "newLineNumber": null,
+          "content": "  off(event: string, handler: EventHandler): void {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 29,
+          "newLineNumber": null,
+          "content": "    const handlers = this.events[event];"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 30,
+          "newLineNumber": null,
+          "content": "    if (!handlers) return;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 31,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 32,
+          "newLineNumber": null,
+          "content": "    this.events[event] = handlers.filter((h) => h !== handler);"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 33,
+          "newLineNumber": null,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 69,
+          "content": "  off(event: string, handler: EventHandler): void {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 70,
+          "content": "    const isWildcard = event.endsWith(\".*\") || event === \"*\";"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 71,
+          "content": "    const store = isWildcard ? this.wildcardListeners : this.listeners;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 72,
+          "content": "    const entries = store.get(event);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 73,
+          "content": "    if (entries == null) return;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 74,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 75,
+          "content": "    const filtered = entries.filter((e) => e.handler !== handler);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 76,
+          "content": "    if (filtered.length === 0) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 77,
+          "content": "      store.delete(event);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 78,
+          "content": "    } else {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 79,
+          "content": "      store.set(event, filtered);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 80,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 81,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 82,
+          "content": "    metrics.increment('events.listeners.removed', { event });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 83,
+          "content": "  }"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 34,
+          "newLineNumber": 84,
+          "content": ""
+        }
+      ]
+    },
+    {
+      "header": "@@ -38,13 +90,53 @@",
+      "oldStart": 38,
+      "oldCount": 13,
+      "newStart": 90,
+      "newCount": 53,
+      "lines": [
+        {
+          "lineType": "removed",
+          "oldLineNumber": 38,
+          "newLineNumber": null,
+          "content": "  emit(event: string, ...args: unknown[]): void {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 39,
+          "newLineNumber": null,
+          "content": "    const handlers = this.events[event];"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 40,
+          "newLineNumber": null,
+          "content": "    if (!handlers) return;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 41,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 42,
+          "newLineNumber": null,
+          "content": "    for (const handler of handlers) {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 43,
+          "newLineNumber": null,
+          "content": "      try {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 44,
+          "newLineNumber": null,
+          "content": "        handler(...args);"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 45,
+          "newLineNumber": null,
+          "content": "      } catch (error) {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 46,
+          "newLineNumber": null,
+          "content": "        logger.error('Event handler error', { event, error });"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 47,
+          "newLineNumber": null,
+          "content": "      }"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 48,
+          "newLineNumber": null,
+          "content": "    }"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 49,
+          "newLineNumber": null,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 90,
+          "content": "  async emit(event: string, payload: EventPayload = {}): Promise<EmitResult> {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 91,
+          "content": "    const startTime = performance.now();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 92,
+          "content": "    const errors: Error[] = [];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 93,
+          "content": "    this.emitCount++;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 94,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 95,
+          "content": "    const directListeners = this.listeners.get(event) ?? [];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 96,
+          "content": "    const matchingWildcards = this.getMatchingWildcards(event);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 97,
+          "content": "    const allEntries = [...directListeners, ...matchingWildcards];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 98,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 99,
+          "content": "    const toRemove: ListenerEntry[] = [];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 100,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 101,
+          "content": "    for (const entry of allEntries) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 102,
+          "content": "      try {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 103,
+          "content": "        const result = entry.handler(payload);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 104,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 105,
+          "content": "        if (result instanceof Promise) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 106,
+          "content": "          await Promise.race(["
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 107,
+          "content": "            result,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 108,
+          "content": "            this.createTimeout(entry.options.timeout, event),"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 109,
+          "content": "          ]);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 110,
+          "content": "        }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 111,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 112,
+          "content": "        if (entry.options.once) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 113,
+          "content": "          toRemove.push(entry);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 114,
+          "content": "        }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 115,
+          "content": "      } catch (error) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 116,
+          "content": "        const wrappedError = error instanceof Error"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 117,
+          "content": "          ? error : new Error(String(error));"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 118,
+          "content": "        errors.push(wrappedError);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 119,
+          "content": "        logger.error('Event handler error', {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 120,
+          "content": "          event,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 121,
+          "content": "          error: wrappedError.message,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 122,
+          "content": "          listener: entry.addedAt,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 123,
+          "content": "        });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 124,
+          "content": "      }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 125,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 126,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 127,
+          "content": "    for (const entry of toRemove) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 128,
+          "content": "      this.removeEntry(event, entry);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 129,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 130,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 131,
+          "content": "    const durationMs = performance.now() - startTime;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 132,
+          "content": "    metrics.histogram('events.emit.duration', durationMs, { event });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 133,
+          "content": "    metrics.increment('events.emit.count', { event });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 134,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 135,
+          "content": "    return {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 136,
+          "content": "      event,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 137,
+          "content": "      listenerCount: allEntries.length,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 138,
+          "content": "      errors,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 139,
+          "content": "      durationMs,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 140,
+          "content": "    };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 141,
+          "content": "  }"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 50,
+          "newLineNumber": 142,
+          "content": ""
+        }
+      ]
+    },
+    {
+      "header": "@@ -51,13 +143,87 @@",
+      "oldStart": 51,
+      "oldCount": 13,
+      "newStart": 143,
+      "newCount": 87,
+      "lines": [
+        {
+          "lineType": "context",
+          "oldLineNumber": 51,
+          "newLineNumber": 143,
+          "content": "  removeAllListeners(event?: string): void {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 52,
+          "newLineNumber": null,
+          "content": "    if (event) {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 53,
+          "newLineNumber": null,
+          "content": "      delete this.events[event];"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 54,
+          "newLineNumber": null,
+          "content": "    } else {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 55,
+          "newLineNumber": null,
+          "content": "      this.events = {};"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 56,
+          "newLineNumber": null,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 144,
+          "content": "    if (event != null) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 145,
+          "content": "      this.listeners.delete(event);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 146,
+          "content": "      this.wildcardListeners.delete(event as WildcardPattern);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 147,
+          "content": "    } else {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 148,
+          "content": "      this.listeners.clear();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 149,
+          "content": "      this.wildcardListeners.clear();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 150,
+          "content": "    }"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 57,
+          "newLineNumber": 151,
+          "content": "  }"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 58,
+          "newLineNumber": 152,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 59,
+          "newLineNumber": null,
+          "content": "  listenerCount(event: string): number {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 60,
+          "newLineNumber": null,
+          "content": "    return this.events[event]?.length ?? 0;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 61,
+          "newLineNumber": null,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 153,
+          "content": "  listenerCount(event: string): number {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 154,
+          "content": "    const direct = this.listeners.get(event)?.length ?? 0;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 155,
+          "content": "    const wildcard = this.getMatchingWildcards(event).length;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 156,
+          "content": "    return direct + wildcard;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 157,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 158,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 159,
+          "content": "  once<T extends EventPayload>(event: string, handler: EventHandler<T>): () => void {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 160,
+          "content": "    return this.on(event, handler, { once: true });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 161,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 162,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 163,
+          "content": "  waitFor<T extends EventPayload>(event: string, timeout?: number): Promise<T> {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 164,
+          "content": "    return new Promise((resolve, reject) => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 165,
+          "content": "      const timeoutMs = timeout ?? DEFAULT_TIMEOUT;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 166,
+          "content": "      const timer = setTimeout(() => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 167,
+          "content": "        cleanup();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 168,
+          "content": "        reject(new Error(`Timed out waiting for event: ${event}`));"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 169,
+          "content": "      }, timeoutMs);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 170,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 171,
+          "content": "      const cleanup = this.once<T>(event, (payload) => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 172,
+          "content": "        clearTimeout(timer);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 173,
+          "content": "        resolve(payload);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 174,
+          "content": "      });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 175,
+          "content": "    });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 176,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 177,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 178,
+          "content": "  private getMatchingWildcards(event: string): ListenerEntry[] {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 179,
+          "content": "    const result: ListenerEntry[] = [];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 180,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 181,
+          "content": "    for (const [pattern, entries] of this.wildcardListeners) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 182,
+          "content": "      if (pattern === '*') {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 183,
+          "content": "        result.push(...entries);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 184,
+          "content": "      } else if (pattern.endsWith('.*')) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 185,
+          "content": "        const prefix = pattern.slice(0, -2);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 186,
+          "content": "        if (event.startsWith(prefix)) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 187,
+          "content": "          result.push(...entries);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 188,
+          "content": "        }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 189,
+          "content": "      }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 190,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 191,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 192,
+          "content": "    return result;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 193,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 194,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 195,
+          "content": "  private removeEntry(event: string, entry: ListenerEntry): void {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 196,
+          "content": "    const entries = this.listeners.get(event);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 197,
+          "content": "    if (entries == null) return;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 198,
+          "content": "    const filtered = entries.filter((e) => e !== entry);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 199,
+          "content": "    if (filtered.length === 0) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 200,
+          "content": "      this.listeners.delete(event);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 201,
+          "content": "    } else {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 202,
+          "content": "      this.listeners.set(event, filtered);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 203,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 204,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 205,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 206,
+          "content": "  private createTimeout(ms: number, event: string): Promise<never> {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 207,
+          "content": "    return new Promise((_, reject) => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 208,
+          "content": "      setTimeout(() => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 209,
+          "content": "        reject(new Error(`Handler timeout after ${ms}ms for event: ${event}`));"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 210,
+          "content": "      }, ms);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 211,
+          "content": "    });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 212,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 213,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 214,
+          "content": "  inspect(): { events: string[]; wildcards: string[]; totalListeners: number; emitCount: number } {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 215,
+          "content": "    const events = [...this.listeners.keys()];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 216,
+          "content": "    const wildcards = [...this.wildcardListeners.keys()];"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 217,
+          "content": "    let totalListeners = 0;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 218,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 219,
+          "content": "    for (const entries of this.listeners.values()) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 220,
+          "content": "      totalListeners += entries.length;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 221,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 222,
+          "content": "    for (const entries of this.wildcardListeners.values()) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 223,
+          "content": "      totalListeners += entries.length;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 224,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 225,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 226,
+          "content": "    return { events, wildcards, totalListeners, emitCount: this.emitCount };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 227,
+          "content": "  }"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 62,
+          "newLineNumber": 228,
+          "content": "}"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 63,
+          "newLineNumber": 229,
+          "content": ""
+        }
+      ]
+    },
+    {
+      "header": "@@ -63,1 +232,3 @@",
+      "oldStart": 63,
+      "oldCount": 1,
+      "newStart": 232,
+      "newCount": 3,
+      "lines": [
+        {
+          "lineType": "removed",
+          "oldLineNumber": 63,
+          "newLineNumber": null,
+          "content": "export const emitter = new EventEmitter();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 232,
+          "content": "export const EventBus = new EventEmitter();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 233,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 234,
+          "content": "export type { EventHandler, EventPayload, EventOptions, EmitResult };"
+        }
+      ]
+    }
+  ]
+}

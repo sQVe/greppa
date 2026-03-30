@@ -1,0 +1,1666 @@
+{
+  "path": "src/services/userService.ts",
+  "changeType": "modified",
+  "language": "typescript",
+  "hunks": [
+    {
+      "header": "@@ -1,12 +1,28 @@",
+      "oldStart": 1,
+      "oldCount": 12,
+      "newStart": 1,
+      "newCount": 28,
+      "lines": [
+        {
+          "lineType": "context",
+          "oldLineNumber": 1,
+          "newLineNumber": 1,
+          "content": "import { db } from '../database/connection';"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 2,
+          "newLineNumber": 2,
+          "content": "import { logger } from '../utils/createLogger';"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 3,
+          "newLineNumber": null,
+          "content": "import type { User } from '../types';"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 4,
+          "newLineNumber": null,
+          "content": "import { hashPassword } from '../auth/hashPassword';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 3,
+          "content": "import type { User, UserRole, AuditEntry } from '../types';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 4,
+          "content": "import { hashPassword, verifyPassword } from '../auth/hashPassword';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 5,
+          "content": "import { EventBus } from '../events/eventEmitter';"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 6,
+          "content": "import { cache } from '../cache/redisClient';"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 5,
+          "newLineNumber": 7,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 6,
+          "newLineNumber": null,
+          "content": "interface CreateUserInput {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 7,
+          "newLineNumber": null,
+          "content": "  email: string;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 8,
+          "newLineNumber": null,
+          "content": "  password: string;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 9,
+          "newLineNumber": null,
+          "content": "  name: string;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 10,
+          "newLineNumber": null,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 8,
+          "content": "interface CreateUserInput {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 9,
+          "content": "  email: string;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 10,
+          "content": "  password: string;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 11,
+          "content": "  name: string;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 12,
+          "content": "  role?: UserRole;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 13,
+          "content": "  metadata?: Record<string, unknown>;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 14,
+          "content": "}"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 11,
+          "newLineNumber": 15,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 16,
+          "content": "interface UpdateUserInput {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 17,
+          "content": "  name?: string;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 18,
+          "content": "  email?: string;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 19,
+          "content": "  role?: UserRole;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 20,
+          "content": "  metadata?: Record<string, unknown>;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 21,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 22,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 23,
+          "content": "interface UserQueryOptions {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 24,
+          "content": "  includeDeleted?: boolean;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 25,
+          "content": "  cacheTtl?: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 26,
+          "content": "}"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 27,
+          "content": ""
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 12,
+          "newLineNumber": 28,
+          "content": "const DEFAULT_PAGE_SIZE = 25;"
+        }
+      ]
+    },
+    {
+      "header": "@@ -18,16 +35,39 @@",
+      "oldStart": 18,
+      "oldCount": 16,
+      "newStart": 35,
+      "newCount": 39,
+      "lines": [
+        {
+          "lineType": "context",
+          "oldLineNumber": 18,
+          "newLineNumber": 35,
+          "content": "export const createUser = async (input: CreateUserInput): Promise<User> => {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 19,
+          "newLineNumber": null,
+          "content": "  const hashed = await hashPassword(input.password);"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 20,
+          "newLineNumber": null,
+          "content": "  const user = await db"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 21,
+          "newLineNumber": null,
+          "content": "    .insertInto('users')"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 22,
+          "newLineNumber": null,
+          "content": "    .values({"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 23,
+          "newLineNumber": null,
+          "content": "      email: input.email,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 24,
+          "newLineNumber": null,
+          "content": "      name: input.name,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 25,
+          "newLineNumber": null,
+          "content": "      passwordHash: hashed,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 26,
+          "newLineNumber": null,
+          "content": "    })"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 27,
+          "newLineNumber": null,
+          "content": "    .returningAll()"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 28,
+          "newLineNumber": null,
+          "content": "    .executeTakeFirstOrThrow();"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 29,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 30,
+          "newLineNumber": null,
+          "content": "  logger.info('User created', { userId: user.id });"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 31,
+          "newLineNumber": null,
+          "content": "  return user;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 36,
+          "content": "  const existing = await db"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 37,
+          "content": "    .selectFrom('users')"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 38,
+          "content": "    .where('email', '=', input.email)"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 39,
+          "content": "    .select('id')"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 40,
+          "content": "    .executeTakeFirst();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 41,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 42,
+          "content": "  if (existing != null) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 43,
+          "content": "    throw new Error(`User with email ${input.email} already exists`);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 44,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 45,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 46,
+          "content": "  const passwordHash = await hashPassword(input.password);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 47,
+          "content": "  const now = new Date().toISOString();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 48,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 49,
+          "content": "  const user = await db"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 50,
+          "content": "    .insertInto('users')"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 51,
+          "content": "    .values({"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 52,
+          "content": "      email: input.email,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 53,
+          "content": "      name: input.name,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 54,
+          "content": "      passwordHash,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 55,
+          "content": "      role: input.role ?? 'member',"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 56,
+          "content": "      metadata: input.metadata ?? {},"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 57,
+          "content": "      createdAt: now,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 58,
+          "content": "      updatedAt: now,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 59,
+          "content": "    })"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 60,
+          "content": "    .returningAll()"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 61,
+          "content": "    .executeTakeFirstOrThrow();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 62,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 63,
+          "content": "  await EventBus.emit('user.created', {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 64,
+          "content": "    userId: user.id,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 65,
+          "content": "    email: user.email,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 66,
+          "content": "    role: user.role,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 67,
+          "content": "    timestamp: now,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 68,
+          "content": "  });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 69,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 70,
+          "content": "  logger.info('User created', { userId: user.id, role: user.role });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 71,
+          "content": "  return user;"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 32,
+          "newLineNumber": 72,
+          "content": "};"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 33,
+          "newLineNumber": 73,
+          "content": ""
+        }
+      ]
+    },
+    {
+      "header": "@@ -35,15 +78,52 @@",
+      "oldStart": 35,
+      "oldCount": 15,
+      "newStart": 78,
+      "newCount": 52,
+      "lines": [
+        {
+          "lineType": "removed",
+          "oldLineNumber": 35,
+          "newLineNumber": null,
+          "content": "export const updateUser = async ("
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 36,
+          "newLineNumber": null,
+          "content": "  userId: string,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 37,
+          "newLineNumber": null,
+          "content": "  data: Partial<CreateUserInput>,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 38,
+          "newLineNumber": null,
+          "content": "): Promise<User> => {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 39,
+          "newLineNumber": null,
+          "content": "  const user = await db"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 40,
+          "newLineNumber": null,
+          "content": "    .updateTable('users')"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 41,
+          "newLineNumber": null,
+          "content": "    .where('id', '=', userId)"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 42,
+          "newLineNumber": null,
+          "content": "    .set(data)"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 43,
+          "newLineNumber": null,
+          "content": "    .returningAll()"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 44,
+          "newLineNumber": null,
+          "content": "    .executeTakeFirstOrThrow();"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 45,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 46,
+          "newLineNumber": null,
+          "content": "  logger.info('User updated', { userId });"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 47,
+          "newLineNumber": null,
+          "content": "  return user;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 48,
+          "newLineNumber": null,
+          "content": "};"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 78,
+          "content": "export const updateUser = async ("
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 79,
+          "content": "  userId: string,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 80,
+          "content": "  input: UpdateUserInput,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 81,
+          "content": "): Promise<User> => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 82,
+          "content": "  const current = await getUserById(userId);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 83,
+          "content": "  if (current == null) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 84,
+          "content": "    throw new Error(`User ${userId} not found`);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 85,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 86,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 87,
+          "content": "  const changes: Record<string, unknown> = {};"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 88,
+          "content": "  if (input.name != null && input.name !== current.name) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 89,
+          "content": "    changes['name'] = input.name;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 90,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 91,
+          "content": "  if (input.email != null && input.email !== current.email) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 92,
+          "content": "    changes['email'] = input.email;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 93,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 94,
+          "content": "  if (input.role != null && input.role !== current.role) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 95,
+          "content": "    changes['role'] = input.role;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 96,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 97,
+          "content": "  if (input.metadata != null) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 98,
+          "content": "    changes['metadata'] = { ...current.metadata, ...input.metadata };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 99,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 100,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 101,
+          "content": "  if (Object.keys(changes).length === 0) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 102,
+          "content": "    return current;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 103,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 104,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 105,
+          "content": "  const now = new Date().toISOString();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 106,
+          "content": "  changes['updatedAt'] = now;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 107,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 108,
+          "content": "  const user = await db"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 109,
+          "content": "    .updateTable('users')"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 110,
+          "content": "    .where('id', '=', userId)"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 111,
+          "content": "    .set(changes)"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 112,
+          "content": "    .returningAll()"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 113,
+          "content": "    .executeTakeFirstOrThrow();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 114,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 115,
+          "content": "  await cache.del(`user:${userId}`);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 116,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 117,
+          "content": "  const auditEntry: AuditEntry = {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 118,
+          "content": "    entityId: userId,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 119,
+          "content": "    entityType: 'user',"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 120,
+          "content": "    action: 'update',"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 121,
+          "content": "    changes,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 122,
+          "content": "    performedAt: now,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 123,
+          "content": "  };"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 124,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 125,
+          "content": "  await EventBus.emit('user.updated', auditEntry);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 126,
+          "content": "  logger.info('User updated', { userId, fields: Object.keys(changes) });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 127,
+          "content": "  return user;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 128,
+          "content": "};"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 49,
+          "newLineNumber": 129,
+          "content": ""
+        }
+      ]
+    },
+    {
+      "header": "@@ -50,12 +123,66 @@",
+      "oldStart": 50,
+      "oldCount": 12,
+      "newStart": 123,
+      "newCount": 66,
+      "lines": [
+        {
+          "lineType": "context",
+          "oldLineNumber": 50,
+          "newLineNumber": 123,
+          "content": "export const getUserById = async ("
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 51,
+          "newLineNumber": 124,
+          "content": "  userId: string,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 52,
+          "newLineNumber": null,
+          "content": "): Promise<User | null> => {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 53,
+          "newLineNumber": null,
+          "content": "  const user = await db"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 54,
+          "newLineNumber": null,
+          "content": "    .selectFrom('users')"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 55,
+          "newLineNumber": null,
+          "content": "    .where('id', '=', userId)"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 56,
+          "newLineNumber": null,
+          "content": "    .selectAll()"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 57,
+          "newLineNumber": null,
+          "content": "    .executeTakeFirst();"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 58,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 59,
+          "newLineNumber": null,
+          "content": "  return user ?? null;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 125,
+          "content": "  options: UserQueryOptions = {},"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 126,
+          "content": "): Promise<User | null> => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 127,
+          "content": "  const { includeDeleted = false, cacheTtl = 300 } = options;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 128,
+          "content": "  const cacheKey = `user:${userId}`;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 129,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 130,
+          "content": "  if (!includeDeleted) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 131,
+          "content": "    const cached = await cache.get<User>(cacheKey);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 132,
+          "content": "    if (cached != null) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 133,
+          "content": "      return cached;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 134,
+          "content": "    }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 135,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 136,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 137,
+          "content": "  let query = db"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 138,
+          "content": "    .selectFrom('users')"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 139,
+          "content": "    .where('id', '=', userId)"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 140,
+          "content": "    .selectAll();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 141,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 142,
+          "content": "  if (!includeDeleted) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 143,
+          "content": "    query = query.where('deletedAt', 'is', null);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 144,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 145,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 146,
+          "content": "  const user = await query.executeTakeFirst();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 147,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 148,
+          "content": "  if (user != null && !includeDeleted) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 149,
+          "content": "    await cache.set(cacheKey, user, cacheTtl);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 150,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 151,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 152,
+          "content": "  return user ?? null;"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 60,
+          "newLineNumber": 153,
+          "content": "};"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 61,
+          "newLineNumber": 154,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 155,
+          "content": "export const deleteUser = async ("
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 156,
+          "content": "  userId: string,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 157,
+          "content": "  hardDelete = false,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 158,
+          "content": "): Promise<void> => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 159,
+          "content": "  const user = await getUserById(userId, { includeDeleted: true });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 160,
+          "content": "  if (user == null) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 161,
+          "content": "    throw new Error(`User ${userId} not found`);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 162,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 163,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 164,
+          "content": "  if (hardDelete) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 165,
+          "content": "    await db"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 166,
+          "content": "      .deleteFrom('users')"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 167,
+          "content": "      .where('id', '=', userId)"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 168,
+          "content": "      .execute();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 169,
+          "content": "  } else {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 170,
+          "content": "    const now = new Date().toISOString();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 171,
+          "content": "    await db"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 172,
+          "content": "      .updateTable('users')"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 173,
+          "content": "      .where('id', '=', userId)"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 174,
+          "content": "      .set({ deletedAt: now })"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 175,
+          "content": "      .execute();"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 176,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 177,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 178,
+          "content": "  await cache.del(`user:${userId}`);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 179,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 180,
+          "content": "  await EventBus.emit('user.deleted', {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 181,
+          "content": "    userId,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 182,
+          "content": "    hardDelete,"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 183,
+          "content": "    timestamp: new Date().toISOString(),"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 184,
+          "content": "  });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 185,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 186,
+          "content": "  logger.info('User deleted', { userId, hardDelete });"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 187,
+          "content": "};"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 188,
+          "content": ""
+        }
+      ]
+    },
+    {
+      "header": "@@ -62,14 +194,30 @@",
+      "oldStart": 62,
+      "oldCount": 14,
+      "newStart": 194,
+      "newCount": 30,
+      "lines": [
+        {
+          "lineType": "context",
+          "oldLineNumber": 62,
+          "newLineNumber": 194,
+          "content": "export const listUsers = async ("
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 63,
+          "newLineNumber": null,
+          "content": "  page = 1,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 64,
+          "newLineNumber": null,
+          "content": "  pageSize = DEFAULT_PAGE_SIZE,"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 65,
+          "newLineNumber": null,
+          "content": "): Promise<User[]> => {"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 66,
+          "newLineNumber": null,
+          "content": "  const offset = (page - 1) * pageSize;"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 67,
+          "newLineNumber": null,
+          "content": "  const users = await db"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 68,
+          "newLineNumber": null,
+          "content": "    .selectFrom('users')"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 69,
+          "newLineNumber": null,
+          "content": "    .selectAll()"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 70,
+          "newLineNumber": null,
+          "content": "    .limit(pageSize)"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 71,
+          "newLineNumber": null,
+          "content": "    .offset(offset)"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 72,
+          "newLineNumber": null,
+          "content": "    .execute();"
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 73,
+          "newLineNumber": null,
+          "content": ""
+        },
+        {
+          "lineType": "removed",
+          "oldLineNumber": 74,
+          "newLineNumber": null,
+          "content": "  return users;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 195,
+          "content": "  options: {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 196,
+          "content": "    page?: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 197,
+          "content": "    pageSize?: number;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 198,
+          "content": "    role?: UserRole;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 199,
+          "content": "    search?: string;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 200,
+          "content": "  } = {},"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 201,
+          "content": "): Promise<{ users: User[]; total: number; hasMore: boolean }> => {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 202,
+          "content": "  const { page = 1, pageSize = DEFAULT_PAGE_SIZE, role, search } = options;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 203,
+          "content": "  const offset = (page - 1) * pageSize;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 204,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 205,
+          "content": "  let query = db.selectFrom('users').where('deletedAt', 'is', null);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 206,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 207,
+          "content": "  if (role != null) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 208,
+          "content": "    query = query.where('role', '=', role);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 209,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 210,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 211,
+          "content": "  if (search != null && search.length > 0) {"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 212,
+          "content": "    const pattern = `%${search}%`;"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 213,
+          "content": "    query = query.where((eb) => eb.or([eb('name', 'ilike', pattern), eb('email', 'ilike', pattern)]));"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 214,
+          "content": "  }"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 215,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 216,
+          "content": "  const [users, countResult] = await Promise.all(["
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 217,
+          "content": "    query.selectAll().limit(pageSize).offset(offset).execute(),"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 218,
+          "content": "    query.select(db.fn.countAll().as('count')).executeTakeFirstOrThrow(),"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 219,
+          "content": "  ]);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 220,
+          "content": ""
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 221,
+          "content": "  const total = Number(countResult.count);"
+        },
+        {
+          "lineType": "added",
+          "oldLineNumber": null,
+          "newLineNumber": 222,
+          "content": "  return { users, total, hasMore: offset + users.length < total };"
+        },
+        {
+          "lineType": "context",
+          "oldLineNumber": 75,
+          "newLineNumber": 223,
+          "content": "};"
+        }
+      ]
+    }
+  ]
+}

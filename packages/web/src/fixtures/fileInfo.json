@@ -36,6 +36,20 @@
     "relatedPRs": [31, 58, 103]
   },
   {
+    "path": "src/events/eventEmitter.ts",
+    "lastModified": "2026-03-26T11:00:00Z",
+    "changeFrequency": 7,
+    "authors": ["Carol Martinez", "Alice Chen"],
+    "relatedPRs": [31, 67, 103]
+  },
+  {
+    "path": "src/services/userService.ts",
+    "lastModified": "2026-03-26T09:30:00Z",
+    "changeFrequency": 14,
+    "authors": ["Bob Park", "Alice Chen", "Carol Martinez"],
+    "relatedPRs": [42, 67, 89, 103]
+  },
+  {
     "path": "src/utils/config.ts",
     "language": "TypeScript",
     "encoding": "UTF-8",

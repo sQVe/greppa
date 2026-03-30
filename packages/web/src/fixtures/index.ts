@@ -1,8 +1,10 @@
 import rawComments from './comments.json';
 import rawConfig from './diffs/config.json';
 import rawCreateLogger from './diffs/createLogger.json';
+import rawEventEmitter from './diffs/eventEmitter.json';
 import rawHashPassword from './diffs/hashPassword.json';
 import rawRateLimiter from './diffs/rateLimiter.json';
+import rawUserService from './diffs/userService.json';
 import rawValidateToken from './diffs/validateToken.json';
 import rawFileInfo from './fileInfo.json';
 import rawFiles from './files.json';
@@ -15,8 +17,10 @@ export const files = rawFiles as FileNode[];
 const diffList = [
   rawConfig,
   rawCreateLogger,
+  rawEventEmitter,
   rawHashPassword,
   rawRateLimiter,
+  rawUserService,
   rawValidateToken,
 ] as DiffFile[];
 

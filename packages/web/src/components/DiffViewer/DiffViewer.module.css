@@ -6,14 +6,16 @@
   line-height: var(--gr-leading-code);
 }
 
-.splitContainer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.virtualList {
+  position: relative;
+  width: 100%;
 }
 
-.side {
-  display: grid;
-  grid-template-rows: subgrid;
+.virtualRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
 }
 
 .hunkHeader {
@@ -26,7 +28,13 @@
 
 .row {
   display: grid;
-  grid-template-columns: 3.5rem 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.rowSide {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  min-width: 0;
 }
 
 .gutter {
@@ -61,4 +69,25 @@
 
 .lineEmpty {
   background: var(--gr-color-bg-surface);
+}
+
+.collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gr-space-md);
+  height: 100%;
+  color: var(--gr-color-text-muted);
+  font-size: var(--gr-text-sm);
+}
+
+.expandButton {
+  padding: var(--gr-space-sm) var(--gr-space-lg);
+  border: 1px solid var(--gr-color-border-default);
+  border-radius: var(--gr-radius-sm);
+  background: var(--gr-color-bg-surface);
+  color: var(--gr-color-text-primary);
+  font-size: var(--gr-text-sm);
+  cursor: pointer;
 }

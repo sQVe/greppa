@@ -1,6 +1,13 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
@@ -22,42 +29,53 @@ afterEach(() => {
   cleanup();
 });
 
+const renderApp = (initialLocation = '/') => {
+  const rootRoute = createRootRoute({ component: App });
+  const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/' });
+  const fileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/file/$' });
+  const routeTree = rootRoute.addChildren([indexRoute, fileRoute]);
+  const history = createMemoryHistory({ initialEntries: [initialLocation] });
+  const router = createRouter({ routeTree, history });
+
+  return render(<RouterProvider router={router} />);
+};
+
 describe('App', () => {
-  it('renders the header with logo', () => {
-    render(<App />);
-    expect(screen.getByText('Greppa')).toBeDefined();
+  it('renders the header with logo', async () => {
+    renderApp();
+    expect(await screen.findByText('Greppa')).toBeDefined();
   });
 
-  it('renders the status bar with fixture review counts', () => {
-    render(<App />);
-    expect(screen.getByText('2/7 files reviewed')).toBeDefined();
+  it('renders the status bar with fixture review counts', async () => {
+    renderApp();
+    expect(await screen.findByText('2/7 files reviewed')).toBeDefined();
   });
 
-  it('renders the file tree', () => {
-    render(<App />);
-    expect(screen.getByRole('treegrid', { name: 'File tree' })).toBeDefined();
+  it('renders the file tree', async () => {
+    renderApp();
+    expect(await screen.findByRole('treegrid', { name: 'File tree' })).toBeDefined();
   });
 
-  it('renders the diff viewer placeholder', () => {
-    render(<App />);
-    expect(screen.getByText('Select a file to view diff')).toBeDefined();
+  it('renders the diff viewer placeholder', async () => {
+    renderApp();
+    expect(await screen.findByText('Select a file to view diff')).toBeDefined();
   });
 
-  it('renders the detail panel placeholder', () => {
-    render(<App />);
-    expect(screen.getByText('Select a file to view details')).toBeDefined();
+  it('renders the detail panel placeholder', async () => {
+    renderApp();
+    expect(await screen.findByText('Select a file to view details')).toBeDefined();
   });
 
   it('increments reviewed count when selecting an unreviewed file', async () => {
-    render(<App />);
-    expect(screen.getByText('2/7 files reviewed')).toBeDefined();
-    await userEvent.click(screen.getByText('rateLimiter.ts'));
-    expect(screen.getByText('3/7 files reviewed')).toBeDefined();
+    renderApp();
+    expect(await screen.findByText('2/7 files reviewed')).toBeDefined();
+    await userEvent.click(await screen.findByText('rateLimiter.ts'));
+    expect(await screen.findByText('3/7 files reviewed')).toBeDefined();
   });
 
   it('does not increment when selecting an already-reviewed file', async () => {
-    render(<App />);
-    await userEvent.click(screen.getByText('validateToken.ts'));
-    expect(screen.getByText('2/7 files reviewed')).toBeDefined();
+    renderApp();
+    await userEvent.click(await screen.findByText('validateToken.ts'));
+    expect(await screen.findByText('2/7 files reviewed')).toBeDefined();
   });
 });

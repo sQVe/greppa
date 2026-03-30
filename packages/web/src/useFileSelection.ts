@@ -1,3 +1,4 @@
+import { useMatch, useNavigate } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
@@ -12,21 +13,32 @@ export const useFileSelection = (
   fileInfoMap: Map<string, FileInfo>,
 ) => {
   const allFiles = useMemo(() => collectFiles(files), [files]);
+  const validPaths = useMemo(() => new Set(allFiles.map((file) => file.path)), [allFiles]);
 
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const fileMatch = useMatch({ from: '/file/$', shouldThrow: false });
+  const urlFile = fileMatch?.params._splat ?? null;
+  const navigate = useNavigate();
+
+  const selectedFilePath = urlFile != null && validPaths.has(urlFile) ? urlFile : null;
+
   const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(
-    () => new Set(allFiles.filter((f) => f.status === 'reviewed').map((f) => f.path)),
+    () => new Set(allFiles.filter((file) => file.status === 'reviewed').map((file) => file.path)),
   );
 
-  const selectFile = useCallback((path: string) => {
-    setSelectedFilePath(path);
-    setReviewedPaths((prev) => (prev.has(path) ? prev : new Set([...prev, path])));
-  }, []);
+  const selectFile = useCallback(
+    (path: string) => {
+      void navigate({ to: '/file/$', params: { _splat: path } });
+      setReviewedPaths((prev) => (prev.has(path) ? prev : new Set([...prev, path])));
+    },
+    [navigate],
+  );
 
   const selectedDiff = selectedFilePath != null ? (diffs.get(selectedFilePath) ?? null) : null;
 
   const selectedThreads =
-    selectedFilePath != null ? comments.filter((t) => t.filePath === selectedFilePath) : [];
+    selectedFilePath != null
+      ? comments.filter((thread) => thread.filePath === selectedFilePath)
+      : [];
 
   const selectedFileInfo =
     selectedFilePath != null ? (fileInfoMap.get(selectedFilePath) ?? null) : null;

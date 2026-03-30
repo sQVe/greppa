@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { RouterProvider } from '@tanstack/react-router';
 
-import { App } from './App';
+import { router } from './router';
 
 // oxlint-disable-next-line no-unassigned-import
 import './reset.css';
@@ -15,6 +16,6 @@ if (root == null) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <RouterProvider router={router} />
   </StrictMode>,
 );

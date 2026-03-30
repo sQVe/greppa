@@ -81,7 +81,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
     enabled: !isCollapsed,
   });
 
-  useDiffKeyboardNavigation(items, virtualizer);
+  useDiffKeyboardNavigation({ items, virtualizer });
 
   if (diff == null) {
     return <EmptyState>Select a file to view diff</EmptyState>;

@@ -6,6 +6,12 @@ import { TokenSpans } from './TokenSpans';
 
 import styles from './DiffViewer.module.css';
 
+interface RowSideCellProps {
+  data: RowSide | null;
+  side: 'left' | 'right';
+  tokenMap: Map<string, ThemedToken[]> | null;
+}
+
 const lineClass = (type: LineType) => {
   if (type === 'removed') {
     return styles.lineRemoved;
@@ -17,15 +23,7 @@ const lineClass = (type: LineType) => {
   return '';
 };
 
-export const RowSideCell = ({
-  data,
-  side,
-  tokenMap,
-}: {
-  data: RowSide | null;
-  side: 'left' | 'right';
-  tokenMap: Map<string, ThemedToken[]> | null;
-}) => {
+export const RowSideCell = ({ data, side, tokenMap }: RowSideCellProps) => {
   const cellClass = data != null ? lineClass(data.type) : styles.lineEmpty;
 
   return (

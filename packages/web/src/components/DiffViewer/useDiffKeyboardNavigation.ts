@@ -12,10 +12,15 @@ const KEY_TO_ACTION: Record<string, NavigationAction> = {
   p: 'prevChange',
 };
 
-export const useDiffKeyboardNavigation = (
-  items: VirtualItem[],
-  virtualizer: Virtualizer<HTMLDivElement, Element>,
-) => {
+interface UseDiffKeyboardNavigationOptions {
+  items: VirtualItem[];
+  virtualizer: Virtualizer<HTMLDivElement, Element>;
+}
+
+export const useDiffKeyboardNavigation = ({
+  items,
+  virtualizer,
+}: UseDiffKeyboardNavigationOptions) => {
   const currentIndexRef = useRef(0);
 
   useEffect(() => {
@@ -36,7 +41,7 @@ export const useDiffKeyboardNavigation = (
         return;
       }
 
-      const target = findNavigationTarget(items, currentIndexRef.current, action);
+      const target = findNavigationTarget({ items, currentIndex: currentIndexRef.current, action });
       if (target == null) {
         return;
       }

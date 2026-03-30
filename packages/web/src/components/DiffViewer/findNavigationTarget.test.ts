@@ -16,56 +16,56 @@ const items: VirtualItem[] = [
 describe('findNavigationTarget', () => {
   describe('next hunk (j)', () => {
     it('finds the first hunk header after the current index', () => {
-      expect(findNavigationTarget(items, 0, 'nextHunk')).toBe(4);
+      expect(findNavigationTarget({ items, currentIndex: 0, action: 'nextHunk' })).toBe(4);
     });
 
     it('returns null when already at the last hunk', () => {
-      expect(findNavigationTarget(items, 4, 'nextHunk')).toBeNull();
-      expect(findNavigationTarget(items, 6, 'nextHunk')).toBeNull();
+      expect(findNavigationTarget({ items, currentIndex: 4, action: 'nextHunk' })).toBeNull();
+      expect(findNavigationTarget({ items, currentIndex: 6, action: 'nextHunk' })).toBeNull();
     });
 
     it('finds the next hunk when starting from a diff row', () => {
-      expect(findNavigationTarget(items, 2, 'nextHunk')).toBe(4);
+      expect(findNavigationTarget({ items, currentIndex: 2, action: 'nextHunk' })).toBe(4);
     });
   });
 
   describe('previous hunk (k)', () => {
     it('finds the previous hunk header before the current index', () => {
-      expect(findNavigationTarget(items, 5, 'prevHunk')).toBe(4);
-      expect(findNavigationTarget(items, 4, 'prevHunk')).toBe(0);
+      expect(findNavigationTarget({ items, currentIndex: 5, action: 'prevHunk' })).toBe(4);
+      expect(findNavigationTarget({ items, currentIndex: 4, action: 'prevHunk' })).toBe(0);
     });
 
     it('returns null when already at the first hunk', () => {
-      expect(findNavigationTarget(items, 0, 'prevHunk')).toBeNull();
+      expect(findNavigationTarget({ items, currentIndex: 0, action: 'prevHunk' })).toBeNull();
     });
 
     it('finds the containing hunk when inside a hunk', () => {
-      expect(findNavigationTarget(items, 3, 'prevHunk')).toBe(0);
+      expect(findNavigationTarget({ items, currentIndex: 3, action: 'prevHunk' })).toBe(0);
     });
   });
 
   describe('next change (n)', () => {
     it('finds the next non-context diff row', () => {
-      expect(findNavigationTarget(items, 0, 'nextChange')).toBe(2);
+      expect(findNavigationTarget({ items, currentIndex: 0, action: 'nextChange' })).toBe(2);
     });
 
     it('skips context rows', () => {
-      expect(findNavigationTarget(items, 2, 'nextChange')).toBe(5);
+      expect(findNavigationTarget({ items, currentIndex: 2, action: 'nextChange' })).toBe(5);
     });
 
     it('returns null when no more changes exist', () => {
-      expect(findNavigationTarget(items, 5, 'nextChange')).toBeNull();
+      expect(findNavigationTarget({ items, currentIndex: 5, action: 'nextChange' })).toBeNull();
     });
   });
 
   describe('previous change (p)', () => {
     it('finds the previous non-context diff row', () => {
-      expect(findNavigationTarget(items, 5, 'prevChange')).toBe(2);
+      expect(findNavigationTarget({ items, currentIndex: 5, action: 'prevChange' })).toBe(2);
     });
 
     it('returns null when no previous changes exist', () => {
-      expect(findNavigationTarget(items, 0, 'prevChange')).toBeNull();
-      expect(findNavigationTarget(items, 2, 'prevChange')).toBeNull();
+      expect(findNavigationTarget({ items, currentIndex: 0, action: 'prevChange' })).toBeNull();
+      expect(findNavigationTarget({ items, currentIndex: 2, action: 'prevChange' })).toBeNull();
     });
   });
 });

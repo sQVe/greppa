@@ -13,11 +13,17 @@ const isChangedRow = (item: VirtualItem) => {
   return leftType === 'removed' || leftType === 'added' || rightType === 'removed' || rightType === 'added';
 };
 
-export const findNavigationTarget = (
-  items: VirtualItem[],
-  currentIndex: number,
-  action: NavigationAction,
-): number | null => {
+interface FindNavigationTargetOptions {
+  items: VirtualItem[];
+  currentIndex: number;
+  action: NavigationAction;
+}
+
+export const findNavigationTarget = ({
+  items,
+  currentIndex,
+  action,
+}: FindNavigationTargetOptions): number | null => {
   if (action === 'nextHunk') {
     for (let i = currentIndex + 1; i < items.length; i++) {
       if (items[i]?.kind === 'hunk-header') {

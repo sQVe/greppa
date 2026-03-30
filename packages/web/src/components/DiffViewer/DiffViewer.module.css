@@ -84,10 +84,10 @@
 
 .expandButton {
   padding: var(--gr-space-sm) var(--gr-space-lg);
-  border: 1px solid var(--gr-color-border);
+  border: 1px solid var(--gr-color-border-default);
   border-radius: var(--gr-radius-sm);
   background: var(--gr-color-bg-surface);
-  color: var(--gr-color-text);
+  color: var(--gr-color-text-primary);
   font-size: var(--gr-text-sm);
   cursor: pointer;
 }

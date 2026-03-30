@@ -1,6 +1,5 @@
-import type { ThemedToken } from 'shiki';
-
 import type { LineType } from '../../fixtures/types';
+import type { HighlightToken } from '../../workers/highlightProtocol';
 import type { RowSide } from './buildRows';
 import { TokenSpans } from './TokenSpans';
 
@@ -9,7 +8,7 @@ import styles from './DiffViewer.module.css';
 interface RowSideCellProps {
   data: RowSide | null;
   side: 'left' | 'right';
-  tokenMap: Map<string, ThemedToken[]> | null;
+  tokenMap: Map<string, HighlightToken[]> | null;
 }
 
 const lineClass = (type: LineType) => {

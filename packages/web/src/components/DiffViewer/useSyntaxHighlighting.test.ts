@@ -1,13 +1,51 @@
 // @vitest-environment happy-dom
-import { renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import type { DiffFile } from '../../fixtures/types';
-import { buildTokenEntries, diffLineKey, useSyntaxHighlighting } from './useSyntaxHighlighting';
+import type { HighlightResponse } from '../../workers/highlightProtocol';
+import { resetWorkerForTesting, useSyntaxHighlighting } from './useSyntaxHighlighting';
 
-vi.mock('shiki', () => ({
-  createHighlighter: () => Promise.resolve(null),
-}));
+let messageHandler: ((event: MessageEvent) => void) | null = null;
+
+const mockPostMessage = vi.fn();
+const mockAddEventListener = vi.fn();
+const mockRemoveEventListener = vi.fn();
+const mockTerminate = vi.fn();
+
+let workerConstructCount = 0;
+
+vi.stubGlobal(
+  'Worker',
+  class {
+    postMessage = mockPostMessage.mockImplementation(() => {
+      const response: HighlightResponse = {
+        type: 'highlight-result',
+        filePath: 'src/foo.ts',
+        tokens: {
+          'context:1:1': [{ content: 'const a = 1;', color: '#f00' }],
+          'added::2': [{ content: 'const b = 2;', color: '#0f0' }],
+        },
+      };
+      setTimeout(() => {
+        messageHandler?.({ data: response } as MessageEvent);
+      }, 0);
+    });
+    addEventListener = mockAddEventListener.mockImplementation(
+      (_type: string, handler: (event: MessageEvent) => void) => {
+        messageHandler = handler;
+      },
+    );
+    removeEventListener = mockRemoveEventListener.mockImplementation(() => {
+      messageHandler = null;
+    });
+    terminate = mockTerminate;
+
+    constructor() {
+      workerConstructCount++;
+    }
+  },
+);
 
 const singleHunkDiff: DiffFile = {
   path: 'src/foo.ts',
@@ -22,100 +60,70 @@ const singleHunkDiff: DiffFile = {
       newCount: 4,
       lines: [
         { lineType: 'context', oldLineNumber: 1, newLineNumber: 1, content: 'const a = 1;' },
-        {
-          lineType: 'removed',
-          oldLineNumber: 2,
-          newLineNumber: null,
-          content: 'const b = 2;',
-        },
-        { lineType: 'added', oldLineNumber: null, newLineNumber: 2, content: 'const b = 3;' },
-        { lineType: 'added', oldLineNumber: null, newLineNumber: 3, content: 'const c = 4;' },
-        { lineType: 'context', oldLineNumber: 3, newLineNumber: 4, content: '' },
+        { lineType: 'added', oldLineNumber: null, newLineNumber: 2, content: 'const b = 2;' },
       ],
     },
   ],
 };
-
-const multiHunkDiff: DiffFile = {
-  path: 'src/bar.ts',
-  changeType: 'modified',
-  language: 'typescript',
-  hunks: [
-    {
-      header: '@@ -1,2 +1,2 @@',
-      oldStart: 1,
-      oldCount: 2,
-      newStart: 1,
-      newCount: 2,
-      lines: [
-        { lineType: 'removed', oldLineNumber: 1, newLineNumber: null, content: 'const x = 1;' },
-        { lineType: 'added', oldLineNumber: null, newLineNumber: 1, content: 'const x = 2;' },
-      ],
-    },
-    {
-      header: '@@ -10,2 +10,2 @@',
-      oldStart: 10,
-      oldCount: 2,
-      newStart: 10,
-      newCount: 2,
-      lines: [
-        { lineType: 'removed', oldLineNumber: 10, newLineNumber: null, content: 'const y = 1;' },
-        { lineType: 'added', oldLineNumber: null, newLineNumber: 10, content: 'const y = 2;' },
-      ],
-    },
-  ],
-};
-
-describe('diffLineKey', () => {
-  it('includes line type and both line numbers', () => {
-    expect(
-      diffLineKey({ lineType: 'context', oldLineNumber: 1, newLineNumber: 1, content: '' }),
-    ).toBe('context:1:1');
-  });
-
-  it('uses empty string for null line numbers', () => {
-    expect(
-      diffLineKey({ lineType: 'removed', oldLineNumber: 5, newLineNumber: null, content: '' }),
-    ).toBe('removed:5:');
-    expect(
-      diffLineKey({ lineType: 'added', oldLineNumber: null, newLineNumber: 3, content: '' }),
-    ).toBe('added::3');
-  });
-});
-
-describe('buildTokenEntries', () => {
-  it('splits lines into old and new entry lists', () => {
-    const { oldEntries, newEntries } = buildTokenEntries(singleHunkDiff);
-    expect(oldEntries.map((e) => e.content)).toEqual(['const a = 1;', 'const b = 2;', '']);
-    expect(newEntries.map((e) => e.content)).toEqual([
-      'const a = 1;',
-      'const b = 3;',
-      'const c = 4;',
-      '',
-    ]);
-  });
-
-  it('inserts empty separator entries between hunks', () => {
-    const { oldEntries, newEntries } = buildTokenEntries(multiHunkDiff);
-    expect(oldEntries[1]).toEqual({ key: '', content: '' });
-    expect(newEntries[1]).toEqual({ key: '', content: '' });
-  });
-
-  it('assigns diffLineKey as the key for each entry', () => {
-    const { oldEntries } = buildTokenEntries(singleHunkDiff);
-    expect(oldEntries[0]?.key).toBe('context:1:1');
-    expect(oldEntries[1]?.key).toBe('removed:2:');
-  });
-});
 
 describe('useSyntaxHighlighting', () => {
-  it('returns null token map when diff is null', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    messageHandler = null;
+    workerConstructCount = 0;
+    resetWorkerForTesting();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetWorkerForTesting();
+  });
+
+  it('returns null token map initially', () => {
+    const { result } = renderHook(() => useSyntaxHighlighting(singleHunkDiff, 'catppuccin-mocha'));
+    expect(result.current).toBeNull();
+  });
+
+  it('returns null when diff is null', () => {
     const { result } = renderHook(() => useSyntaxHighlighting(null, 'catppuccin-mocha'));
     expect(result.current).toBeNull();
   });
 
-  it('returns null token map when highlighter has not loaded', () => {
+  it('updates token map when worker responds', async () => {
     const { result } = renderHook(() => useSyntaxHighlighting(singleHunkDiff, 'catppuccin-mocha'));
-    expect(result.current).toBeNull();
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(result.current).not.toBeNull();
+    expect(result.current?.get('context:1:1')).toEqual([
+      { content: 'const a = 1;', color: '#f00' },
+    ]);
+  });
+
+  it('posts highlight request to worker', () => {
+    renderHook(() => useSyntaxHighlighting(singleHunkDiff, 'catppuccin-mocha'));
+
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'highlight',
+        filePath: 'src/foo.ts',
+        language: 'typescript',
+        theme: 'catppuccin-mocha',
+      }),
+    );
+  });
+
+  it('reuses the same worker across renders', () => {
+    const { rerender } = renderHook(
+      ({ diff }) => useSyntaxHighlighting(diff, 'catppuccin-mocha'),
+      { initialProps: { diff: singleHunkDiff as DiffFile | null } },
+    );
+
+    rerender({ diff: { ...singleHunkDiff, path: 'src/bar.ts' } });
+
+    expect(workerConstructCount).toBe(1);
   });
 });

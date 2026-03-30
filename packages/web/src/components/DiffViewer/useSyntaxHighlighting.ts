@@ -1,103 +1,80 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { BundledLanguage, Highlighter, ThemedToken } from 'shiki';
-import { createHighlighter } from 'shiki';
+import { useEffect, useRef, useState } from 'react';
 
-import type { DiffFile, DiffLine } from '../../fixtures/types';
+import type { DiffFile } from '../../fixtures/types';
+import type {
+  HighlightRequest,
+  HighlightResponse,
+  HighlightToken,
+} from '../../workers/highlightProtocol';
+import { diffLineKey } from './buildRows';
 
-interface TokenEntry {
-  key: string;
-  content: string;
-}
+let sharedWorker: Worker | null = null;
 
-export const diffLineKey = (line: DiffLine) =>
-  `${line.lineType}:${line.oldLineNumber ?? ''}:${line.newLineNumber ?? ''}`;
-
-let highlighterPromise: Promise<Highlighter> | null = null;
-
-const getOrCreateHighlighter = () => {
-  highlighterPromise ??= createHighlighter({
-    themes: ['catppuccin-mocha', 'catppuccin-latte'],
-    langs: ['typescript'],
-  }).catch((error: unknown) => {
-    highlighterPromise = null;
-    throw error;
+const getOrCreateWorker = () => {
+  sharedWorker ??= new Worker(new URL('../../workers/highlightWorker.ts', import.meta.url), {
+    type: 'module',
   });
 
-  return highlighterPromise;
+  return sharedWorker;
 };
 
-export const buildTokenEntries = (diff: DiffFile) => {
-  const oldEntries: TokenEntry[] = [];
-  const newEntries: TokenEntry[] = [];
+const buildHighlightRequest = (diff: DiffFile, theme: string): HighlightRequest => {
+  const lines: HighlightRequest['lines'] = [];
 
-  for (const [i, hunk] of diff.hunks.entries()) {
-    if (i > 0) {
-      oldEntries.push({ key: '', content: '' });
-      newEntries.push({ key: '', content: '' });
-    }
-
+  for (const hunk of diff.hunks) {
     for (const line of hunk.lines) {
-      const key = diffLineKey(line);
-      if (line.lineType !== 'added') {
-        oldEntries.push({ key, content: line.content });
-      }
-      if (line.lineType !== 'removed') {
-        newEntries.push({ key, content: line.content });
-      }
+      lines.push({ key: diffLineKey(line), content: line.content });
     }
   }
 
-  return { oldEntries, newEntries };
-};
-
-const useHighlighter = () => {
-  const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
-
-  useEffect(() => {
-    void getOrCreateHighlighter().then(setHighlighter);
-  }, []);
-
-  return highlighter;
-};
-
-const buildTokenMap = (diff: DiffFile, highlighter: Highlighter, theme: string) => {
-  const { oldEntries, newEntries } = buildTokenEntries(diff);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, oxlint/no-unsafe-type-assertion -- fixture language strings are valid Shiki language IDs
-  const lang = diff.language as BundledLanguage;
-  const oldTokenLines = highlighter.codeToTokens(
-    oldEntries.map((e) => e.content).join('\n') || ' ',
-    { lang, theme },
-  ).tokens;
-  const newTokenLines = highlighter.codeToTokens(
-    newEntries.map((e) => e.content).join('\n') || ' ',
-    { lang, theme },
-  ).tokens;
-
-  const map = new Map<string, ThemedToken[]>();
-  for (const [i, entry] of oldEntries.entries()) {
-    const tokens = oldTokenLines[i];
-    if (entry.key !== '' && tokens != null) {
-      map.set(entry.key, tokens);
-    }
-  }
-  for (const [i, entry] of newEntries.entries()) {
-    const tokens = newTokenLines[i];
-    if (entry.key !== '' && !map.has(entry.key) && tokens != null) {
-      map.set(entry.key, tokens);
-    }
-  }
-
-  return map;
+  return {
+    type: 'highlight',
+    filePath: diff.path,
+    language: diff.language,
+    theme,
+    lines,
+  };
 };
 
 export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
-  const highlighter = useHighlighter();
+  const [tokenMap, setTokenMap] = useState<Map<string, HighlightToken[]> | null>(null);
+  const requestIdRef = useRef(0);
 
-  return useMemo(() => {
-    if (highlighter == null || diff == null) {
-      return null;
+  useEffect(() => {
+    if (diff == null) {
+      setTokenMap(null);
+      return;
     }
 
-    return buildTokenMap(diff, highlighter, theme);
-  }, [diff, highlighter, theme]);
+    const currentId = ++requestIdRef.current;
+    const worker = getOrCreateWorker();
+    const request = buildHighlightRequest(diff, theme);
+
+    const handleMessage = (event: MessageEvent<HighlightResponse>) => {
+      if (currentId !== requestIdRef.current) {
+        return;
+      }
+
+      const map = new Map<string, HighlightToken[]>();
+      for (const [key, tokens] of Object.entries(event.data.tokens)) {
+        map.set(key, tokens);
+      }
+      setTokenMap(map);
+    };
+
+    worker.addEventListener('message', handleMessage);
+    // eslint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage does not accept targetOrigin
+    worker.postMessage(request);
+
+    return () => {
+      worker.removeEventListener('message', handleMessage);
+    };
+  }, [diff, theme]);
+
+  return tokenMap;
+};
+
+export const resetWorkerForTesting = () => {
+  sharedWorker?.terminate();
+  sharedWorker = null;
 };

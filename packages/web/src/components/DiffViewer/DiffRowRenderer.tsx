@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ThemedToken } from 'shiki';
-
+import type { HighlightToken } from '../../workers/highlightProtocol';
 import type { DiffRow } from './buildRows';
 import { RowSideCell } from './RowSideCell';
 
@@ -8,7 +7,7 @@ import styles from './DiffViewer.module.css';
 
 interface DiffRowRendererProps {
   row: DiffRow;
-  tokenMap: Map<string, ThemedToken[]> | null;
+  tokenMap: Map<string, HighlightToken[]> | null;
   measureRef: (node: Element | null) => void;
   style: CSSProperties;
   dataIndex: number;

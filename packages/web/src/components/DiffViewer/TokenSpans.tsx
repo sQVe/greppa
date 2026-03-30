@@ -1,8 +1,8 @@
-import type { ThemedToken } from 'shiki';
+import type { HighlightToken } from '../../workers/highlightProtocol';
 
 interface TokenSpansProps {
   content: string;
-  tokens: ThemedToken[] | null;
+  tokens: HighlightToken[] | null;
 }
 
 export const TokenSpans = ({ content, tokens }: TokenSpansProps) => {
@@ -10,7 +10,7 @@ export const TokenSpans = ({ content, tokens }: TokenSpansProps) => {
     return content;
   }
   return tokens.map((token, i) => (
-    // Shiki tokens have no stable identity; index keys are safe here since the list is static per render
+    // Token lists are static per render; index keys are safe
     // oxlint-disable-next-line react/no-array-index-key
     <span key={i} style={{ color: token.color }}>
       {token.content}

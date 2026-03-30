@@ -12,8 +12,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
 
-vi.mock('shiki', () => ({
-  createHighlighter: () => Promise.resolve(null),
+vi.mock('./components/DiffViewer/useSyntaxHighlighting', () => ({
+  useSyntaxHighlighting: () => null,
 }));
 
 vi.mock('./hooks/useTheme', () => ({

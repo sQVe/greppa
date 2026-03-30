@@ -13,8 +13,8 @@ vi.mock('../../hooks/useTheme', () => ({
   }),
 }));
 
-vi.mock('shiki', () => ({
-  createHighlighter: () => Promise.resolve(null),
+vi.mock('./useSyntaxHighlighting', () => ({
+  useSyntaxHighlighting: () => null,
 }));
 
 const scrollToIndex = vi.fn();

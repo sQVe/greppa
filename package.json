@@ -6,7 +6,7 @@
     "build": "vp run -r build",
     "check": "vp check",
     "ci:publish": "pnpm publish -r --access public --no-git-checks",
-    "dev": "pnpm run env:check && pnpm run dev:caddy & pnpm -r --parallel run dev",
+    "dev": "pnpm run env:check && (pnpm run dev:caddy & pnpm -r --parallel run dev)",
     "dev:caddy": "caddy run --config ~/.config/caddy/greppa/Caddyfile",
     "env:check": "test -f .env.local || pnpm run env:setup",
     "env:setup": "tsx scripts/worktreeEnv.ts",

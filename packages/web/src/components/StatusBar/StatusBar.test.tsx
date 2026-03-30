@@ -18,4 +18,29 @@ describe('StatusBar', () => {
     const { container } = render(<StatusBar reviewedCount={0} totalCount={0} />);
     expect(container.querySelector('footer')).not.toBeNull();
   });
+
+  describe('file metadata', () => {
+    it('renders language when provided', () => {
+      render(<StatusBar reviewedCount={0} totalCount={0} language="TypeScript" />);
+      expect(screen.getByText('TypeScript')).toBeDefined();
+    });
+
+    it('renders encoding when provided', () => {
+      render(<StatusBar reviewedCount={0} totalCount={0} encoding="UTF-8" />);
+      expect(screen.getByText('UTF-8')).toBeDefined();
+    });
+
+    it('renders both language and encoding together', () => {
+      render(
+        <StatusBar reviewedCount={0} totalCount={0} language="TypeScript" encoding="UTF-8" />,
+      );
+      expect(screen.getByText('TypeScript')).toBeDefined();
+      expect(screen.getByText('UTF-8')).toBeDefined();
+    });
+
+    it('does not render metadata section when neither is provided', () => {
+      const { container } = render(<StatusBar reviewedCount={0} totalCount={0} />);
+      expect(container.querySelector('[class*="metadata"]')).toBeNull();
+    });
+  });
 });

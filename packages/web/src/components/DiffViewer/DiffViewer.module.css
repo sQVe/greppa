@@ -6,22 +6,6 @@
   line-height: var(--gr-leading-code);
 }
 
-.fileHeader {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--gr-space-md);
-  padding: var(--gr-space-md) var(--gr-space-lg);
-  background: var(--gr-color-bg-subtle);
-  border-bottom: 1px solid var(--gr-color-border-muted);
-  font-family: var(--gr-font-ui);
-  font-size: var(--gr-text-sm);
-  font-weight: var(--gr-font-weight-medium);
-  color: var(--gr-color-text-primary);
-}
-
 .splitContainer {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -30,10 +14,6 @@
 .side {
   display: grid;
   grid-template-rows: subgrid;
-}
-
-.side[data-side='right'] {
-  border-left: 1px solid var(--gr-color-border-default);
 }
 
 .hunkHeader {

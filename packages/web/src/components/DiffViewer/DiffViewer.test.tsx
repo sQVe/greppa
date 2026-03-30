@@ -103,23 +103,6 @@ describe('DiffViewer', () => {
     });
   });
 
-  describe('file header', () => {
-    it('renders the file path', () => {
-      render(<DiffViewer diff={modifiedDiff} />);
-      expect(screen.getByText('src/auth/validateToken.ts')).toBeDefined();
-    });
-
-    it('renders the change type badge', () => {
-      render(<DiffViewer diff={modifiedDiff} />);
-      expect(screen.getByText('Modified')).toBeDefined();
-    });
-
-    it('renders Deleted badge for deleted files', () => {
-      render(<DiffViewer diff={deletedDiff} />);
-      expect(screen.getByText('Deleted')).toBeDefined();
-    });
-  });
-
   describe('hunk headers', () => {
     it('renders the hunk range header on both sides', () => {
       render(<DiffViewer diff={modifiedDiff} />);

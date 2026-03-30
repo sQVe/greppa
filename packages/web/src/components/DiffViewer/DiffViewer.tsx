@@ -1,6 +1,6 @@
-import { Badge, EmptyState } from '@greppa/ui';
+import { EmptyState } from '@greppa/ui';
 
-import type { ChangeType, DiffFile } from '../../fixtures/types';
+import type { DiffFile } from '../../fixtures/types';
 import { useTheme } from '../../hooks/useTheme';
 import type { DiffRow } from './buildRows';
 import { buildRows } from './buildRows';
@@ -19,13 +19,6 @@ interface HunkData {
   rows: DiffRow[];
 }
 
-const CHANGE_LABELS: Record<ChangeType, string> = {
-  added: 'Added',
-  deleted: 'Deleted',
-  modified: 'Modified',
-  renamed: 'Renamed',
-};
-
 const SIDES = ['left', 'right'] as const;
 
 export type { HunkData };
@@ -38,7 +31,6 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
     return <EmptyState>Select a file to view diff</EmptyState>;
   }
 
-  const label = CHANGE_LABELS[diff.changeType];
   const hunks: HunkData[] = diff.hunks.map((hunk, index) => ({
     header: hunk.header,
     key: `${index}-${hunk.header}`,
@@ -48,11 +40,6 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
 
   return (
     <div className={styles.viewer}>
-      <div className={styles.fileHeader}>
-        <Badge variant={diff.changeType}>{label}</Badge>
-        <span>{diff.path}</span>
-        {diff.oldPath != null ? <span>← {diff.oldPath}</span> : null}
-      </div>
       <div
         className={styles.splitContainer}
         style={{ gridTemplateRows: `repeat(${totalRows}, auto)` }}

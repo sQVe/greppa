@@ -103,6 +103,7 @@ const deletedDiff: DiffFile = {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 const getDiffRows = () => [...document.querySelectorAll('[data-testid="diff-row"]')];
@@ -189,9 +190,9 @@ describe('DiffViewer', () => {
     it('renders inside a scroll container with a virtual list', () => {
       render(<DiffViewer diff={modifiedDiff} />);
       const viewer = document.querySelector('[data-testid="diff-viewer"]');
-      expect(viewer).toBeDefined();
+      expect(viewer).not.toBeNull();
       const virtualList = viewer!.firstElementChild;
-      expect(virtualList).toBeDefined();
+      expect(virtualList).not.toBeNull();
     });
   });
 
@@ -203,8 +204,6 @@ describe('DiffViewer', () => {
       render(<DiffViewer diff={modifiedDiff} />);
       expect(screen.getByTestId('diff-collapsed')).toBeDefined();
       expect(getDiffRows()).toHaveLength(0);
-
-      vi.restoreAllMocks();
     });
 
     it('expands a huge diff when the expand button is clicked', async () => {
@@ -216,8 +215,6 @@ describe('DiffViewer', () => {
       fireEvent.click(expandButton);
       expect(screen.queryByTestId('diff-collapsed')).toBeNull();
       expect(getDiffRows().length).toBeGreaterThan(0);
-
-      vi.restoreAllMocks();
     });
 
     it('renders normally for small diffs without collapsed state', () => {
@@ -233,13 +230,11 @@ describe('DiffViewer', () => {
       render(<DiffViewer diff={modifiedDiff} />);
       expect(getDiffRows().length).toBeGreaterThan(0);
       expect(screen.queryByTestId('diff-collapsed')).toBeNull();
-
-      vi.restoreAllMocks();
     });
   });
 
   describe('keyboard navigation', () => {
-    it('scrolls to the next hunk on j key', () => {
+    it('does not scroll when no next hunk exists', () => {
       render(<DiffViewer diff={modifiedDiff} />);
       scrollToIndex.mockClear();
       fireEvent.keyDown(document, { key: 'j' });

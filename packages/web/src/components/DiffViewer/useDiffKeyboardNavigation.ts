@@ -8,6 +8,7 @@ import { findNavigationTarget } from './findNavigationTarget';
 interface UseDiffKeyboardNavigationOptions {
   items: VirtualItem[];
   virtualizer: Virtualizer<HTMLDivElement, Element>;
+  enabled: boolean;
 }
 
 const KEY_TO_ACTION: Record<string, NavigationAction> = {
@@ -20,6 +21,7 @@ const KEY_TO_ACTION: Record<string, NavigationAction> = {
 export const useDiffKeyboardNavigation = ({
   items,
   virtualizer,
+  enabled,
 }: UseDiffKeyboardNavigationOptions) => {
   const currentIndexRef = useRef(0);
 
@@ -28,7 +30,15 @@ export const useDiffKeyboardNavigation = ({
   }, [items]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
@@ -52,5 +62,5 @@ export const useDiffKeyboardNavigation = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () =>{  document.removeEventListener('keydown', handleKeyDown); };
-  }, [items, virtualizer]);
+  }, [items, virtualizer, enabled]);
 };

@@ -71,7 +71,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
   const isCollapsed = tier === 'huge' && !forceExpanded;
   const shouldDeferHighlighting = tier === 'large' || (tier === 'huge' && forceExpanded);
 
-  const highlightDiff = useDeferredDiff(diff, shouldDeferHighlighting);
+  const highlightDiff = useDeferredDiff(isCollapsed ? null : diff, shouldDeferHighlighting);
   const tokenMap = useSyntaxHighlighting(highlightDiff, theme);
 
   const virtualizer = useVirtualizer({
@@ -81,7 +81,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
     enabled: !isCollapsed,
   });
 
-  useDiffKeyboardNavigation({ items, virtualizer });
+  useDiffKeyboardNavigation({ items, virtualizer, enabled: diff != null && !isCollapsed });
 
   if (diff == null) {
     return <EmptyState>Select a file to view diff</EmptyState>;

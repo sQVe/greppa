@@ -2,6 +2,12 @@ import type { VirtualItem } from './buildVirtualItems';
 
 export type NavigationAction = 'nextHunk' | 'prevHunk' | 'nextChange' | 'prevChange';
 
+interface FindNavigationTargetOptions {
+  items: VirtualItem[];
+  currentIndex: number;
+  action: NavigationAction;
+}
+
 const isChangedRow = (item: VirtualItem) => {
   if (item.kind !== 'diff-row') {
     return false;
@@ -12,12 +18,6 @@ const isChangedRow = (item: VirtualItem) => {
 
   return leftType === 'removed' || leftType === 'added' || rightType === 'removed' || rightType === 'added';
 };
-
-interface FindNavigationTargetOptions {
-  items: VirtualItem[];
-  currentIndex: number;
-  action: NavigationAction;
-}
 
 export const findNavigationTarget = ({
   items,

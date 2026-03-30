@@ -5,17 +5,17 @@ import type { VirtualItem } from './buildVirtualItems';
 import type { NavigationAction } from './findNavigationTarget';
 import { findNavigationTarget } from './findNavigationTarget';
 
+interface UseDiffKeyboardNavigationOptions {
+  items: VirtualItem[];
+  virtualizer: Virtualizer<HTMLDivElement, Element>;
+}
+
 const KEY_TO_ACTION: Record<string, NavigationAction> = {
   j: 'nextHunk',
   k: 'prevHunk',
   n: 'nextChange',
   p: 'prevChange',
 };
-
-interface UseDiffKeyboardNavigationOptions {
-  items: VirtualItem[];
-  virtualizer: Virtualizer<HTMLDivElement, Element>;
-}
 
 export const useDiffKeyboardNavigation = ({
   items,

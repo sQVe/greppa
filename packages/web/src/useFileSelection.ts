@@ -1,5 +1,5 @@
 import { useMatch, useNavigate } from '@tanstack/react-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
 
@@ -25,10 +25,17 @@ export const useFileSelection = (
     () => new Set(allFiles.filter((file) => file.status === 'reviewed').map((file) => file.path)),
   );
 
+  useEffect(() => {
+    if (selectedFilePath == null) {
+      return;
+    }
+
+    setReviewedPaths((prev) => (prev.has(selectedFilePath) ? prev : new Set([...prev, selectedFilePath])));
+  }, [selectedFilePath]);
+
   const selectFile = useCallback(
     (path: string) => {
       void navigate({ to: '/file/$', params: { _splat: path } });
-      setReviewedPaths((prev) => (prev.has(path) ? prev : new Set([...prev, path])));
     },
     [navigate],
   );

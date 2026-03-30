@@ -256,5 +256,33 @@ describe('useFileSelection', () => {
         expect(result.current.reviewedCount).toBe(1);
       });
     });
+
+    it('marks a file as reviewed when loaded via deep link', async () => {
+      const { result } = await renderFileSelection('/file/src/b.ts');
+      await waitFor(() => {
+        expect(result.current.reviewedCount).toBe(2);
+      });
+    });
+
+    it('marks a file as reviewed on browser back navigation', async () => {
+      const { result, router } = await renderFileSelection();
+      expect(result.current.reviewedCount).toBe(1);
+
+      act(() => { result.current.selectFile('src/b.ts'); });
+      await waitFor(() => {
+        expect(result.current.reviewedCount).toBe(2);
+      });
+
+      act(() => { result.current.selectFile('c.ts'); });
+      await waitFor(() => {
+        expect(result.current.reviewedCount).toBe(3);
+      });
+
+      router.history.back();
+      await waitFor(() => {
+        expect(result.current.selectedFilePath).toBe('src/b.ts');
+        expect(result.current.reviewedCount).toBe(3);
+      });
+    });
   });
 });

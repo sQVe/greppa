@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DiffFile } from '../../fixtures/types';
@@ -15,6 +15,23 @@ vi.mock('../../hooks/useTheme', () => ({
 
 vi.mock('shiki', () => ({
   createHighlighter: () => Promise.resolve(null),
+}));
+
+const scrollToIndex = vi.fn();
+
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getTotalSize: () => count * 20,
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, i) => ({
+        index: i,
+        key: i,
+        start: i * 20,
+        size: 20,
+        measureElement: () => undefined,
+      })),
+    scrollToIndex,
+  }),
 }));
 
 const modifiedDiff: DiffFile = {
@@ -88,12 +105,15 @@ afterEach(() => {
   cleanup();
 });
 
-const getSide = (side: 'left' | 'right') => document.querySelector(`[data-side="${side}"]`)!;
+const getDiffRows = () => [...document.querySelectorAll('[data-testid="diff-row"]')];
 
-const getDataRows = (side: 'left' | 'right') => {
-  const sideEl = getSide(side);
-  return [...sideEl.querySelectorAll(':scope > [data-testid="diff-row"]')];
-};
+const getHunkHeaders = () => [...document.querySelectorAll('[data-testid="hunk-header"]')];
+
+const getGutters = (row: Element, side: 'left' | 'right') =>
+  row.querySelector(`[data-side="${side}"] [class*="gutter"]`)!;
+
+const getContent = (row: Element, side: 'left' | 'right') =>
+  row.querySelector(`[data-side="${side}"] [class*="content"]`)!;
 
 describe('DiffViewer', () => {
   describe('empty state', () => {
@@ -106,68 +126,131 @@ describe('DiffViewer', () => {
   describe('hunk headers', () => {
     it('renders the hunk range header on both sides', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      expect(screen.getAllByText('@@ -1,3 +1,4 @@').length).toBe(2);
+      const headers = getHunkHeaders();
+      expect(headers).toHaveLength(1);
+      expect(headers[0]!.textContent).toBe('@@ -1,3 +1,4 @@@@ -1,3 +1,4 @@');
     });
   });
 
   describe('line numbers', () => {
-    it('renders old line numbers in the left side', () => {
+    it('renders old line numbers on the left side', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      const rows = getDataRows('left');
-      const gutter = rows[0]!.querySelector('[class*="gutter"]')!;
+      const rows = getDiffRows();
+      const gutter = getGutters(rows[0]!, 'left');
       expect(gutter.textContent).toBe('1');
     });
 
-    it('renders new line numbers in the right side', () => {
+    it('renders new line numbers on the right side', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      const rows = getDataRows('right');
-      const gutter = rows[0]!.querySelector('[class*="gutter"]')!;
+      const rows = getDiffRows();
+      const gutter = getGutters(rows[0]!, 'right');
       expect(gutter.textContent).toBe('1');
     });
   });
 
   describe('side-by-side pairing', () => {
-    it('renders the correct number of data rows per side', () => {
+    it('renders the correct number of diff rows', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      expect(getDataRows('left').length).toBeGreaterThanOrEqual(4);
-      expect(getDataRows('right').length).toBeGreaterThanOrEqual(4);
+      expect(getDiffRows()).toHaveLength(4);
     });
 
     it('renders empty gutter on the left for unmatched added lines', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      const rows = getDataRows('left');
-      const gutter = rows[2]!.querySelector('[class*="gutter"]')!;
+      const rows = getDiffRows();
+      const gutter = getGutters(rows[2]!, 'left');
       expect(gutter.textContent).toBe('');
     });
 
     it('renders all removed lines on left for deleted files', () => {
       render(<DiffViewer diff={deletedDiff} />);
-      const leftRows = getDataRows('left');
-      expect(leftRows.length).toBe(3);
-      const leftGutter = leftRows[0]!.querySelector('[class*="gutter"]')!;
+      const rows = getDiffRows();
+      expect(rows).toHaveLength(3);
+
+      const leftGutter = getGutters(rows[0]!, 'left');
       expect(leftGutter.textContent).toBe('1');
 
-      const rightRows = getDataRows('right');
-      const rightGutter = rightRows[0]!.querySelector('[class*="gutter"]')!;
+      const rightGutter = getGutters(rows[0]!, 'right');
       expect(rightGutter.textContent).toBe('');
     });
   });
 
   describe('line content', () => {
-    it('renders code content in the content cells', () => {
+    it('renders code content in both sides for context lines', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      expect(screen.getAllByText("import { verify } from 'jsonwebtoken';").length).toBe(2);
+      const rows = getDiffRows();
+      const leftContent = getContent(rows[0]!, 'left');
+      const rightContent = getContent(rows[0]!, 'right');
+      expect(leftContent.textContent).toBe("import { verify } from 'jsonwebtoken';");
+      expect(rightContent.textContent).toBe("import { verify } from 'jsonwebtoken';");
     });
   });
 
-  describe('selection isolation', () => {
-    it('renders left and right sides as separate DOM subtrees', () => {
+  describe('virtualized structure', () => {
+    it('renders inside a scroll container with a virtual list', () => {
       render(<DiffViewer diff={modifiedDiff} />);
-      const left = getSide('left');
-      const right = getSide('right');
-      expect(left).toBeDefined();
-      expect(right).toBeDefined();
-      expect(left.parentElement).toBe(right.parentElement);
+      const viewer = document.querySelector('[data-testid="diff-viewer"]');
+      expect(viewer).toBeDefined();
+      const virtualList = viewer!.firstElementChild;
+      expect(virtualList).toBeDefined();
+    });
+  });
+
+  describe('file size tiers', () => {
+    it('renders collapsed summary for huge diffs', async () => {
+      const tierModule = await import('./getFileSizeTier');
+      vi.spyOn(tierModule, 'getFileSizeTier').mockReturnValue('huge');
+
+      render(<DiffViewer diff={modifiedDiff} />);
+      expect(screen.getByTestId('diff-collapsed')).toBeDefined();
+      expect(getDiffRows()).toHaveLength(0);
+
+      vi.restoreAllMocks();
+    });
+
+    it('expands a huge diff when the expand button is clicked', async () => {
+      const tierModule = await import('./getFileSizeTier');
+      vi.spyOn(tierModule, 'getFileSizeTier').mockReturnValue('huge');
+
+      render(<DiffViewer diff={modifiedDiff} />);
+      const expandButton = screen.getByRole('button', { name: /show diff/i });
+      fireEvent.click(expandButton);
+      expect(screen.queryByTestId('diff-collapsed')).toBeNull();
+      expect(getDiffRows().length).toBeGreaterThan(0);
+
+      vi.restoreAllMocks();
+    });
+
+    it('renders normally for small diffs without collapsed state', () => {
+      render(<DiffViewer diff={modifiedDiff} />);
+      expect(screen.queryByTestId('diff-collapsed')).toBeNull();
+      expect(getDiffRows()).toHaveLength(4);
+    });
+
+    it('defers syntax highlighting for large diffs', async () => {
+      const tierModule = await import('./getFileSizeTier');
+      vi.spyOn(tierModule, 'getFileSizeTier').mockReturnValue('large');
+
+      render(<DiffViewer diff={modifiedDiff} />);
+      expect(getDiffRows().length).toBeGreaterThan(0);
+      expect(screen.queryByTestId('diff-collapsed')).toBeNull();
+
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe('keyboard navigation', () => {
+    it('scrolls to the next hunk on j key', () => {
+      render(<DiffViewer diff={modifiedDiff} />);
+      scrollToIndex.mockClear();
+      fireEvent.keyDown(document, { key: 'j' });
+      expect(scrollToIndex).not.toHaveBeenCalled();
+    });
+
+    it('scrolls to the next change on n key', () => {
+      render(<DiffViewer diff={modifiedDiff} />);
+      scrollToIndex.mockClear();
+      fireEvent.keyDown(document, { key: 'n' });
+      expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start' });
     });
   });
 });

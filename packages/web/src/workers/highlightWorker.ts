@@ -3,6 +3,7 @@ import { handleHighlightRequest } from './highlightEngine';
 
 globalThis.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
   void handleHighlightRequest(event.data).then((response) => {
-    globalThis.postMessage(response, globalThis.location.origin);
+    // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage does not accept targetOrigin
+    globalThis.postMessage(response);
   });
 });

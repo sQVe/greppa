@@ -41,11 +41,11 @@ export const handleHighlightRequest = async (
     }
   }
 
-  const uncachedLines: { index: number; key: string; content: string }[] = [];
-  for (const [i, line] of lines.entries()) {
+  const uncachedLines: { key: string; content: string }[] = [];
+  for (const line of lines) {
     const cacheKey = `${filePath}:${line.key}`;
     if (!cache.has(cacheKey)) {
-      uncachedLines.push({ index: i, key: line.key, content: line.content });
+      uncachedLines.push({ key: line.key, content: line.content });
     }
   }
 

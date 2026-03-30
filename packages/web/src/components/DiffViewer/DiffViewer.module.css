@@ -1,6 +1,7 @@
 .viewer {
   height: 100%;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-family: var(--gr-font-mono);
   font-size: var(--gr-text-code);
   line-height: var(--gr-leading-code);

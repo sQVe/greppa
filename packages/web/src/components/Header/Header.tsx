@@ -7,18 +7,18 @@ import { isTheme, useTheme } from '../../hooks/useTheme';
 
 import styles from './Header.module.css';
 
+interface HeaderProps {
+  filePath?: string | null;
+  oldPath?: string | null;
+  changeType?: ChangeType | null;
+}
+
 const CHANGE_LABELS: Record<ChangeType, string> = {
   added: 'Added',
   deleted: 'Deleted',
   modified: 'Modified',
   renamed: 'Renamed',
 };
-
-interface HeaderProps {
-  filePath?: string | null;
-  oldPath?: string | null;
-  changeType?: ChangeType | null;
-}
 
 export const Header = ({ filePath, oldPath, changeType }: HeaderProps) => {
   const { theme, setTheme, themes } = useTheme();

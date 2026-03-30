@@ -30,7 +30,7 @@ describe('App', () => {
 
   it('renders the status bar with fixture review counts', () => {
     render(<App />);
-    expect(screen.getByText('2/5 files reviewed')).toBeDefined();
+    expect(screen.getByText('2/7 files reviewed')).toBeDefined();
   });
 
   it('renders the file tree', () => {
@@ -50,14 +50,14 @@ describe('App', () => {
 
   it('increments reviewed count when selecting an unreviewed file', async () => {
     render(<App />);
-    expect(screen.getByText('2/5 files reviewed')).toBeDefined();
+    expect(screen.getByText('2/7 files reviewed')).toBeDefined();
     await userEvent.click(screen.getByText('rateLimiter.ts'));
-    expect(screen.getByText('3/5 files reviewed')).toBeDefined();
+    expect(screen.getByText('3/7 files reviewed')).toBeDefined();
   });
 
   it('does not increment when selecting an already-reviewed file', async () => {
     render(<App />);
     await userEvent.click(screen.getByText('validateToken.ts'));
-    expect(screen.getByText('2/5 files reviewed')).toBeDefined();
+    expect(screen.getByText('2/7 files reviewed')).toBeDefined();
   });
 });

@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, render, screen } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -8,6 +7,8 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
+import { cleanup, render, screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
@@ -30,6 +31,9 @@ afterEach(() => {
 });
 
 const renderApp = (initialLocation = '/') => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const rootRoute = createRootRoute({ component: App });
   const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/' });
   const fileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/file/$' });
@@ -37,7 +41,11 @@ const renderApp = (initialLocation = '/') => {
   const history = createMemoryHistory({ initialEntries: [initialLocation] });
   const router = createRouter({ routeTree, history });
 
-  return render(<RouterProvider router={router} />);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 };
 
 describe('App', () => {

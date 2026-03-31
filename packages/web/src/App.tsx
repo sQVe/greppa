@@ -5,7 +5,8 @@ import { DiffViewer } from './components/DiffViewer/DiffViewer';
 import { FileTree } from './components/FileTree/FileTree';
 import { Header } from './components/Header/Header';
 import { StatusBar } from './components/StatusBar/StatusBar';
-import { comments, diffs, fileInfoMap, files } from './fixtures';
+import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
+import { useFileList } from './hooks/useFileList';
 import { useFileSelection } from './useFileSelection';
 
 import styles from './App.module.css';
@@ -17,6 +18,9 @@ export const App = () => {
     id: 'gr-panels',
     panelIds: PANEL_IDS,
   });
+
+  const { files: apiFiles, isError } = useFileList('HEAD~1', 'HEAD');
+  const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
 
   const {
     selectedFilePath,

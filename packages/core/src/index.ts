@@ -1,1 +1,18 @@
+import { Schema } from 'effect';
+
 export const name = '@greppa/core' as const;
+
+export const ChangeType = Schema.Union([
+  Schema.Literal('added'),
+  Schema.Literal('modified'),
+  Schema.Literal('deleted'),
+  Schema.Literal('renamed'),
+]);
+export type ChangeType = typeof ChangeType.Type;
+
+export const FileEntry = Schema.Struct({
+  path: Schema.String,
+  changeType: ChangeType,
+  oldPath: Schema.optional(Schema.String),
+});
+export type FileEntry = typeof FileEntry.Type;

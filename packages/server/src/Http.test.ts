@@ -4,13 +4,23 @@ import { HttpRouter } from 'effect/unstable/http';
 import { layer as EtagLayer } from 'effect/unstable/http/Etag';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { GitServiceLive, RepoPath } from './GitService';
 import { ApiRoutes } from './Http';
 
-const PlatformLayer = Layer.mergeAll(NodeServices.layer, NodeHttpPlatform.layer, EtagLayer);
+const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
+
+const PlatformLayer = Layer.mergeAll(
+  NodeServices.layer,
+  NodeHttpPlatform.layer,
+  EtagLayer,
+  GitServiceLive,
+  Layer.succeed(RepoPath, monorepoRoot),
+);
 
 const TestAppLayer = ApiRoutes.pipe(Layer.provide(PlatformLayer));
 
-let handler: (request: Request) => Promise<Response>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let handler: (...args: any[]) => Promise<Response>;
 let dispose: () => Promise<void>;
 
 beforeAll(() => {
@@ -30,6 +40,30 @@ describe('Http', () => {
 
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ status: 'ok' });
+    });
+  });
+
+  describe('GET /api/files', () => {
+    it('returns file list for valid refs', async () => {
+      const response = await handler(
+        new Request('http://localhost/api/files?oldRef=HEAD~1&newRef=HEAD'),
+      );
+
+      expect(response.status).toBe(200);
+      const body: unknown = await response.json();
+      expect(Array.isArray(body)).toBe(true);
+      const entries = body as Record<string, unknown>[];
+      expect(entries.length).toBeGreaterThan(0);
+      expect(entries[0]).toHaveProperty('path');
+      expect(entries[0]).toHaveProperty('changeType');
+    });
+
+    it('returns error for invalid refs', async () => {
+      const response = await handler(
+        new Request('http://localhost/api/files?oldRef=invalid-xxx&newRef=HEAD'),
+      );
+
+      expect(response.status).not.toBe(200);
     });
   });
 

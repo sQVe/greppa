@@ -14,6 +14,8 @@ export interface HighlightRequest {
   language: string;
   theme: string;
   lines: HighlightLine[];
+  oldContent?: string;
+  newContent?: string;
 }
 
 export interface HighlightResponse {

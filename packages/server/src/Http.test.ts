@@ -67,6 +67,33 @@ describe('Http', () => {
     });
   });
 
+  describe('GET /api/diff/:oldRef/:newRef/*path', () => {
+    it('returns diff content for valid refs and path', async () => {
+      const response = await handler(
+        new Request('http://localhost/api/diff/HEAD~1/HEAD/packages/server/src/Api.ts'),
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as Record<string, unknown>;
+      expect(body).toHaveProperty('path', 'packages/server/src/Api.ts');
+      expect(body).toHaveProperty('changeType');
+      expect(body).toHaveProperty('oldContent');
+      expect(body).toHaveProperty('newContent');
+      expect(typeof body.oldContent).toBe('string');
+      expect(typeof body.newContent).toBe('string');
+      expect((body.oldContent as string).length).toBeGreaterThan(0);
+      expect((body.newContent as string).length).toBeGreaterThan(0);
+    });
+
+    it('returns error for invalid refs', async () => {
+      const response = await handler(
+        new Request('http://localhost/api/diff/invalid-xxx/HEAD/some-file.ts'),
+      );
+
+      expect(response.status).not.toBe(200);
+    });
+  });
+
   describe('unknown routes', () => {
     it('returns 404 for unknown routes', async () => {
       const response = await handler(new Request('http://localhost/api/unknown'));

@@ -16,3 +16,12 @@ export const FileEntry = Schema.Struct({
   oldPath: Schema.optional(Schema.String),
 });
 export type FileEntry = typeof FileEntry.Type;
+
+export const DiffResponse = Schema.Struct({
+  path: Schema.String,
+  changeType: ChangeType,
+  oldPath: Schema.optional(Schema.String),
+  oldContent: Schema.String,
+  newContent: Schema.String,
+});
+export type DiffResponse = typeof DiffResponse.Type;

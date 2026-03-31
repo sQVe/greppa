@@ -75,6 +75,10 @@ export class GitService extends ServiceMap.Service<
       oldRef: string,
       newRef: string,
     ) => Effect.Effect<FileEntry[], GitError, ChildProcessSpawner | typeof RepoPath>;
+    getFileContent: (
+      ref: string,
+      path: string,
+    ) => Effect.Effect<string, GitError, ChildProcessSpawner | typeof RepoPath>;
   }
 >()('greppa/GitService') {}
 
@@ -83,5 +87,6 @@ export const GitServiceLive = Layer.succeed(
   GitService.of({
     listFiles: (oldRef, newRef) =>
       runGit(['diff', '--name-status', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
+    getFileContent: (ref, path) => runGit(['show', `${ref}:${path}`]),
   }),
 );

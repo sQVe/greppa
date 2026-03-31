@@ -6,6 +6,7 @@ import { FileTree } from './components/FileTree/FileTree';
 import { Header } from './components/Header/Header';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
+import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
 import { useFileSelection } from './useFileSelection';
 
@@ -31,6 +32,9 @@ export const App = () => {
     selectedThreads,
     selectedFileInfo,
   } = useFileSelection(files, diffs, comments, fileInfoMap);
+
+  // Prefetch diff content — consumed by vscode-diff worker in next task
+  useDiffContent('HEAD~1', 'HEAD', selectedFilePath);
 
   return (
     <div className={styles.app}>

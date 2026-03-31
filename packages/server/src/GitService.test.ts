@@ -78,3 +78,26 @@ describe('GitService', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('GitService.getFileContent', () => {
+  it('returns content for valid ref and path', async () => {
+    const result = await runGitService((git) =>
+      git.getFileContent('HEAD', 'package.json'),
+    );
+
+    expect(result).toContain('"name"');
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('fails with GitError for invalid ref', async () => {
+    await expect(
+      runGitService((git) => git.getFileContent('invalid-ref-xxx', 'package.json')),
+    ).rejects.toThrow();
+  });
+
+  it('fails with GitError for non-existent path', async () => {
+    await expect(
+      runGitService((git) => git.getFileContent('HEAD', 'does-not-exist.xyz')),
+    ).rejects.toThrow();
+  });
+});

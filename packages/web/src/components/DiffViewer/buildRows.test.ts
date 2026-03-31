@@ -94,6 +94,41 @@ describe('buildRows', () => {
     expect(rows[0]?.left?.tokenMapKey).toBe('removed:1:');
     expect(rows[0]?.right?.tokenMapKey).toBe('added::1');
   });
+
+  it('passes charRanges through to RowSide', () => {
+    const hunk: DiffHunk = {
+      header: '@@ -1,1 +1,1 @@',
+      oldStart: 1,
+      oldCount: 1,
+      newStart: 1,
+      newCount: 1,
+      lines: [
+        {
+          lineType: 'removed',
+          oldLineNumber: 1,
+          newLineNumber: null,
+          content: 'old',
+          charRanges: [{ startColumn: 1, endColumn: 3 }],
+        },
+        {
+          lineType: 'added',
+          oldLineNumber: null,
+          newLineNumber: 1,
+          content: 'new',
+          charRanges: [{ startColumn: 1, endColumn: 4 }],
+        },
+      ],
+    };
+    const rows = buildRows(hunk);
+    expect(rows[0]?.left?.charRanges).toEqual([{ startColumn: 1, endColumn: 3 }]);
+    expect(rows[0]?.right?.charRanges).toEqual([{ startColumn: 1, endColumn: 4 }]);
+  });
+
+  it('omits charRanges on context lines', () => {
+    const rows = buildRows(contextOnly);
+    expect(rows[0]?.left?.charRanges).toBeUndefined();
+    expect(rows[0]?.right?.charRanges).toBeUndefined();
+  });
 });
 
 describe('diffLineKey', () => {

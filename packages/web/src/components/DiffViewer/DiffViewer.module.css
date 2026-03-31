@@ -72,6 +72,16 @@
   background: var(--gr-color-bg-surface);
 }
 
+.charRemoved {
+  background: var(--gr-color-diff-removed-char-bg);
+  border-radius: 2px;
+}
+
+.charAdded {
+  background: var(--gr-color-diff-added-char-bg);
+  border-radius: 2px;
+}
+
 .collapsed {
   display: flex;
   flex-direction: column;

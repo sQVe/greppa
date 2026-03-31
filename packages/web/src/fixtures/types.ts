@@ -13,11 +13,17 @@ export interface FileNode {
 
 export type LineType = 'added' | 'removed' | 'context';
 
+export interface CharRange {
+  startColumn: number;
+  endColumn: number;
+}
+
 export interface DiffLine {
   lineType: LineType;
   oldLineNumber: number | null;
   newLineNumber: number | null;
   content: string;
+  charRanges?: CharRange[];
 }
 
 export interface DiffHunk {
@@ -35,6 +41,8 @@ export interface DiffFile {
   changeType: ChangeType;
   language: string;
   hunks: DiffHunk[];
+  oldContent?: string;
+  newContent?: string;
 }
 
 export interface Comment {

@@ -1,4 +1,5 @@
 import type { DiffFile, DiffHunk, DiffLine } from '../fixtures/types';
+import { extractCharRanges } from '../components/DiffViewer/extractCharRanges';
 import type { DiffMapping } from '../workers/diffProtocol';
 
 const CHANGE_TYPES = new Set(['added', 'modified', 'deleted', 'renamed']);
@@ -95,21 +96,25 @@ const buildHunk = (
     }
 
     for (let i = change.original.startLineNumber; i < change.original.endLineNumberExclusive; i++) {
+      const charRanges = extractCharRanges(change, i, 'original');
       lines.push({
         lineType: 'removed',
         oldLineNumber: i,
         newLineNumber: null,
         content: oldLines[i - 1] ?? '',
+        ...(charRanges.length > 0 ? { charRanges } : {}),
       });
     }
     oldIdx = change.original.endLineNumberExclusive;
 
     for (let i = change.modified.startLineNumber; i < change.modified.endLineNumberExclusive; i++) {
+      const charRanges = extractCharRanges(change, i, 'modified');
       lines.push({
         lineType: 'added',
         oldLineNumber: null,
         newLineNumber: i,
         content: newLines[i - 1] ?? '',
+        ...(charRanges.length > 0 ? { charRanges } : {}),
       });
     }
     newIdx = change.modified.endLineNumberExclusive;
@@ -160,6 +165,8 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
       changeType,
       language: getLanguage(filePath),
       hunks: [],
+      oldContent,
+      newContent,
     };
   }
 
@@ -173,5 +180,7 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
     changeType,
     language: getLanguage(filePath),
     hunks,
+    oldContent,
+    newContent,
   };
 };

@@ -170,6 +170,37 @@ describe('buildDiffFile', () => {
     expect(result!.hunks).toEqual([]);
   });
 
+  it('attaches charRanges to removed and added lines from innerChanges', () => {
+    const changes: DiffMapping[] = [
+      {
+        original: { startLineNumber: 1, endLineNumberExclusive: 2 },
+        modified: { startLineNumber: 1, endLineNumberExclusive: 2 },
+        innerChanges: [
+          {
+            originalRange: { startLineNumber: 1, startColumn: 7, endLineNumber: 1, endColumn: 8 },
+            modifiedRange: { startLineNumber: 1, startColumn: 7, endLineNumber: 1, endColumn: 8 },
+          },
+        ],
+      },
+    ];
+
+    const result = buildDiffFile({
+      filePath: 'f.ts',
+      changeType: 'modified',
+      oldContent: 'const a = 1;',
+      newContent: 'const a = 2;',
+      changes,
+    });
+
+    const removedLine = result!.hunks[0].lines.find((l) => l.lineType === 'removed');
+    const addedLine = result!.hunks[0].lines.find((l) => l.lineType === 'added');
+    const contextLine = result!.hunks[0].lines.find((l) => l.lineType === 'context');
+
+    expect(removedLine!.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
+    expect(addedLine!.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
+    expect(contextLine?.charRanges).toBeUndefined();
+  });
+
   it('derives language from file extension', () => {
     const result = buildDiffFile({
       filePath: 'src/app.tsx',
@@ -186,5 +217,24 @@ describe('buildDiffFile', () => {
     });
 
     expect(result!.language).toBe('tsx');
+  });
+
+  it('includes oldContent and newContent in result', () => {
+    const result = buildDiffFile({
+      filePath: 'f.ts',
+      changeType: 'modified',
+      oldContent: 'const a = 1;',
+      newContent: 'const a = 2;',
+      changes: [
+        {
+          original: { startLineNumber: 1, endLineNumberExclusive: 2 },
+          modified: { startLineNumber: 1, endLineNumberExclusive: 2 },
+          innerChanges: null,
+        },
+      ],
+    });
+
+    expect(result!.oldContent).toBe('const a = 1;');
+    expect(result!.newContent).toBe('const a = 2;');
   });
 });

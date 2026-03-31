@@ -12,6 +12,16 @@ import { GitError, GitService } from './GitService';
 
 const fileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
 const CACHE_TTL_MS = 30_000;
+const MAX_CACHE_ENTRIES = 50;
+
+const evictStaleEntries = () => {
+  const now = Date.now();
+  for (const [key, value] of fileListCache) {
+    if (now - value.timestamp >= CACHE_TTL_MS) {
+      fileListCache.delete(key);
+    }
+  }
+};
 
 const getCachedFileList = (key: string) => {
   const cached = fileListCache.get(key);
@@ -21,23 +31,44 @@ const getCachedFileList = (key: string) => {
   return null;
 };
 
+const setCachedFileList = (key: string, entries: FileEntry[]) => {
+  if (fileListCache.size >= MAX_CACHE_ENTRIES) {
+    evictStaleEntries();
+  }
+  if (fileListCache.size >= MAX_CACHE_ENTRIES) {
+    fileListCache.clear();
+  }
+  fileListCache.set(key, { entries, timestamp: Date.now() });
+};
+
 const HealthHandlers = HttpApiBuilder.group(Api, 'health', (handlers) =>
   Effect.succeed(handlers.handle('getHealth', () => Effect.succeed({ status: 'ok' as const }))),
 );
 
-const FilesHandlers = HttpApiBuilder.group(Api, 'files', (handlers) =>
+const getFileList = (oldRef: string, newRef: string) =>
   Effect.gen(function* () {
+    const cacheKey = `${oldRef}:${newRef}`;
+    const cached = getCachedFileList(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
     const git = yield* GitService;
-    return handlers.handle('getFiles', ({ query }) =>
-      git.listFiles(query.oldRef, query.newRef),
-    );
-  }),
+    const entries = yield* git.listFiles(oldRef, newRef);
+    setCachedFileList(cacheKey, entries);
+    return entries;
+  });
+
+const FilesHandlers = HttpApiBuilder.group(Api, 'files', (handlers) =>
+  Effect.succeed(
+    handlers.handle('getFiles', ({ query }) => getFileList(query.oldRef, query.newRef)),
+  ),
 );
 
 const extractFilePath = (url: string, oldRef: string, newRef: string) => {
   const parsed = new URL(url, 'http://localhost');
-  const prefix = `/api/diff/${oldRef}/${newRef}/`;
-  return decodeURIComponent(parsed.pathname.slice(prefix.length));
+  const decoded = decodeURIComponent(parsed.pathname);
+  const prefix = `/api/diff/${decodeURIComponent(oldRef)}/${decodeURIComponent(newRef)}/`;
+  return decoded.slice(prefix.length);
 };
 
 const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
@@ -53,13 +84,9 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
       }
 
       return Effect.gen(function* () {
-        const cacheKey = `${oldRef}:${newRef}`;
-        const cached = getCachedFileList(cacheKey);
-        const entries = cached ?? (yield* git.listFiles(oldRef, newRef));
-        if (cached == null) {
-          fileListCache.set(cacheKey, { entries, timestamp: Date.now() });
-        }
-        const entry = entries.find((e) => e.path === filePath);
+        const entries = yield* getFileList(oldRef, newRef);
+        const matchesPath = (e: FileEntry) => e.path === filePath;
+        const entry = entries.find(matchesPath);
         if (entry == null) {
           return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
         }

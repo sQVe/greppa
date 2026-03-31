@@ -58,12 +58,12 @@ describe('Http', () => {
       expect(entries[0]).toHaveProperty('changeType');
     });
 
-    it('returns error for invalid refs', async () => {
+    it('returns 500 for invalid refs', async () => {
       const response = await handler(
         new Request('http://localhost/api/files?oldRef=invalid-xxx&newRef=HEAD'),
       );
 
-      expect(response.status).not.toBe(200);
+      expect(response.status).toBe(500);
     });
   });
 
@@ -94,12 +94,12 @@ describe('Http', () => {
       expect((body.newContent as string).length).toBeGreaterThan(0);
     });
 
-    it('returns error for invalid refs', async () => {
+    it('returns 500 for invalid refs', async () => {
       const response = await handler(
         new Request('http://localhost/api/diff/invalid-xxx/HEAD/some-file.ts'),
       );
 
-      expect(response.status).not.toBe(200);
+      expect(response.status).toBe(500);
     });
   });
 

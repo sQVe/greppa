@@ -25,6 +25,10 @@ vi.mock('./hooks/useDiffContent', () => ({
   useDiffContent: () => ({ diff: null, isLoading: false, isError: false }),
 }));
 
+vi.mock('./hooks/useDiffComputation', () => ({
+  useDiffComputation: () => ({ changes: null, error: null }),
+}));
+
 vi.mock('./hooks/useTheme', () => ({
   isTheme: (value: string) => ['catppuccin-mocha', 'catppuccin-latte'].includes(value),
   useTheme: () => ({

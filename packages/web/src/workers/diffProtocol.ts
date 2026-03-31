@@ -28,7 +28,7 @@ export interface DiffRequest {
   newContent: string;
 }
 
-export interface DiffResponse {
+export interface DiffWorkerResponse {
   type: 'diff-result';
   filePath: string;
   changes: DiffMapping[];

@@ -37,7 +37,7 @@ export const App = () => {
   } = useFileSelection(files, diffs, comments, fileInfoMap);
 
   const { diff: apiDiff } = useDiffContent('HEAD~1', 'HEAD', selectedFilePath);
-  const computedChanges = useDiffComputation(
+  const { changes: computedChanges } = useDiffComputation(
     apiDiff?.path ?? null,
     apiDiff?.oldContent ?? null,
     apiDiff?.newContent ?? null,
@@ -47,6 +47,7 @@ export const App = () => {
       buildDiffFile({
         filePath: apiDiff?.path ?? null,
         changeType: apiDiff?.changeType ?? null,
+        oldPath: apiDiff?.oldPath ?? null,
         oldContent: apiDiff?.oldContent ?? null,
         newContent: apiDiff?.newContent ?? null,
         changes: computedChanges,

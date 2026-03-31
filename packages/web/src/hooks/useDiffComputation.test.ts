@@ -2,7 +2,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
-import type { DiffMapping, DiffResponse } from '../workers/diffProtocol';
+import type { DiffMapping, DiffWorkerResponse } from '../workers/diffProtocol';
 import { resetDiffWorkerForTesting, useDiffComputation } from './useDiffComputation';
 
 let messageHandler: ((event: MessageEvent) => void) | null = null;
@@ -31,7 +31,7 @@ vi.stubGlobal(
   'Worker',
   class {
     postMessage = mockPostMessage.mockImplementation(() => {
-      const response: DiffResponse = {
+      const response: DiffWorkerResponse = {
         type: 'diff-result',
         filePath: 'src/foo.ts',
         changes: sampleChanges,
@@ -80,7 +80,8 @@ describe('useDiffComputation', () => {
       useDiffComputation('src/foo.ts', 'const a = 1;\n', 'const a = 2;\n'),
     );
 
-    expect(result.current).toBeNull();
+    expect(result.current.changes).toBeNull();
+    expect(result.current.error).toBeNull();
   });
 
   it('returns null when filePath is null', () => {
@@ -88,7 +89,7 @@ describe('useDiffComputation', () => {
       useDiffComputation(null, null, null),
     );
 
-    expect(result.current).toBeNull();
+    expect(result.current.changes).toBeNull();
   });
 
   it('returns changes when worker responds', async () => {
@@ -100,7 +101,7 @@ describe('useDiffComputation', () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(result.current).toEqual(sampleChanges);
+    expect(result.current.changes).toEqual(sampleChanges);
   });
 
   it('posts diff request to worker', () => {
@@ -139,6 +140,6 @@ describe('useDiffComputation', () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(result.current).toBeNull();
+    expect(result.current.changes).toBeNull();
   });
 });

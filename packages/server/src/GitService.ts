@@ -52,6 +52,13 @@ const validateRef = (ref: string): Effect.Effect<void, GitError> => {
   return Effect.void;
 };
 
+const validatePath = (path: string): Effect.Effect<void, GitError> => {
+  if (path === '' || path.startsWith('/') || path.includes('..')) {
+    return Effect.fail(new GitError({ message: `Invalid path: ${path}` }));
+  }
+  return Effect.void;
+};
+
 const runGit = (
   args: string[],
 ): Effect.Effect<string, GitError, ChildProcessSpawner | typeof RepoPath> =>
@@ -98,7 +105,7 @@ export const GitServiceLive = Layer.succeed(
         Effect.map(parseNameStatus),
       ),
     getFileContent: (ref, path) =>
-      validateRef(ref).pipe(
+      Effect.all([validateRef(ref), validatePath(path)]).pipe(
         Effect.flatMap(() => runGit(['show', `${ref}:${path}`])),
       ),
   }),

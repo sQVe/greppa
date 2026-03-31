@@ -1,12 +1,12 @@
 import { DefaultLinesDiffComputer } from 'vscode-diff';
 
-import type { DiffInnerChange, DiffMapping, DiffRequest, DiffResponse } from './diffProtocol';
+import type { DiffInnerChange, DiffMapping, DiffRequest, DiffWorkerResponse } from './diffProtocol';
 
 const computer = new DefaultLinesDiffComputer();
 
 const splitLines = (content: string): string[] => content.split('\n');
 
-export const handleDiffRequest = (request: DiffRequest): DiffResponse => {
+export const handleDiffRequest = (request: DiffRequest): DiffWorkerResponse => {
   const { filePath, oldContent, newContent } = request;
 
   const originalLines = splitLines(oldContent);

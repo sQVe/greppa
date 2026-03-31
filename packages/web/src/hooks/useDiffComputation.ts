@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { DiffMapping, DiffRequest, DiffResponse } from '../workers/diffProtocol';
+import type { DiffMapping, DiffRequest, DiffWorkerResponse } from '../workers/diffProtocol';
 
 let sharedWorker: Worker | null = null;
 
@@ -18,16 +18,19 @@ export const useDiffComputation = (
   newContent: string | null,
 ) => {
   const [changes, setChanges] = useState<DiffMapping[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (filePath == null || oldContent == null || newContent == null) {
       setChanges(null);
+      setError(null);
       return;
     }
 
     const currentId = ++requestIdRef.current;
     const worker = getOrCreateWorker();
+    setError(null);
 
     const request: DiffRequest = {
       type: 'diff',
@@ -36,7 +39,7 @@ export const useDiffComputation = (
       newContent,
     };
 
-    const handleMessage = (event: MessageEvent<DiffResponse>) => {
+    const handleMessage = (event: MessageEvent<DiffWorkerResponse>) => {
       if (currentId !== requestIdRef.current || event.data.filePath !== filePath) {
         return;
       }
@@ -45,8 +48,10 @@ export const useDiffComputation = (
     };
 
     const handleError = (event: ErrorEvent) => {
-      // eslint-disable-next-line no-console -- surface worker script-load failures during development
-      console.error('Diff worker error:', event.message);
+      if (currentId !== requestIdRef.current) {
+        return;
+      }
+      setError(event.message);
     };
 
     worker.addEventListener('message', handleMessage);
@@ -60,7 +65,7 @@ export const useDiffComputation = (
     };
   }, [filePath, oldContent, newContent]);
 
-  return changes;
+  return { changes, error };
 };
 
 export const resetDiffWorkerForTesting = () => {

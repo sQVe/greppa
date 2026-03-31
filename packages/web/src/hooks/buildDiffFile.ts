@@ -1,10 +1,6 @@
-import type { DiffFile, DiffHunk, DiffLine } from '../fixtures/types';
+import type { ChangeType, DiffFile, DiffHunk, DiffLine } from '../fixtures/types';
 import { extractCharRanges } from '../components/DiffViewer/extractCharRanges';
 import type { DiffMapping } from '../workers/diffProtocol';
-
-const CHANGE_TYPES = new Set(['added', 'modified', 'deleted', 'renamed']);
-
-const isChangeType = (value: string): value is DiffFile['changeType'] => CHANGE_TYPES.has(value);
 
 const CONTEXT_LINES = 3;
 
@@ -146,28 +142,31 @@ const buildHunk = (
 
 export interface BuildDiffFileInput {
   filePath: string | null;
-  changeType: string | null;
+  changeType: ChangeType | null;
+  oldPath?: string | null;
   oldContent: string | null;
   newContent: string | null;
   changes?: DiffMapping[] | null;
 }
 
 export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
-  const { filePath, changeType, oldContent, newContent, changes } = input;
+  const { filePath, changeType, oldPath, oldContent, newContent, changes } = input;
 
-  if (filePath == null || changeType == null || !isChangeType(changeType) || oldContent == null || newContent == null) {
+  if (filePath == null || changeType == null || oldContent == null || newContent == null) {
     return null;
   }
 
+  const base = {
+    path: filePath,
+    changeType,
+    ...(oldPath != null ? { oldPath } : {}),
+    language: getLanguage(filePath),
+    oldContent,
+    newContent,
+  };
+
   if (changes == null || changes.length === 0) {
-    return {
-      path: filePath,
-      changeType,
-      language: getLanguage(filePath),
-      hunks: [],
-      oldContent,
-      newContent,
-    };
+    return { ...base, hunks: [] };
   }
 
   const oldLines = oldContent.split('\n');
@@ -175,12 +174,5 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
   const hunkRanges = computeHunkRanges(changes, oldLines.length, newLines.length);
   const hunks = hunkRanges.map((range) => buildHunk(range, changes, oldLines, newLines));
 
-  return {
-    path: filePath,
-    changeType,
-    language: getLanguage(filePath),
-    hunks,
-    oldContent,
-    newContent,
-  };
+  return { ...base, hunks };
 };

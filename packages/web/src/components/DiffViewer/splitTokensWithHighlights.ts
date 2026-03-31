@@ -23,6 +23,7 @@ export const splitTokensWithHighlights = (
     return effectiveTokens.map((t) => ({ content: t.content, color: t.color, highlighted: false }));
   }
 
+  const sorted = [...charRanges].toSorted((a, b) => a.startColumn - b.startColumn);
   const result: HighlightedToken[] = [];
   let col = 1;
 
@@ -31,11 +32,11 @@ export const splitTokensWithHighlights = (
     const tokenEnd = col + token.content.length;
     let cursor = tokenStart;
 
-    for (const range of charRanges) {
-      const hlStart = Math.max(range.startColumn, tokenStart);
+    for (const range of sorted) {
+      const hlStart = Math.max(range.startColumn, tokenStart, cursor);
       const hlEnd = Math.min(range.endColumn, tokenEnd);
 
-      if (hlStart >= tokenEnd || hlEnd <= tokenStart) {
+      if (hlStart >= tokenEnd || hlEnd <= hlStart) {
         continue;
       }
 

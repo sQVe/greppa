@@ -3,19 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { FileNode } from '../fixtures/types';
 
-const sortNodes = (nodes: FileNode[]): FileNode[] => {
-  for (const node of nodes) {
-    if (node.children != null) {
-      node.children = sortNodes(node.children);
-    }
-  }
-  return nodes.toSorted((a, b) => {
-    if (a.type !== b.type) {
-      return a.type === 'directory' ? -1 : 1;
-    }
-    return a.name.localeCompare(b.name);
-  });
-};
+const sortNodes = (nodes: FileNode[]): FileNode[] =>
+  nodes
+    .map((node) => (node.children != null ? { ...node, children: sortNodes(node.children) } : node))
+    .toSorted((a, b) => {
+      if (a.type !== b.type) {
+        return a.type === 'directory' ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
 
 export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
   const root = new Map<string, FileNode>();
@@ -91,10 +87,11 @@ export const useFileList = (oldRef: string, newRef: string) => {
     queryFn: () => fetchFiles(oldRef, newRef),
     retry: false,
     staleTime: Infinity,
+    select: buildFileTree,
   });
 
   return {
-    files: data != null ? buildFileTree(data) : null,
+    files: data ?? null,
     isLoading,
     isError,
   };

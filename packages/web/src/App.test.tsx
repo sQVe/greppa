@@ -17,6 +17,14 @@ vi.mock('./components/DiffViewer/useSyntaxHighlighting', () => ({
   useSyntaxHighlighting: () => null,
 }));
 
+vi.mock('./hooks/useFileList', () => ({
+  useFileList: () => ({ files: null, isError: true, isLoading: false }),
+}));
+
+vi.mock('./hooks/useDiffContent', () => ({
+  useDiffContent: () => ({ diff: null, isLoading: false, isError: false }),
+}));
+
 vi.mock('./hooks/useTheme', () => ({
   isTheme: (value: string) => ['catppuccin-mocha', 'catppuccin-latte'].includes(value),
   useTheme: () => ({

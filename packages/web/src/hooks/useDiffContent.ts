@@ -18,8 +18,12 @@ export const fetchDiffContent = async (
 export const useDiffContent = (oldRef: string, newRef: string, path: string | null) => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['diff', oldRef, newRef, path],
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- enabled guard ensures path is non-null
-    queryFn: () => fetchDiffContent(oldRef, newRef, path!),
+    queryFn: () => {
+      if (path == null) {
+        throw new Error('path is required');
+      }
+      return fetchDiffContent(oldRef, newRef, path);
+    },
     enabled: path != null,
     retry: false,
     staleTime: Infinity,

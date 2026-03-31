@@ -36,4 +36,3 @@ export interface DiffResponse {
 }
 
 export type DiffWorkerRequest = DiffRequest;
-export type DiffWorkerResponse = DiffResponse;

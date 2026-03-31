@@ -19,13 +19,13 @@ const PlatformLayer = Layer.mergeAll(
 
 const TestAppLayer = ApiRoutes.pipe(Layer.provide(PlatformLayer));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let handler: (...args: any[]) => Promise<Response>;
+let handler: (request: Request) => Promise<Response>;
 let dispose: () => Promise<void>;
 
 beforeAll(() => {
   const app = HttpRouter.toWebHandler(TestAppLayer);
-  handler = app.handler;
+  // oxlint-disable-next-line no-unsafe-type-assertion -- context is baked into the layer; only Request is needed in tests
+  handler = app.handler as (request: Request) => Promise<Response>;
   dispose = app.dispose;
 });
 
@@ -74,15 +74,17 @@ describe('Http', () => {
       );
       const files = (await filesResponse.json()) as { path: string; changeType: string }[];
       const modified = files.find((f) => f.changeType === 'modified');
-      expect(modified).toBeDefined();
+      if (modified == null) {
+        expect.fail('Expected at least one modified file');
+      }
 
       const response = await handler(
-        new Request(`http://localhost/api/diff/HEAD~1/HEAD/${modified!.path}`),
+        new Request(`http://localhost/api/diff/HEAD~1/HEAD/${modified.path}`),
       );
 
       expect(response.status).toBe(200);
       const body = (await response.json()) as Record<string, unknown>;
-      expect(body).toHaveProperty('path', modified!.path);
+      expect(body).toHaveProperty('path', modified.path);
       expect(body).toHaveProperty('changeType');
       expect(body).toHaveProperty('oldContent');
       expect(body).toHaveProperty('newContent');

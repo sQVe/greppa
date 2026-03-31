@@ -32,12 +32,16 @@ vi.stubGlobal(
       }, 0);
     });
     addEventListener = mockAddEventListener.mockImplementation(
-      (_type: string, handler: (event: MessageEvent) => void) => {
-        messageHandler = handler;
+      (type: string, handler: (event: MessageEvent) => void) => {
+        if (type === 'message') {
+          messageHandler = handler;
+        }
       },
     );
-    removeEventListener = mockRemoveEventListener.mockImplementation(() => {
-      messageHandler = null;
+    removeEventListener = mockRemoveEventListener.mockImplementation((type: string) => {
+      if (type === 'message') {
+        messageHandler = null;
+      }
     });
     terminate = mockTerminate;
 

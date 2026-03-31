@@ -51,7 +51,7 @@ export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
     const request = buildHighlightRequest(diff, theme);
 
     const handleMessage = (event: MessageEvent<HighlightResponse>) => {
-      if (currentId !== requestIdRef.current) {
+      if (currentId !== requestIdRef.current || event.data.filePath !== diff.path) {
         return;
       }
 
@@ -62,12 +62,19 @@ export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
       setTokenMap(map);
     };
 
+    const handleError = (event: ErrorEvent) => {
+      // eslint-disable-next-line no-console -- surface worker script-load failures during development
+      console.error('Highlight worker error:', event.message);
+    };
+
     worker.addEventListener('message', handleMessage);
+    worker.addEventListener('error', handleError);
     // eslint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage does not accept targetOrigin
     worker.postMessage(request);
 
     return () => {
       worker.removeEventListener('message', handleMessage);
+      worker.removeEventListener('error', handleError);
     };
   }, [diff, theme]);
 

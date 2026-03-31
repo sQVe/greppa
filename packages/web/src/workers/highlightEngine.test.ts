@@ -4,14 +4,12 @@ import type { HighlightRequest } from './highlightProtocol';
 
 const mockCodeToTokens = vi.fn();
 const mockLoadLanguage = vi.fn();
-const mockGetLoadedLanguages = vi.fn();
 
 vi.mock('shiki', () => ({
   createHighlighter: vi.fn(() =>
     Promise.resolve({
       codeToTokens: mockCodeToTokens,
       loadLanguage: mockLoadLanguage,
-      getLoadedLanguages: mockGetLoadedLanguages,
     }),
   ),
 }));
@@ -31,7 +29,6 @@ const makeRequest = (overrides: Partial<HighlightRequest> = {}): HighlightReques
 describe('handleHighlightRequest', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockGetLoadedLanguages.mockReturnValue(['typescript']);
     mockCodeToTokens.mockReturnValue({
       tokens: [
         [{ content: 'const a = 1;', color: '#f00' }],

@@ -1,4 +1,5 @@
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
+import { useMemo } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
 import { DiffViewer } from './components/DiffViewer/DiffViewer';
@@ -6,6 +7,8 @@ import { FileTree } from './components/FileTree/FileTree';
 import { Header } from './components/Header/Header';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
+import { buildDiffFile } from './hooks/buildDiffFile';
+import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
 import { useFileSelection } from './useFileSelection';
@@ -28,13 +31,30 @@ export const App = () => {
     selectFile,
     reviewedCount,
     totalCount,
-    selectedDiff,
+    selectedDiff: fixtureDiff,
     selectedThreads,
     selectedFileInfo,
   } = useFileSelection(files, diffs, comments, fileInfoMap);
 
-  // Prefetch diff content — consumed by vscode-diff worker in next task
-  useDiffContent('HEAD~1', 'HEAD', selectedFilePath);
+  const { diff: apiDiff } = useDiffContent('HEAD~1', 'HEAD', selectedFilePath);
+  const computedChanges = useDiffComputation(
+    apiDiff?.path ?? null,
+    apiDiff?.oldContent ?? null,
+    apiDiff?.newContent ?? null,
+  );
+  const computedDiff = useMemo(
+    () =>
+      buildDiffFile({
+        filePath: apiDiff?.path ?? null,
+        changeType: apiDiff?.changeType ?? null,
+        oldContent: apiDiff?.oldContent ?? null,
+        newContent: apiDiff?.newContent ?? null,
+        changes: computedChanges,
+      }),
+    [apiDiff, computedChanges],
+  );
+
+  const selectedDiff = computedDiff ?? fixtureDiff;
 
   return (
     <div className={styles.app}>

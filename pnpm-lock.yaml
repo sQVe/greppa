@@ -141,6 +141,9 @@ importers:
       shiki:
         specifier: 4.0.2
         version: 4.0.2
+      vscode-diff:
+        specifier: 3.0.1
+        version: 3.0.1
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 6.9.1
@@ -4455,6 +4458,12 @@ packages:
       yaml:
         optional: true
 
+  vscode-diff@3.0.1:
+    resolution:
+      {
+        integrity: sha512-0rRDmIuGsuQMIIhbWsILSMxG4k5x8unNvkD7P+yn5cA7O6bKg28P/dhvgABRvP5ksYmGE9UKHonk/Z4PBMdojA==,
+      }
+
   webidl-conversions@3.0.1:
     resolution:
       {
@@ -7514,6 +7523,8 @@ snapshots:
       fsevents: 2.3.3
       tsx: 4.21.0
       yaml: 2.8.3
+
+  vscode-diff@3.0.1: {}
 
   webidl-conversions@3.0.1: {}
 

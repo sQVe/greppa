@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { DiffHunk } from '../../fixtures/types';
-import { buildRows } from './buildRows';
+import { buildRows, diffLineKey } from './buildRows';
 
 const contextOnly: DiffHunk = {
   header: '@@ -1,2 +1,2 @@',
@@ -93,5 +93,22 @@ describe('buildRows', () => {
     const rows = buildRows(pairedChange);
     expect(rows[0]?.left?.tokenMapKey).toBe('removed:1:');
     expect(rows[0]?.right?.tokenMapKey).toBe('added::1');
+  });
+});
+
+describe('diffLineKey', () => {
+  it('includes line type and both line numbers', () => {
+    expect(
+      diffLineKey({ lineType: 'context', oldLineNumber: 1, newLineNumber: 1, content: '' }),
+    ).toBe('context:1:1');
+  });
+
+  it('uses empty string for null line numbers', () => {
+    expect(
+      diffLineKey({ lineType: 'removed', oldLineNumber: 5, newLineNumber: null, content: '' }),
+    ).toBe('removed:5:');
+    expect(
+      diffLineKey({ lineType: 'added', oldLineNumber: null, newLineNumber: 3, content: '' }),
+    ).toBe('added::3');
   });
 });

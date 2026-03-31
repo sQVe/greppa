@@ -1,5 +1,4 @@
 import type { DiffHunk, DiffLine, LineType } from '../../fixtures/types';
-import { diffLineKey } from './useSyntaxHighlighting';
 
 export interface RowSide {
   lineNumber: number | null;
@@ -12,6 +11,9 @@ export interface DiffRow {
   left: RowSide | null;
   right: RowSide | null;
 }
+
+export const diffLineKey = (line: DiffLine) =>
+  `${line.lineType}:${line.oldLineNumber ?? ''}:${line.newLineNumber ?? ''}`;
 
 export const buildRows = (hunk: DiffHunk) => {
   const rows: DiffRow[] = [];

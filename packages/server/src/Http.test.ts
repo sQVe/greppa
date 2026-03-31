@@ -69,13 +69,20 @@ describe('Http', () => {
 
   describe('GET /api/diff/:oldRef/:newRef/*path', () => {
     it('returns diff content for valid refs and path', async () => {
+      const filesResponse = await handler(
+        new Request('http://localhost/api/files?oldRef=HEAD~1&newRef=HEAD'),
+      );
+      const files = (await filesResponse.json()) as { path: string; changeType: string }[];
+      const modified = files.find((f) => f.changeType === 'modified');
+      expect(modified).toBeDefined();
+
       const response = await handler(
-        new Request('http://localhost/api/diff/HEAD~1/HEAD/packages/server/src/Api.ts'),
+        new Request(`http://localhost/api/diff/HEAD~1/HEAD/${modified!.path}`),
       );
 
       expect(response.status).toBe(200);
       const body = (await response.json()) as Record<string, unknown>;
-      expect(body).toHaveProperty('path', 'packages/server/src/Api.ts');
+      expect(body).toHaveProperty('path', modified!.path);
       expect(body).toHaveProperty('changeType');
       expect(body).toHaveProperty('oldContent');
       expect(body).toHaveProperty('newContent');

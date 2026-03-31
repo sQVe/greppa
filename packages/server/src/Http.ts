@@ -5,8 +5,21 @@ import { Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
 import { HttpApiBuilder } from 'effect/unstable/httpapi';
 
+import type { FileEntry } from '@greppa/core';
+
 import { Api } from './Api';
 import { GitError, GitService } from './GitService';
+
+const fileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
+const CACHE_TTL_MS = 30_000;
+
+const getCachedFileList = (key: string) => {
+  const cached = fileListCache.get(key);
+  if (cached != null && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.entries;
+  }
+  return null;
+};
 
 const HealthHandlers = HttpApiBuilder.group(Api, 'health', (handlers) =>
   Effect.succeed(handlers.handle('getHealth', () => Effect.succeed({ status: 'ok' as const }))),
@@ -40,19 +53,27 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
       }
 
       return Effect.gen(function* () {
-        const entries = yield* git.listFiles(oldRef, newRef);
+        const cacheKey = `${oldRef}:${newRef}`;
+        const cached = getCachedFileList(cacheKey);
+        const entries = cached ?? (yield* git.listFiles(oldRef, newRef));
+        if (cached == null) {
+          fileListCache.set(cacheKey, { entries, timestamp: Date.now() });
+        }
         const entry = entries.find((e) => e.path === filePath);
-        const changeType = entry?.changeType ?? ('modified' as const);
+        if (entry == null) {
+          return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
+        }
+        const changeType = entry.changeType;
 
         const oldContent =
-          changeType === 'added' ? '' : yield* git.getFileContent(oldRef, entry?.oldPath ?? filePath);
+          changeType === 'added' ? '' : yield* git.getFileContent(oldRef, entry.oldPath ?? filePath);
         const newContent =
           changeType === 'deleted' ? '' : yield* git.getFileContent(newRef, filePath);
 
         return {
           path: filePath,
           changeType,
-          ...(entry?.oldPath != null ? { oldPath: entry.oldPath } : {}),
+          ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}),
           oldContent,
           newContent,
         };

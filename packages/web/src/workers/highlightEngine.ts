@@ -98,8 +98,19 @@ const handleFullFileRequest = async (
   const oldTokens = highlightFullContent(highlighter, oldContent ?? '', resolvedLanguage, theme);
   const newTokens = highlightFullContent(highlighter, newContent ?? '', resolvedLanguage, theme);
 
+  if (cache.size > MAX_CACHE_SIZE) {
+    cache.clear();
+  }
+
   const tokens: Record<string, HighlightToken[]> = {};
   for (const line of lines) {
+    const cacheKey = `${theme}:${filePath}:${line.key}`;
+    const cached = cache.get(cacheKey);
+    if (cached != null) {
+      tokens[line.key] = cached;
+      continue;
+    }
+
     const parsed = parseLineKey(line.key);
     if (parsed == null) {
       continue;
@@ -109,6 +120,7 @@ const handleFullFileRequest = async (
     const lineTokens = fileTokens[parsed.lineNumber - 1];
     if (lineTokens != null) {
       tokens[line.key] = lineTokens;
+      cache.set(cacheKey, lineTokens);
     }
   }
 

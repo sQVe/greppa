@@ -90,6 +90,7 @@ export const useFileList = (oldRef: string, newRef: string) => {
     queryKey: ['files', oldRef, newRef],
     queryFn: () => fetchFiles(oldRef, newRef),
     retry: false,
+    staleTime: Infinity,
   });
 
   return {

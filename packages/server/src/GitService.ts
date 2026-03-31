@@ -21,20 +21,20 @@ export const parseNameStatus = (output: string): FileEntry[] =>
   output
     .split('\n')
     .filter((line) => line.trim() !== '')
-    .map((line): FileEntry => {
+    .flatMap((line): FileEntry[] => {
       const parts = line.split('\t');
       const status = parts[0] ?? '';
 
       if (status.startsWith('R')) {
-        return { path: parts[2] ?? '', changeType: 'renamed', oldPath: parts[1] };
+        return [{ path: parts[2] ?? '', changeType: 'renamed', oldPath: parts[1] }];
       }
 
       const changeType = statusMap[status];
       if (changeType == null) {
-        throw new Error(`Unknown git status: ${status}`);
+        return [];
       }
 
-      return { path: parts[1] ?? '', changeType };
+      return [{ path: parts[1] ?? '', changeType }];
     });
 
 const collectString = <E>(stream: Stream.Stream<Uint8Array, E>) =>
@@ -44,6 +44,13 @@ const collectString = <E>(stream: Stream.Stream<Uint8Array, E>) =>
       return chunks.map((c) => decoder.decode(c)).join('');
     }),
   );
+
+const validateRef = (ref: string): Effect.Effect<void, GitError> => {
+  if (ref.startsWith('-')) {
+    return Effect.fail(new GitError({ message: `Invalid ref: ${ref}` }));
+  }
+  return Effect.void;
+};
 
 const runGit = (
   args: string[],
@@ -86,7 +93,13 @@ export const GitServiceLive = Layer.succeed(
   GitService,
   GitService.of({
     listFiles: (oldRef, newRef) =>
-      runGit(['diff', '--name-status', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
-    getFileContent: (ref, path) => runGit(['show', `${ref}:${path}`]),
+      Effect.all([validateRef(oldRef), validateRef(newRef)]).pipe(
+        Effect.flatMap(() => runGit(['diff', '--name-status', oldRef, newRef])),
+        Effect.map(parseNameStatus),
+      ),
+    getFileContent: (ref, path) =>
+      validateRef(ref).pipe(
+        Effect.flatMap(() => runGit(['show', `${ref}:${path}`])),
+      ),
   }),
 );

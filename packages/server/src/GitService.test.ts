@@ -39,6 +39,12 @@ describe('parseNameStatus', () => {
     ]);
   });
 
+  it('skips unknown status letters', () => {
+    expect(parseNameStatus('C100\tsrc.ts\tdst.ts\nM\ta.ts')).toEqual([
+      { path: 'a.ts', changeType: 'modified' },
+    ]);
+  });
+
   it('skips empty lines', () => {
     expect(parseNameStatus('M\ta.ts\n\nA\tb.ts\n')).toEqual([
       { path: 'a.ts', changeType: 'modified' },
@@ -76,6 +82,12 @@ describe('GitService', () => {
     await expect(
       runGitService((git) => git.listFiles('invalid-ref-xxx', 'HEAD')),
     ).rejects.toThrow();
+  });
+
+  it('rejects refs starting with a dash', async () => {
+    await expect(
+      runGitService((git) => git.listFiles('--output=/tmp/pwned', 'HEAD')),
+    ).rejects.toThrow('Invalid ref');
   });
 });
 

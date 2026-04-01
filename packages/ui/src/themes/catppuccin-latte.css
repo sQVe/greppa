@@ -38,13 +38,21 @@
 
   /* Diff — added (green) */
   --gr-color-diff-added-bg: rgb(64 160 43 / 15%);
-  --gr-color-diff-added-char-bg: rgb(64 160 43 / 12%);
+  --gr-color-diff-added-char-bg: color-mix(
+    in srgb,
+    rgb(64 160 43) 12%,
+    color-mix(in srgb, rgb(64 160 43) 15%, var(--gr-color-bg-default))
+  );
   --gr-color-diff-gutter-added-bg: rgb(64 160 43 / 20%);
   --gr-color-diff-added-border: rgb(64 160 43 / 40%);
 
   /* Diff — removed (red) */
   --gr-color-diff-removed-bg: rgb(210 15 57 / 15%);
-  --gr-color-diff-removed-char-bg: rgb(210 15 57 / 12%);
+  --gr-color-diff-removed-char-bg: color-mix(
+    in srgb,
+    rgb(210 15 57) 12%,
+    color-mix(in srgb, rgb(210 15 57) 15%, var(--gr-color-bg-default))
+  );
   --gr-color-diff-gutter-removed-bg: rgb(210 15 57 / 20%);
   --gr-color-diff-removed-border: rgb(210 15 57 / 40%);
 

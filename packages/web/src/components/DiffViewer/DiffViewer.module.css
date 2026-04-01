@@ -29,6 +29,7 @@
   display: grid;
   grid-template-columns: 3.5rem minmax(0, 1fr);
   min-width: 0;
+  overflow: clip;
 }
 
 .gutter {
@@ -67,10 +68,16 @@
 
 .charRemoved {
   background: var(--gr-color-diff-removed-char-bg);
+  padding-block: calc((var(--gr-leading-code) - 1) * 0.5em);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .charAdded {
   background: var(--gr-color-diff-added-char-bg);
+  padding-block: calc((var(--gr-leading-code) - 1) * 0.5em);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .collapsed {

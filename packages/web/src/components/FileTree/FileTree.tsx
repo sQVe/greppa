@@ -1,6 +1,8 @@
-import { Badge, Tree } from '@greppa/ui';
+import { Badge, FileIcon, Tree } from '@greppa/ui';
 
 import type { ChangeType, FileNode } from '../../fixtures/types';
+
+import styles from './FileTree.module.css';
 
 interface FileTreeProps {
   files: FileNode[];
@@ -27,11 +29,18 @@ const renderItem = (node: FileNode) => {
   return (
     <Tree.Item key={node.path} id={node.path} textValue={node.name}>
       <Tree.ItemContent>
-        {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
-        <Tree.Label>{node.name}</Tree.Label>
-        {changeType != null ? (
-          <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
-        ) : null}
+        {({ isExpanded }) => (
+          <>
+            {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
+            <FileIcon name={node.name} isDirectory={isDirectory} isExpanded={isExpanded} />
+            <Tree.Label className={changeType != null ? styles[changeType] : undefined}>
+              {node.name}
+            </Tree.Label>
+            {changeType != null && !isDirectory ? (
+              <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
+            ) : null}
+          </>
+        )}
       </Tree.ItemContent>
       {isDirectory ? (
         <Tree.Collection items={node.children ?? []}>{renderItem}</Tree.Collection>

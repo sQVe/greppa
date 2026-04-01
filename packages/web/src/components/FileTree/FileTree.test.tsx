@@ -71,4 +71,46 @@ describe('FileTree', () => {
     await userEvent.click(screen.getByText('validateToken.ts'));
     expect(onSelectFile).toHaveBeenCalledWith('src/auth/validateToken.ts');
   });
+
+  it('renders file icons as img elements', () => {
+    const { container } = render(
+      <FileTree files={files} selectedFilePath={null} onSelectFile={vi.fn()} />,
+    );
+    const images = container.querySelectorAll('img');
+    expect(images.length).toBe(4);
+  });
+
+  it('applies change type color class to filenames', () => {
+    render(<FileTree files={files} selectedFilePath={null} onSelectFile={vi.fn()} />);
+    const modified = screen.getByText('validateToken.ts');
+    expect(modified.className).toContain('modified');
+    const added = screen.getByText('rateLimiter.ts');
+    expect(added.className).toContain('added');
+  });
+
+  it('does not render badges on directories with changeType', () => {
+    const dirWithChange: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        changeType: 'modified',
+        children: [
+          {
+            path: 'src/index.ts',
+            name: 'index.ts',
+            type: 'file',
+            changeType: 'modified',
+          },
+        ],
+      },
+    ];
+    render(
+      <FileTree files={dirWithChange} selectedFilePath={null} onSelectFile={vi.fn()} />,
+    );
+    const dirLabel = screen.getByText('src');
+    expect(dirLabel.className).toContain('modified');
+    const badges = screen.getAllByText('M');
+    expect(badges).toHaveLength(1);
+  });
 });

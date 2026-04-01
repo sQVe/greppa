@@ -17,7 +17,8 @@
     "react-dom": "19.2.4",
     "react-resizable-panels": "4.7.6",
     "shiki": "4.0.2",
-    "vscode-diff": "3.0.1"
+    "vscode-diff": "3.0.1",
+    "vscode-material-icons": "0.1.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.9.1",

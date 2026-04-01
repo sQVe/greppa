@@ -29,7 +29,7 @@ let listeners: (() => void)[] = [];
 const subscribe = (listener: () => void) => {
   listeners = [...listeners, listener];
   return () => {
-    listeners = listeners.filter((l) => l !== listener);
+    listeners = listeners.filter((existingListener) => existingListener !== listener);
   };
 };
 

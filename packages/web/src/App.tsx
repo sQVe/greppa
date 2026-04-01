@@ -1,11 +1,16 @@
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
+import { useMemo } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
 import { DiffViewer } from './components/DiffViewer/DiffViewer';
 import { FileTree } from './components/FileTree/FileTree';
 import { Header } from './components/Header/Header';
 import { StatusBar } from './components/StatusBar/StatusBar';
-import { comments, diffs, fileInfoMap, files } from './fixtures';
+import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
+import { buildDiffFile } from './hooks/buildDiffFile';
+import { useDiffComputation } from './hooks/useDiffComputation';
+import { useDiffContent } from './hooks/useDiffContent';
+import { useFileList } from './hooks/useFileList';
 import { useFileSelection } from './useFileSelection';
 
 import styles from './App.module.css';
@@ -18,15 +23,41 @@ export const App = () => {
     panelIds: PANEL_IDS,
   });
 
+  const { files: apiFiles, isError } = useFileList('HEAD~1', 'HEAD');
+  const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
+
   const {
     selectedFilePath,
     selectFile,
     reviewedCount,
     totalCount,
-    selectedDiff,
+    selectedDiff: fixtureDiff,
     selectedThreads,
     selectedFileInfo,
   } = useFileSelection(files, diffs, comments, fileInfoMap);
+
+  const { diff: apiDiff } = useDiffContent('HEAD~1', 'HEAD', selectedFilePath);
+  const { changes: computedChanges } = useDiffComputation(
+    apiDiff?.path ?? null,
+    apiDiff?.oldContent ?? null,
+    apiDiff?.newContent ?? null,
+  );
+  const computedDiff = useMemo(() => {
+    if (apiDiff == null || computedChanges == null) {
+      return null;
+    }
+
+    return buildDiffFile({
+      filePath: apiDiff.path,
+      changeType: apiDiff.changeType,
+      oldPath: apiDiff.oldPath ?? null,
+      oldContent: apiDiff.oldContent,
+      newContent: apiDiff.newContent,
+      changes: computedChanges,
+    });
+  }, [apiDiff, computedChanges]);
+
+  const selectedDiff = computedDiff ?? fixtureDiff;
 
   return (
     <div className={styles.app}>

@@ -22,7 +22,7 @@ export const App = () => {
   const [theme, setTheme] = useState(getInitialTheme);
   const [selected, setSelected] = useState(previews[0]?.name ?? null);
 
-  const activePreview = previews.find((p) => p.name === selected);
+  const activePreview = previews.find((preview) => preview.name === selected);
 
   const handleThemeChange = (value: string) => {
     setTheme(value);
@@ -40,23 +40,23 @@ export const App = () => {
           value={theme}
           onChange={(event) =>{  handleThemeChange(event.target.value); }}
         >
-          {themes.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          {themes.map((themeOption) => (
+            <option key={themeOption} value={themeOption}>
+              {themeOption}
             </option>
           ))}
         </select>
       </header>
 
       <nav className={styles['sidebar']}>
-        {previews.map((p) => (
+        {previews.map((preview) => (
           <button
             type="button"
-            key={p.name}
-            className={`${styles['sidebarButton']} ${p.name === selected ? styles['sidebarButtonActive'] : ''}`}
-            onClick={() =>{  setSelected(p.name); }}
+            key={preview.name}
+            className={`${styles['sidebarButton']} ${preview.name === selected ? styles['sidebarButtonActive'] : ''}`}
+            onClick={() =>{  setSelected(preview.name); }}
           >
-            {p.name}
+            {preview.name}
           </button>
         ))}
       </nav>

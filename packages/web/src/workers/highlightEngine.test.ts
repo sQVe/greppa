@@ -84,6 +84,40 @@ describe('handleHighlightRequest', () => {
     expect(mockCodeToTokens).toHaveBeenCalledOnce();
   });
 
+  it('highlights full files when oldContent and newContent are provided', async () => {
+    mockCodeToTokens
+      .mockReturnValueOnce({
+        tokens: [
+          [{ content: 'const a = 1;', color: '#aaa' }],
+          [{ content: 'const b = 2;', color: '#bbb' }],
+        ],
+      })
+      .mockReturnValueOnce({
+        tokens: [
+          [{ content: 'const a = 1;', color: '#aaa' }],
+          [{ content: 'const c = 3;', color: '#ccc' }],
+        ],
+      });
+
+    const { handleHighlightRequest } = await import('./highlightEngine');
+    const response = await handleHighlightRequest(
+      makeRequest({
+        lines: [
+          { key: 'context:1:1', content: 'const a = 1;' },
+          { key: 'removed:2:', content: 'const b = 2;' },
+          { key: 'added::2', content: 'const c = 3;' },
+        ],
+        oldContent: 'const a = 1;\nconst b = 2;',
+        newContent: 'const a = 1;\nconst c = 3;',
+      }),
+    );
+
+    expect(response.tokens['context:1:1']).toEqual([{ content: 'const a = 1;', color: '#aaa' }]);
+    expect(response.tokens['removed:2:']).toEqual([{ content: 'const b = 2;', color: '#bbb' }]);
+    expect(response.tokens['added::2']).toEqual([{ content: 'const c = 3;', color: '#ccc' }]);
+    expect(mockCodeToTokens).toHaveBeenCalledTimes(2);
+  });
+
   it('falls back to plaintext for unknown languages', async () => {
     mockLoadLanguage.mockRejectedValueOnce(new Error('Unknown language'));
     mockCodeToTokens.mockReturnValue({

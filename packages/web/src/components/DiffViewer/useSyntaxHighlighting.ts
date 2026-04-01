@@ -33,6 +33,8 @@ const buildHighlightRequest = (diff: DiffFile, theme: string): HighlightRequest 
     language: diff.language,
     theme,
     lines,
+    ...(diff.oldContent != null ? { oldContent: diff.oldContent } : {}),
+    ...(diff.newContent != null ? { newContent: diff.newContent } : {}),
   };
 };
 

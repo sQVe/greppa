@@ -30,7 +30,12 @@ export const RowSideCell = ({ data, side, tokenMap }: RowSideCellProps) => {
       <div className={styles.gutter}>{data?.lineNumber}</div>
       <div className={styles.content}>
         {data != null ? (
-          <TokenSpans content={data.content} tokens={tokenMap?.get(data.tokenMapKey) ?? null} />
+          <TokenSpans
+            content={data.content}
+            tokens={tokenMap?.get(data.tokenMapKey) ?? null}
+            charRanges={data.charRanges}
+            lineType={data.type}
+          />
         ) : null}
       </div>
     </div>

@@ -24,7 +24,7 @@ const diffList = [
   rawValidateToken,
 ] as DiffFile[];
 
-export const diffs = new Map(diffList.map((d) => [d.path, d]));
+export const diffs = new Map(diffList.map((diffFile) => [diffFile.path, diffFile]));
 
 // oxlint-disable-next-line no-unsafe-type-assertion
 export const comments = rawComments as CommentThread[];
@@ -32,4 +32,4 @@ export const comments = rawComments as CommentThread[];
 // oxlint-disable-next-line no-unsafe-type-assertion
 const fileInfoList = rawFileInfo as FileInfo[];
 
-export const fileInfoMap = new Map(fileInfoList.map((f) => [f.path, f]));
+export const fileInfoMap = new Map(fileInfoList.map((fileInfo) => [fileInfo.path, fileInfo]));

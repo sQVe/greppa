@@ -1,10 +1,11 @@
-import type { DiffHunk, DiffLine, LineType } from '../../fixtures/types';
+import type { CharRange, DiffHunk, DiffLine, LineType } from '../../fixtures/types';
 
 export interface RowSide {
   lineNumber: number | null;
   tokenMapKey: string;
   content: string;
   type: LineType;
+  charRanges?: CharRange[];
 }
 
 export interface DiffRow {
@@ -33,6 +34,7 @@ export const buildRows = (hunk: DiffHunk) => {
                 tokenMapKey: diffLineKey(removed),
                 content: removed.content,
                 type: 'removed',
+                ...(removed.charRanges != null ? { charRanges: removed.charRanges } : {}),
               }
             : null,
         right:
@@ -42,6 +44,7 @@ export const buildRows = (hunk: DiffHunk) => {
                 tokenMapKey: diffLineKey(added),
                 content: added.content,
                 type: 'added',
+                ...(added.charRanges != null ? { charRanges: added.charRanges } : {}),
               }
             : null,
       });

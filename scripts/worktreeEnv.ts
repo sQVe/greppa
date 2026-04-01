@@ -1,7 +1,8 @@
 import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 interface EnvConfig {
   apiPort: number;
@@ -138,4 +139,6 @@ const main = () => {
   process.stdout.write(summary);
 };
 
-main();
+if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  main();
+}

@@ -114,9 +114,15 @@ importers:
 
   packages/web:
     dependencies:
+      '@greppa/core':
+        specifier: workspace:*
+        version: link:../core
       '@greppa/ui':
         specifier: workspace:*
         version: link:../ui
+      '@tanstack/react-query':
+        specifier: 5.95.2
+        version: 5.95.2(react@19.2.4)
       '@tanstack/react-router':
         specifier: 1.168.8
         version: 1.168.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -135,6 +141,9 @@ importers:
       shiki:
         specifier: 4.0.2
         version: 4.0.2
+      vscode-diff:
+        specifier: 3.0.1
+        version: 3.0.1
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 6.9.1
@@ -2565,6 +2574,20 @@ packages:
       }
     engines: { node: '>=20.19' }
 
+  '@tanstack/query-core@5.95.2':
+    resolution:
+      {
+        integrity: sha512-o4T8vZHZET4Bib3jZ/tCW9/7080urD4c+0/AUaYVpIqOsr7y0reBc1oX3ttNaSW5mYyvZHctiQ/UOP2PfdmFEQ==,
+      }
+
+  '@tanstack/react-query@5.95.2':
+    resolution:
+      {
+        integrity: sha512-/wGkvLj/st5Ud1Q76KF1uFxScV7WeqN1slQx5280ycwAyYkIPGaRZAEgHxe3bjirSd5Zpwkj6zNcR4cqYni/ZA==,
+      }
+    peerDependencies:
+      react: ^18 || ^19
+
   '@tanstack/react-router@1.168.8':
     resolution:
       {
@@ -4434,6 +4457,12 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  vscode-diff@3.0.1:
+    resolution:
+      {
+        integrity: sha512-0rRDmIuGsuQMIIhbWsILSMxG4k5x8unNvkD7P+yn5cA7O6bKg28P/dhvgABRvP5ksYmGE9UKHonk/Z4PBMdojA==,
+      }
 
   webidl-conversions@3.0.1:
     resolution:
@@ -6321,6 +6350,13 @@ snapshots:
 
   '@tanstack/history@1.161.6': {}
 
+  '@tanstack/query-core@5.95.2': {}
+
+  '@tanstack/react-query@5.95.2(react@19.2.4)':
+    dependencies:
+      '@tanstack/query-core': 5.95.2
+      react: 19.2.4
+
   '@tanstack/react-router@1.168.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@tanstack/history': 1.161.6
@@ -7487,6 +7523,8 @@ snapshots:
       fsevents: 2.3.3
       tsx: 4.21.0
       yaml: 2.8.3
+
+  vscode-diff@3.0.1: {}
 
   webidl-conversions@3.0.1: {}
 

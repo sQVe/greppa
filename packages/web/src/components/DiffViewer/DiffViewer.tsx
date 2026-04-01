@@ -54,6 +54,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
 
   useEffect(() =>{  setForceExpanded(false); }, [diff]);
 
+
   const hunks: HunkData[] = useMemo(() => {
     if (diff == null) {
       return [];
@@ -88,7 +89,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
   }
 
   if (isCollapsed) {
-    const totalLines = items.filter((i) => i.kind === 'diff-row').length;
+    const totalLines = items.filter((item) => item.kind === 'diff-row').length;
 
     return (
       <div className={styles.collapsed} data-testid="diff-collapsed">
@@ -100,10 +101,20 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
     );
   }
 
+  const virtualItems = virtualizer.getVirtualItems();
+  const paddingTop = virtualItems[0]?.start ?? 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? virtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0)
+      : 0;
+
   return (
     <div ref={scrollRef} className={styles.viewer} data-testid="diff-viewer">
-      <div className={styles.virtualList} style={{ height: virtualizer.getTotalSize() }}>
-        {virtualizer.getVirtualItems().map((virtualItem) => {
+      <div
+        className={styles.virtualList}
+        style={{ paddingTop, paddingBottom, minHeight: virtualizer.getTotalSize() }}
+      >
+        {virtualItems.map((virtualItem) => {
           const item = items[virtualItem.index];
           if (item == null) {
             return null;
@@ -114,8 +125,6 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
               <div
                 key={virtualItem.key}
                 ref={virtualizer.measureElement}
-                className={styles.virtualRow}
-                style={{ transform: `translateY(${virtualItem.start}px)` }}
                 data-index={virtualItem.index}
                 data-testid="hunk-header"
               >
@@ -133,7 +142,6 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
               row={item.row}
               tokenMap={tokenMap}
               measureRef={virtualizer.measureElement}
-              style={{ transform: `translateY(${virtualItem.start}px)` }}
               dataIndex={virtualItem.index}
             />
           );

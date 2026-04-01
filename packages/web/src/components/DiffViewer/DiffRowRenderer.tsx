@@ -22,7 +22,6 @@ export const DiffRowRenderer = ({
 }: DiffRowRendererProps) => (
   <div
     ref={measureRef}
-    className={styles.virtualRow}
     style={style}
     data-index={dataIndex}
     data-testid="diff-row"

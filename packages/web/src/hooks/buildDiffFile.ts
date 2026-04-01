@@ -70,25 +70,25 @@ const buildHunk = (
   newLines: string[],
 ): DiffHunk => {
   const lines: DiffLine[] = [];
-  let oldIdx = range.oldStart;
-  let newIdx = range.newStart;
+  let oldLineNumber = range.oldStart;
+  let newLineNumber = range.newStart;
 
   const relevantChanges = changes.filter(
-    (c) =>
-      c.original.endLineNumberExclusive > range.oldStart - CONTEXT_LINES &&
-      c.original.startLineNumber <= range.oldEnd + CONTEXT_LINES,
+    (change) =>
+      change.original.endLineNumberExclusive > range.oldStart - CONTEXT_LINES &&
+      change.original.startLineNumber <= range.oldEnd + CONTEXT_LINES,
   );
 
   for (const change of relevantChanges) {
-    while (oldIdx < change.original.startLineNumber && newIdx < change.modified.startLineNumber) {
+    while (oldLineNumber < change.original.startLineNumber && newLineNumber < change.modified.startLineNumber) {
       lines.push({
         lineType: 'context',
-        oldLineNumber: oldIdx,
-        newLineNumber: newIdx,
-        content: oldLines[oldIdx - 1] ?? '',
+        oldLineNumber: oldLineNumber,
+        newLineNumber: newLineNumber,
+        content: oldLines[oldLineNumber - 1] ?? '',
       });
-      oldIdx++;
-      newIdx++;
+      oldLineNumber++;
+      newLineNumber++;
     }
 
     for (let i = change.original.startLineNumber; i < change.original.endLineNumberExclusive; i++) {
@@ -101,7 +101,7 @@ const buildHunk = (
         ...(charRanges.length > 0 ? { charRanges } : {}),
       });
     }
-    oldIdx = change.original.endLineNumberExclusive;
+    oldLineNumber = change.original.endLineNumberExclusive;
 
     for (let i = change.modified.startLineNumber; i < change.modified.endLineNumberExclusive; i++) {
       const charRanges = extractCharRanges(change, i, 'modified');
@@ -113,18 +113,18 @@ const buildHunk = (
         ...(charRanges.length > 0 ? { charRanges } : {}),
       });
     }
-    newIdx = change.modified.endLineNumberExclusive;
+    newLineNumber = change.modified.endLineNumberExclusive;
   }
 
-  while (oldIdx <= range.oldEnd && newIdx <= range.newEnd) {
+  while (oldLineNumber <= range.oldEnd && newLineNumber <= range.newEnd) {
     lines.push({
       lineType: 'context',
-      oldLineNumber: oldIdx,
-      newLineNumber: newIdx,
-      content: oldLines[oldIdx - 1] ?? '',
+      oldLineNumber: oldLineNumber,
+      newLineNumber: newLineNumber,
+      content: oldLines[oldLineNumber - 1] ?? '',
     });
-    oldIdx++;
-    newIdx++;
+    oldLineNumber++;
+    newLineNumber++;
   }
 
   const oldCount = range.oldEnd - range.oldStart + 1;

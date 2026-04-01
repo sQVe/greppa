@@ -68,22 +68,22 @@ const highlightFullContent = (
     theme,
   });
 
-  return tokenLines.map((line) => line.map((t) => ({ content: t.content, color: t.color })));
+  return tokenLines.map((line) => line.map((token) => ({ content: token.content, color: token.color })));
 };
 
 const parseLineKey = (key: string): { side: 'old' | 'new'; lineNumber: number } | null => {
   const parts = key.split(':');
   if (key.startsWith('removed:')) {
-    const num = Number.parseInt(parts[1] ?? '', 10);
-    return Number.isNaN(num) ? null : { side: 'old', lineNumber: num };
+    const parsedLineNumber = Number.parseInt(parts[1] ?? '', 10);
+    return Number.isNaN(parsedLineNumber) ? null : { side: 'old', lineNumber: parsedLineNumber };
   }
   if (key.startsWith('added:')) {
-    const num = Number.parseInt(parts[2] ?? '', 10);
-    return Number.isNaN(num) ? null : { side: 'new', lineNumber: num };
+    const parsedLineNumber = Number.parseInt(parts[2] ?? '', 10);
+    return Number.isNaN(parsedLineNumber) ? null : { side: 'new', lineNumber: parsedLineNumber };
   }
   if (key.startsWith('context:')) {
-    const num = Number.parseInt(parts[1] ?? '', 10);
-    return Number.isNaN(num) ? null : { side: 'old', lineNumber: num };
+    const parsedLineNumber = Number.parseInt(parts[1] ?? '', 10);
+    return Number.isNaN(parsedLineNumber) ? null : { side: 'old', lineNumber: parsedLineNumber };
   }
   return null;
 };
@@ -146,7 +146,7 @@ const handleLineByLineRequest = async (
     if (cache.size > MAX_CACHE_SIZE) {
       cache.clear();
     }
-    const code = uncachedLines.map((l) => l.content).join('\n') || ' ';
+    const code = uncachedLines.map((line) => line.content).join('\n') || ' ';
     const { tokens: tokenLines } = highlighter.codeToTokens(code, {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, oxlint/no-unsafe-type-assertion -- validated or resolved to plaintext above
       lang: resolvedLanguage as BundledLanguage,
@@ -156,9 +156,9 @@ const handleLineByLineRequest = async (
     for (const [i, line] of uncachedLines.entries()) {
       const rawTokens = tokenLines[i];
       if (rawTokens != null) {
-        const serialized: HighlightToken[] = rawTokens.map((t) => ({
-          content: t.content,
-          color: t.color,
+        const serialized: HighlightToken[] = rawTokens.map((token) => ({
+          content: token.content,
+          color: token.color,
         }));
         cache.set(`${theme}:${filePath}:${line.key}`, serialized);
       }

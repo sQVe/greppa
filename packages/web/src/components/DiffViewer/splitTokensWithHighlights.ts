@@ -20,7 +20,7 @@ export const splitTokensWithHighlights = (
   }
 
   if (charRanges == null || charRanges.length === 0) {
-    return effectiveTokens.map((t) => ({ content: t.content, color: t.color, highlighted: false }));
+    return effectiveTokens.map((token) => ({ content: token.content, color: token.color, highlighted: false }));
   }
 
   const sorted = [...charRanges].toSorted((a, b) => a.startColumn - b.startColumn);

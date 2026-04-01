@@ -73,7 +73,7 @@ describe('Http', () => {
         new Request('http://localhost/api/files?oldRef=HEAD~1&newRef=HEAD'),
       );
       const files = (await filesResponse.json()) as { path: string; changeType: string }[];
-      const modified = files.find((f) => f.changeType === 'modified');
+      const modified = files.find((fileEntry) => fileEntry.changeType === 'modified');
       if (modified == null) {
         expect.fail('Expected at least one modified file');
       }

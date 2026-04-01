@@ -41,7 +41,7 @@ const collectString = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.runCollect(stream).pipe(
     Effect.map((chunks) => {
       const decoder = new TextDecoder();
-      return chunks.map((c) => decoder.decode(c)).join('');
+      return chunks.map((chunk) => decoder.decode(chunk)).join('');
     }),
   );
 
@@ -77,8 +77,8 @@ const runGit = (
     return stdout;
   }).pipe(
     Effect.scoped,
-    Effect.mapError((e) =>
-      e instanceof GitError ? e : new GitError({ message: e instanceof Error ? e.message : JSON.stringify(e) }),
+    Effect.mapError((error) =>
+      error instanceof GitError ? error : new GitError({ message: error instanceof Error ? error.message : JSON.stringify(error) }),
     ),
   );
 

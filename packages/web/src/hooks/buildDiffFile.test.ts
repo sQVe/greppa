@@ -26,8 +26,9 @@ describe('buildDiffFile', () => {
     });
 
     expect(result).not.toBeNull();
-    expect(result!.path).toBe('src/foo.ts');
-    expect(result!.changeType).toBe('modified');
+    if (result == null) return;
+    expect(result.path).toBe('src/foo.ts');
+    expect(result.changeType).toBe('modified');
   });
 
   it('produces hunk with context lines around changes', () => {
@@ -48,12 +49,17 @@ describe('buildDiffFile', () => {
       newContent: newLines.join('\n'),
       changes,
     });
-    const hunk = result!.hunks[0];
 
-    expect(hunk.lines.some((l) => l.lineType === 'context' && l.content === 'line 1')).toBe(true);
-    expect(hunk.lines.some((l) => l.lineType === 'removed' && l.content === 'line 4')).toBe(true);
-    expect(hunk.lines.some((l) => l.lineType === 'added' && l.content === 'CHANGED')).toBe(true);
-    expect(hunk.lines.some((l) => l.lineType === 'context' && l.content === 'line 7')).toBe(true);
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    const hunk = result.hunks[0];
+    expect(hunk).toBeDefined();
+    if (hunk == null) return;
+
+    expect(hunk.lines.some((line) => line.lineType === 'context' && line.content === 'line 1')).toBe(true);
+    expect(hunk.lines.some((line) => line.lineType === 'removed' && line.content === 'line 4')).toBe(true);
+    expect(hunk.lines.some((line) => line.lineType === 'added' && line.content === 'CHANGED')).toBe(true);
+    expect(hunk.lines.some((line) => line.lineType === 'context' && line.content === 'line 7')).toBe(true);
   });
 
   it('handles added file', () => {
@@ -73,8 +79,13 @@ describe('buildDiffFile', () => {
       changes,
     });
 
-    expect(result!.hunks.length).toBe(1);
-    expect(result!.hunks[0].lines.every((l) => l.lineType === 'added')).toBe(true);
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    expect(result.hunks).toHaveLength(1);
+    const hunk = result.hunks[0];
+    expect(hunk).toBeDefined();
+    if (hunk == null) return;
+    expect(hunk.lines.every((line) => line.lineType === 'added')).toBe(true);
   });
 
   it('handles deleted file', () => {
@@ -94,8 +105,13 @@ describe('buildDiffFile', () => {
       changes,
     });
 
-    expect(result!.hunks.length).toBe(1);
-    expect(result!.hunks[0].lines.every((l) => l.lineType === 'removed')).toBe(true);
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    expect(result.hunks).toHaveLength(1);
+    const hunk = result.hunks[0];
+    expect(hunk).toBeDefined();
+    if (hunk == null) return;
+    expect(hunk.lines.every((line) => line.lineType === 'removed')).toBe(true);
   });
 
   it('merges nearby changes into one hunk', () => {
@@ -125,7 +141,9 @@ describe('buildDiffFile', () => {
       changes,
     });
 
-    expect(result!.hunks.length).toBe(1);
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    expect(result.hunks.length).toBe(1);
   });
 
   it('splits distant changes into separate hunks', () => {
@@ -155,7 +173,9 @@ describe('buildDiffFile', () => {
       changes,
     });
 
-    expect(result!.hunks.length).toBe(2);
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    expect(result.hunks.length).toBe(2);
   });
 
   it('returns empty hunks for identical content', () => {
@@ -167,7 +187,9 @@ describe('buildDiffFile', () => {
       changes: [],
     });
 
-    expect(result!.hunks).toEqual([]);
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    expect(result.hunks).toEqual([]);
   });
 
   it('attaches charRanges to removed and added lines from innerChanges', () => {
@@ -192,12 +214,20 @@ describe('buildDiffFile', () => {
       changes,
     });
 
-    const removedLine = result!.hunks[0].lines.find((l) => l.lineType === 'removed');
-    const addedLine = result!.hunks[0].lines.find((l) => l.lineType === 'added');
-    const contextLine = result!.hunks[0].lines.find((l) => l.lineType === 'context');
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    const hunk = result.hunks[0];
+    expect(hunk).toBeDefined();
+    if (hunk == null) return;
+    const removedLine = hunk.lines.find((line) => line.lineType === 'removed');
+    const addedLine = hunk.lines.find((line) => line.lineType === 'added');
+    const contextLine = hunk.lines.find((line) => line.lineType === 'context');
 
-    expect(removedLine!.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
-    expect(addedLine!.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
+    expect(removedLine).toBeDefined();
+    expect(addedLine).toBeDefined();
+    if (removedLine == null || addedLine == null) return;
+    expect(removedLine.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
+    expect(addedLine.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
     expect(contextLine?.charRanges).toBeUndefined();
   });
 
@@ -216,7 +246,9 @@ describe('buildDiffFile', () => {
       ],
     });
 
-    expect(result!.language).toBe('tsx');
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    expect(result.language).toBe('tsx');
   });
 
   it('includes oldContent and newContent in result', () => {
@@ -234,7 +266,9 @@ describe('buildDiffFile', () => {
       ],
     });
 
-    expect(result!.oldContent).toBe('const a = 1;');
-    expect(result!.newContent).toBe('const a = 2;');
+    expect(result).not.toBeNull();
+    if (result == null) return;
+    expect(result.oldContent).toBe('const a = 1;');
+    expect(result.newContent).toBe('const a = 2;');
   });
 });

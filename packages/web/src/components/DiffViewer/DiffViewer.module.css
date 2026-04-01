@@ -8,15 +8,8 @@
 }
 
 .virtualList {
-  position: relative;
   width: 100%;
-}
-
-.virtualRow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
+  background: var(--gr-color-bg-default);
 }
 
 .hunkHeader {
@@ -52,20 +45,20 @@
   overflow-wrap: break-word;
 }
 
+.lineRemoved {
+  background: var(--gr-color-diff-removed-bg);
+}
+
 .lineRemoved .gutter {
   background: var(--gr-color-diff-gutter-removed-bg);
 }
 
-.lineRemoved .content {
-  background: var(--gr-color-diff-removed-bg);
+.lineAdded {
+  background: var(--gr-color-diff-added-bg);
 }
 
 .lineAdded .gutter {
   background: var(--gr-color-diff-gutter-added-bg);
-}
-
-.lineAdded .content {
-  background: var(--gr-color-diff-added-bg);
 }
 
 .lineEmpty {
@@ -74,12 +67,10 @@
 
 .charRemoved {
   background: var(--gr-color-diff-removed-char-bg);
-  border-radius: 2px;
 }
 
 .charAdded {
   background: var(--gr-color-diff-added-char-bg);
-  border-radius: 2px;
 }
 
 .collapsed {

@@ -37,19 +37,19 @@
 
   /* Diff — added (green) */
   --gr-color-diff-added-bg: rgb(166 227 161 / 15%);
-  --gr-color-diff-added-char-bg: rgb(166 227 161 / 30%);
+  --gr-color-diff-added-char-bg: rgb(166 227 161 / 12%);
   --gr-color-diff-gutter-added-bg: rgb(166 227 161 / 20%);
   --gr-color-diff-added-border: rgb(166 227 161 / 40%);
 
   /* Diff — removed (red) */
   --gr-color-diff-removed-bg: rgb(243 139 168 / 15%);
-  --gr-color-diff-removed-char-bg: rgb(243 139 168 / 30%);
+  --gr-color-diff-removed-char-bg: rgb(243 139 168 / 12%);
   --gr-color-diff-gutter-removed-bg: rgb(243 139 168 / 20%);
   --gr-color-diff-removed-border: rgb(243 139 168 / 40%);
 
   /* Diff — modified (yellow) */
   --gr-color-diff-modified-bg: rgb(249 226 175 / 15%);
-  --gr-color-diff-modified-char-bg: rgb(249 226 175 / 30%);
+  --gr-color-diff-modified-char-bg: rgb(249 226 175 / 12%);
   --gr-color-diff-gutter-modified-bg: rgb(249 226 175 / 20%);
   --gr-color-diff-modified-border: rgb(249 226 175 / 40%);
 }
@@ -94,19 +94,19 @@
 
     /* Diff — added (green) */
     --gr-color-diff-added-bg: rgb(166 227 161 / 15%);
-    --gr-color-diff-added-char-bg: rgb(166 227 161 / 30%);
+    --gr-color-diff-added-char-bg: rgb(166 227 161 / 12%);
     --gr-color-diff-gutter-added-bg: rgb(166 227 161 / 20%);
     --gr-color-diff-added-border: rgb(166 227 161 / 40%);
 
     /* Diff — removed (red) */
     --gr-color-diff-removed-bg: rgb(243 139 168 / 15%);
-    --gr-color-diff-removed-char-bg: rgb(243 139 168 / 30%);
+    --gr-color-diff-removed-char-bg: rgb(243 139 168 / 12%);
     --gr-color-diff-gutter-removed-bg: rgb(243 139 168 / 20%);
     --gr-color-diff-removed-border: rgb(243 139 168 / 40%);
 
     /* Diff — modified (yellow) */
     --gr-color-diff-modified-bg: rgb(249 226 175 / 15%);
-    --gr-color-diff-modified-char-bg: rgb(249 226 175 / 30%);
+    --gr-color-diff-modified-char-bg: rgb(249 226 175 / 12%);
     --gr-color-diff-gutter-modified-bg: rgb(249 226 175 / 20%);
     --gr-color-diff-modified-border: rgb(249 226 175 / 40%);
   }

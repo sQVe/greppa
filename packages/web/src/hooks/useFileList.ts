@@ -34,7 +34,7 @@ export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
 
     if (segments.length > 1) {
       const parent = ensureDir(segments.slice(0, -1));
-      if (!parent.children?.some((c) => c.path === path)) {
+      if (!parent.children?.some((child) => child.path === path)) {
         parent.children?.push(node);
       }
     }

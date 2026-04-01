@@ -46,9 +46,9 @@ export const Header = ({ filePath, oldPath, changeType }: HeaderProps) => {
         value={theme}
         onChange={handleChange}
       >
-        {themes.map((t) => (
-          <option key={t} value={t}>
-            {t}
+        {themes.map((themeOption) => (
+          <option key={themeOption} value={themeOption}>
+            {themeOption}
           </option>
         ))}
       </select>

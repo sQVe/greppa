@@ -8,7 +8,7 @@ import { HttpApiBuilder } from 'effect/unstable/httpapi';
 import type { FileEntry } from '@greppa/core';
 
 import { Api } from './Api';
-import { GitError, GitService } from './GitService';
+import { GitError, GitService, GitServiceLive } from './GitService';
 
 const fileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
 const CACHE_TTL_MS = 30_000;
@@ -85,7 +85,7 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
 
       return Effect.gen(function* () {
         const entries = yield* getFileList(oldRef, newRef);
-        const matchesPath = (e: FileEntry) => e.path === filePath;
+        const matchesPath = (entry: FileEntry) => entry.path === filePath;
         const entry = entries.find(matchesPath);
         if (entry == null) {
           return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
@@ -120,4 +120,7 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
 );
 
 export const makeHttpLayer = (port: number) =>
-  HttpRouter.serve(ApiRoutes).pipe(Layer.provide(NodeHttpServer.layer(createServer, { port })));
+  HttpRouter.serve(ApiRoutes).pipe(
+    Layer.provide(GitServiceLive),
+    Layer.provide(NodeHttpServer.layer(createServer, { port })),
+  );

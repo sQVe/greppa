@@ -50,8 +50,8 @@ describe('buildVirtualItems', () => {
     const items = buildVirtualItems(hunks);
 
     expect(items).toHaveLength(3);
-    expect(items.filter((i) => i.kind === 'hunk-header')).toHaveLength(1);
-    expect(items.filter((i) => i.kind === 'diff-row')).toHaveLength(2);
+    expect(items.filter((item) => item.kind === 'hunk-header')).toHaveLength(1);
+    expect(items.filter((item) => item.kind === 'diff-row')).toHaveLength(2);
   });
 
   it('interleaves hunk headers between multiple hunks', () => {

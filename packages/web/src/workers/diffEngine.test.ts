@@ -32,7 +32,8 @@ describe('handleDiffRequest', () => {
     const innerChanges = response.changes[0].innerChanges;
 
     expect(innerChanges).not.toBeNull();
-    expect(innerChanges!.length).toBeGreaterThan(0);
+    if (innerChanges == null) return;
+    expect(innerChanges.length).toBeGreaterThan(0);
   });
 
   it('returns empty changes for identical content', () => {

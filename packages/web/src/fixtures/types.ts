@@ -4,6 +4,7 @@ export type ReviewStatus = 'reviewed' | 'unreviewed';
 export interface FileNode {
   path: string;
   name: string;
+  displayName?: string;
   type: 'file' | 'directory';
   changeType?: ChangeType;
   status?: ReviewStatus;

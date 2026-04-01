@@ -25,16 +25,17 @@ const collectDirectoryIds = (nodes: FileNode[]): string[] =>
 const renderItem = (node: FileNode) => {
   const isDirectory = node.type === 'directory';
   const { changeType } = node;
+  const label = node.displayName ?? node.name;
 
   return (
-    <Tree.Item key={node.path} id={node.path} textValue={node.name}>
+    <Tree.Item key={node.path} id={node.path} textValue={label}>
       <Tree.ItemContent>
         {({ isExpanded }) => (
           <>
             {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
             <FileIcon name={node.name} isDirectory={isDirectory} isExpanded={isExpanded} />
             <Tree.Label className={changeType != null ? styles[changeType] : undefined}>
-              {node.name}
+              {label}
             </Tree.Label>
             {changeType != null && !isDirectory ? (
               <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>

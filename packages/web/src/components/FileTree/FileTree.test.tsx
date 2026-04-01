@@ -88,6 +88,29 @@ describe('FileTree', () => {
     expect(added.className).toContain('added');
   });
 
+  it('renders displayName when present on compacted directories', () => {
+    const compactedFiles: FileNode[] = [
+      {
+        path: 'src/events',
+        name: 'events',
+        displayName: 'src/events',
+        type: 'directory',
+        children: [
+          {
+            path: 'src/events/handler.ts',
+            name: 'handler.ts',
+            type: 'file',
+            changeType: 'added',
+          },
+        ],
+      },
+    ];
+    render(
+      <FileTree files={compactedFiles} selectedFilePath={null} onSelectFile={vi.fn()} />,
+    );
+    expect(screen.getByText('src/events')).toBeDefined();
+  });
+
   it('does not render badges on directories with changeType', () => {
     const dirWithChange: FileNode[] = [
       {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildFileTree } from './useFileList';
+import type { FileNode } from '../fixtures/types';
+import { buildFileTree, compactTree, propagateChangeType } from './useFileList';
 
 describe('buildFileTree', () => {
   it('builds nested tree from flat entries', () => {
@@ -43,9 +44,9 @@ describe('buildFileTree', () => {
 
     const tree = buildFileTree(entries);
 
-    expect(tree[0].path).toBe('a');
-    expect(tree[0].children?.[0].path).toBe('a/b');
-    expect(tree[0].children?.[0].children?.[0].path).toBe('a/b/c.ts');
+    expect(tree[0].path).toBe('a/b');
+    expect(tree[0].displayName).toBe('a/b');
+    expect(tree[0].children?.[0].path).toBe('a/b/c.ts');
   });
 
   it('groups files under same directory', () => {
@@ -71,5 +72,217 @@ describe('buildFileTree', () => {
 
     expect(children[0].type).toBe('directory');
     expect(children[1].type).toBe('file');
+  });
+});
+
+describe('propagateChangeType', () => {
+  it('sets changeType on parent from single child', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        children: [{ path: 'src/index.ts', name: 'index.ts', type: 'file', changeType: 'added' }],
+      },
+    ];
+
+    const result = propagateChangeType(nodes);
+
+    expect(result[0].changeType).toBe('added');
+  });
+
+  it('picks highest-priority changeType among descendants', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        children: [
+          { path: 'src/a.ts', name: 'a.ts', type: 'file', changeType: 'renamed' },
+          { path: 'src/b.ts', name: 'b.ts', type: 'file', changeType: 'deleted' },
+          { path: 'src/c.ts', name: 'c.ts', type: 'file', changeType: 'modified' },
+        ],
+      },
+    ];
+
+    const result = propagateChangeType(nodes);
+
+    expect(result[0].changeType).toBe('deleted');
+  });
+
+  it('propagates through nested directories', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        children: [
+          {
+            path: 'src/utils',
+            name: 'utils',
+            type: 'directory',
+            children: [
+              { path: 'src/utils/helper.ts', name: 'helper.ts', type: 'file', changeType: 'added' },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const result = propagateChangeType(nodes);
+
+    expect(result[0].changeType).toBe('added');
+    expect(result[0].children?.[0].changeType).toBe('added');
+  });
+
+  it('does not set changeType on directories with no changed descendants', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        children: [{ path: 'src/index.ts', name: 'index.ts', type: 'file' }],
+      },
+    ];
+
+    const result = propagateChangeType(nodes);
+
+    expect(result[0].changeType).toBeUndefined();
+  });
+
+  it('does not overwrite file changeType', () => {
+    const nodes: FileNode[] = [
+      { path: 'README.md', name: 'README.md', type: 'file', changeType: 'modified' },
+    ];
+
+    const result = propagateChangeType(nodes);
+
+    expect(result[0].changeType).toBe('modified');
+  });
+});
+
+describe('compactTree', () => {
+  it('merges single-child directory chains', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        children: [
+          {
+            path: 'src/events',
+            name: 'events',
+            type: 'directory',
+            children: [
+              { path: 'src/events/handler.ts', name: 'handler.ts', type: 'file' },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const result = compactTree(nodes);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].path).toBe('src/events');
+    expect(result[0].displayName).toBe('src/events');
+    expect(result[0].children).toHaveLength(1);
+    expect(result[0].children?.[0].name).toBe('handler.ts');
+  });
+
+  it('preserves multi-child directories', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        children: [
+          { path: 'src/a.ts', name: 'a.ts', type: 'file' },
+          { path: 'src/b.ts', name: 'b.ts', type: 'file' },
+        ],
+      },
+    ];
+
+    const result = compactTree(nodes);
+
+    expect(result[0].path).toBe('src');
+    expect(result[0].displayName).toBeUndefined();
+    expect(result[0].children).toHaveLength(2);
+  });
+
+  it('merges chains of three or more directories', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'a',
+        name: 'a',
+        type: 'directory',
+        children: [
+          {
+            path: 'a/b',
+            name: 'b',
+            type: 'directory',
+            children: [
+              {
+                path: 'a/b/c',
+                name: 'c',
+                type: 'directory',
+                children: [
+                  { path: 'a/b/c/file.ts', name: 'file.ts', type: 'file' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const result = compactTree(nodes);
+
+    expect(result[0].path).toBe('a/b/c');
+    expect(result[0].displayName).toBe('a/b/c');
+    expect(result[0].children).toHaveLength(1);
+    expect(result[0].children?.[0].name).toBe('file.ts');
+  });
+
+  it('does not merge directory with single file child', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        children: [{ path: 'src/index.ts', name: 'index.ts', type: 'file' }],
+      },
+    ];
+
+    const result = compactTree(nodes);
+
+    expect(result[0].path).toBe('src');
+    expect(result[0].displayName).toBeUndefined();
+  });
+
+  it('preserves changeType from deepest merged directory', () => {
+    const nodes: FileNode[] = [
+      {
+        path: 'src',
+        name: 'src',
+        type: 'directory',
+        changeType: 'modified',
+        children: [
+          {
+            path: 'src/utils',
+            name: 'utils',
+            type: 'directory',
+            changeType: 'added',
+            children: [
+              { path: 'src/utils/helper.ts', name: 'helper.ts', type: 'file', changeType: 'added' },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const result = compactTree(nodes);
+
+    expect(result[0].changeType).toBe('added');
   });
 });

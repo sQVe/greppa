@@ -1,7 +1,68 @@
 import type { FileEntry } from '@greppa/core';
 import { useQuery } from '@tanstack/react-query';
 
-import type { FileNode } from '../fixtures/types';
+import type { ChangeType, FileNode } from '../fixtures/types';
+
+const CHANGE_TYPE_PRIORITY: Record<ChangeType, number> = {
+  added: 0,
+  deleted: 1,
+  modified: 2,
+  renamed: 3,
+};
+
+const higherPriority = (a: ChangeType | undefined, b: ChangeType | undefined): ChangeType | undefined => {
+  if (a == null) {
+    return b;
+  }
+  if (b == null) {
+    return a;
+  }
+  return CHANGE_TYPE_PRIORITY[a] <= CHANGE_TYPE_PRIORITY[b] ? a : b;
+};
+
+export const propagateChangeType = (nodes: FileNode[]): FileNode[] =>
+  nodes.map((node) => {
+    if (node.type !== 'directory' || node.children == null) {
+      return node;
+    }
+
+    const updatedChildren = propagateChangeType(node.children);
+    let changeType: ChangeType | undefined;
+    for (const child of updatedChildren) {
+      changeType = higherPriority(changeType, child.changeType);
+    }
+
+    return { ...node, children: updatedChildren, changeType };
+  });
+
+export const compactTree = (nodes: FileNode[]): FileNode[] =>
+  nodes.map((node) => {
+    if (node.type !== 'directory' || node.children == null) {
+      return node;
+    }
+
+    let current = node;
+    const segments = [current.name];
+
+    let onlyChild = current.children?.length === 1 ? current.children[0] : undefined;
+    while (onlyChild?.type === 'directory') {
+      current = onlyChild;
+      segments.push(current.name);
+      onlyChild = current.children?.length === 1 ? current.children[0] : undefined;
+    }
+
+    const compactedChildren = compactTree(current.children ?? []);
+
+    if (segments.length === 1) {
+      return { ...node, children: compactedChildren };
+    }
+
+    return {
+      ...current,
+      displayName: segments.join('/'),
+      children: compactedChildren,
+    };
+  });
 
 const sortNodes = (nodes: FileNode[]): FileNode[] =>
   nodes
@@ -66,7 +127,7 @@ export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
   const topDirs = [...dirs.values()].filter((node) => !node.path.includes('/'));
   const topLevel = [...topDirs, ...topFiles.values()];
 
-  return sortNodes(topLevel);
+  return compactTree(propagateChangeType(sortNodes(topLevel)));
 };
 
 const fetchFiles = async (oldRef: string, newRef: string): Promise<FileEntry[]> => {

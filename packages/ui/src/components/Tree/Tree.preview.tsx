@@ -30,7 +30,7 @@ const files: FileNode[] = [
 const renderItem = (node: FileNode) => (
   <Tree.Item key={node.id} id={node.id} textValue={node.name}>
     <Tree.ItemContent>
-      {node.children != null ? <Tree.Chevron /> : null}
+      {node.children != null ? <Tree.Chevron /> : <Tree.Indent />}
       <Tree.Label>{node.name}</Tree.Label>
     </Tree.ItemContent>
     {node.children != null ? (

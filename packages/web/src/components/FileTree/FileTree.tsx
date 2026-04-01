@@ -27,7 +27,7 @@ const renderItem = (node: FileNode) => {
   return (
     <Tree.Item key={node.path} id={node.path} textValue={node.name}>
       <Tree.ItemContent>
-        {isDirectory ? <Tree.Chevron /> : null}
+        {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
         <Tree.Label>{node.name}</Tree.Label>
         {changeType != null ? (
           <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>

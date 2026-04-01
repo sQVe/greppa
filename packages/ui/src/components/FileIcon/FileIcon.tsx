@@ -5,13 +5,13 @@ import {
   getIconUrlForFilePath,
 } from 'vscode-material-icons';
 
-const ICONS_BASE_URL = '/material-icons';
-
 interface FileIconProps {
   name: string;
   isDirectory?: boolean;
   isExpanded?: boolean;
 }
+
+const ICONS_BASE_URL = '/material-icons';
 
 export const FileIcon = ({ name, isDirectory, isExpanded }: FileIconProps) => {
   let src: string;

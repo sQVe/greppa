@@ -92,6 +92,9 @@ importers:
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
+      vscode-material-icons:
+        specifier: 0.1.1
+        version: 0.1.1
     devDependencies:
       '@testing-library/react':
         specifier: 16.3.2
@@ -144,6 +147,9 @@ importers:
       vscode-diff:
         specifier: 3.0.1
         version: 3.0.1
+      vscode-material-icons:
+        specifier: 0.1.1
+        version: 0.1.1
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 6.9.1
@@ -4464,6 +4470,12 @@ packages:
         integrity: sha512-0rRDmIuGsuQMIIhbWsILSMxG4k5x8unNvkD7P+yn5cA7O6bKg28P/dhvgABRvP5ksYmGE9UKHonk/Z4PBMdojA==,
       }
 
+  vscode-material-icons@0.1.1:
+    resolution:
+      {
+        integrity: sha512-GsoEEF8Tbb0yUFQ6N6FPvh11kFkL9F95x0FkKlbbfRQN9eFms67h+L3t6b9cUv58dSn2gu8kEhNfoESVCrz4ag==,
+      }
+
   webidl-conversions@3.0.1:
     resolution:
       {
@@ -7525,6 +7537,8 @@ snapshots:
       yaml: 2.8.3
 
   vscode-diff@3.0.1: {}
+
+  vscode-material-icons@0.1.1: {}
 
   webidl-conversions@3.0.1: {}
 

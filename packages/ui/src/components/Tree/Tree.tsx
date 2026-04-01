@@ -45,6 +45,10 @@ const Chevron = ({
   </Button>
 );
 
+const Indent = ({ className, ...props }: ComponentProps<'span'>) => (
+  <span className={clsx(styles.indent, className)} {...props} aria-hidden="true" />
+);
+
 const Label = ({ className, ...props }: ComponentProps<'span'>) => (
   <span className={clsx(styles.label, className)} {...props} />
 );
@@ -54,6 +58,7 @@ export const Tree = {
   Item,
   ItemContent: TreeItemContent,
   Chevron,
+  Indent,
   Label,
   Collection,
 };

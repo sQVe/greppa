@@ -58,6 +58,28 @@ describe('Tree', () => {
     expect(tree.className).toContain('custom-tree');
   });
 
+  it('renders Indent as a span with indent style', () => {
+    render(
+      <Tree.Root aria-label="Files">
+        <Tree.Collection items={[{ id: '1', name: 'file.ts' }]}>
+          {(item) => (
+            <Tree.Item key={item.id} id={item.id} textValue={item.name}>
+              <Tree.ItemContent>
+                <Tree.Indent />
+                <Tree.Label>{item.name}</Tree.Label>
+              </Tree.ItemContent>
+            </Tree.Item>
+          )}
+        </Tree.Collection>
+      </Tree.Root>,
+    );
+
+    const row = screen.getByRole('row');
+    const indent = row.querySelector('span');
+    expect(indent).not.toBeNull();
+    expect(indent!.className).toContain('indent');
+  });
+
   it('renders nested items within a directory', () => {
     render(
       <Tree.Root aria-label="Files" defaultExpandedKeys={['src']}>

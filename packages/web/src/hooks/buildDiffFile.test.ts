@@ -193,14 +193,16 @@ describe('buildDiffFile', () => {
   });
 
   it('attaches charRanges to removed and added lines from innerChanges', () => {
+    const oldLines = ['line 1', 'const a = 1;', 'line 3'];
+    const newLines = ['line 1', 'const a = 2;', 'line 3'];
     const changes: DiffMapping[] = [
       {
-        original: { startLineNumber: 1, endLineNumberExclusive: 2 },
-        modified: { startLineNumber: 1, endLineNumberExclusive: 2 },
+        original: { startLineNumber: 2, endLineNumberExclusive: 3 },
+        modified: { startLineNumber: 2, endLineNumberExclusive: 3 },
         innerChanges: [
           {
-            originalRange: { startLineNumber: 1, startColumn: 7, endLineNumber: 1, endColumn: 8 },
-            modifiedRange: { startLineNumber: 1, startColumn: 7, endLineNumber: 1, endColumn: 8 },
+            originalRange: { startLineNumber: 2, startColumn: 7, endLineNumber: 2, endColumn: 8 },
+            modifiedRange: { startLineNumber: 2, startColumn: 7, endLineNumber: 2, endColumn: 8 },
           },
         ],
       },
@@ -209,8 +211,8 @@ describe('buildDiffFile', () => {
     const result = buildDiffFile({
       filePath: 'f.ts',
       changeType: 'modified',
-      oldContent: 'const a = 1;',
-      newContent: 'const a = 2;',
+      oldContent: oldLines.join('\n'),
+      newContent: newLines.join('\n'),
       changes,
     });
 
@@ -221,14 +223,17 @@ describe('buildDiffFile', () => {
     if (hunk == null) return;
     const removedLine = hunk.lines.find((line) => line.lineType === 'removed');
     const addedLine = hunk.lines.find((line) => line.lineType === 'added');
-    const contextLine = hunk.lines.find((line) => line.lineType === 'context');
+    const contextLines = hunk.lines.filter((line) => line.lineType === 'context');
 
     expect(removedLine).toBeDefined();
     expect(addedLine).toBeDefined();
     if (removedLine == null || addedLine == null) return;
     expect(removedLine.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
     expect(addedLine.charRanges).toEqual([{ startColumn: 7, endColumn: 8 }]);
-    expect(contextLine?.charRanges).toBeUndefined();
+    expect(contextLines.length).toBeGreaterThan(0);
+    for (const contextLine of contextLines) {
+      expect(contextLine.charRanges).toBeUndefined();
+    }
   });
 
   it('derives language from file extension', () => {

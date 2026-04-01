@@ -142,7 +142,6 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
               row={item.row}
               tokenMap={tokenMap}
               measureRef={virtualizer.measureElement}
-              style={{}}
               dataIndex={virtualItem.index}
             />
           );

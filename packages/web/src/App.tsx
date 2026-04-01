@@ -42,18 +42,20 @@ export const App = () => {
     apiDiff?.oldContent ?? null,
     apiDiff?.newContent ?? null,
   );
-  const computedDiff = useMemo(
-    () =>
-      buildDiffFile({
-        filePath: apiDiff?.path ?? null,
-        changeType: apiDiff?.changeType ?? null,
-        oldPath: apiDiff?.oldPath ?? null,
-        oldContent: apiDiff?.oldContent ?? null,
-        newContent: apiDiff?.newContent ?? null,
-        changes: computedChanges,
-      }),
-    [apiDiff, computedChanges],
-  );
+  const computedDiff = useMemo(() => {
+    if (apiDiff == null || computedChanges == null) {
+      return null;
+    }
+
+    return buildDiffFile({
+      filePath: apiDiff.path,
+      changeType: apiDiff.changeType,
+      oldPath: apiDiff.oldPath ?? null,
+      oldContent: apiDiff.oldContent,
+      newContent: apiDiff.newContent,
+      changes: computedChanges,
+    });
+  }, [apiDiff, computedChanges]);
 
   const selectedDiff = computedDiff ?? fixtureDiff;
 

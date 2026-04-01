@@ -1,3 +1,5 @@
+import { execSync } from 'node:child_process';
+
 import { NodeHttpPlatform, NodeServices } from '@effect/platform-node';
 import { Layer } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
@@ -8,6 +10,21 @@ import { GitServiceLive, RepoPath } from './GitService';
 import { ApiRoutes } from './Http';
 
 const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
+
+const resolveRef = (ref: string): string | null => {
+  try {
+    return execSync(`git rev-parse --verify ${ref}`, {
+      cwd: monorepoRoot,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return null;
+  }
+};
+
+const parentSha = resolveRef('HEAD~1');
+const headSha = resolveRef('HEAD');
 
 const PlatformLayer = Layer.mergeAll(
   NodeServices.layer,
@@ -43,10 +60,13 @@ describe('Http', () => {
     });
   });
 
-  describe('GET /api/files', () => {
+  describe.runIf(parentSha != null && headSha != null)('GET /api/files', () => {
+    const oldRef = parentSha ?? '';
+    const newRef = headSha ?? '';
+
     it('returns file list for valid refs', async () => {
       const response = await handler(
-        new Request('http://localhost/api/files?oldRef=HEAD~1&newRef=HEAD'),
+        new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
       );
 
       expect(response.status).toBe(200);
@@ -67,10 +87,13 @@ describe('Http', () => {
     });
   });
 
-  describe('GET /api/diff/:oldRef/:newRef/*path', () => {
+  describe.runIf(parentSha != null && headSha != null)('GET /api/diff/:oldRef/:newRef/*path', () => {
+    const oldRef = parentSha ?? '';
+    const newRef = headSha ?? '';
+
     it('returns diff content for valid refs and path', async () => {
       const filesResponse = await handler(
-        new Request('http://localhost/api/files?oldRef=HEAD~1&newRef=HEAD'),
+        new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
       );
       const files = (await filesResponse.json()) as { path: string; changeType: string }[];
       const modified = files.find((fileEntry) => fileEntry.changeType === 'modified');
@@ -79,7 +102,7 @@ describe('Http', () => {
       }
 
       const response = await handler(
-        new Request(`http://localhost/api/diff/HEAD~1/HEAD/${modified.path}`),
+        new Request(`http://localhost/api/diff/${oldRef}/${newRef}/${modified.path}`),
       );
 
       expect(response.status).toBe(200);

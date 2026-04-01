@@ -14,11 +14,12 @@ const sortNodes = (nodes: FileNode[]): FileNode[] =>
     });
 
 export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
-  const root = new Map<string, FileNode>();
+  const dirs = new Map<string, FileNode>();
+  const topFiles = new Map<string, FileNode>();
 
   const ensureDir = (segments: string[]): FileNode => {
     const path = segments.join('/');
-    const existing = root.get(path);
+    const existing = dirs.get(path);
     if (existing != null) {
       return existing;
     }
@@ -30,7 +31,7 @@ export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
       children: [],
     };
 
-    root.set(path, node);
+    dirs.set(path, node);
 
     if (segments.length > 1) {
       const parent = ensureDir(segments.slice(0, -1));
@@ -55,17 +56,15 @@ export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
     };
 
     if (segments.length === 1) {
-      root.set(entry.path, fileNode);
+      topFiles.set(entry.path, fileNode);
     } else {
       const parent = ensureDir(segments.slice(0, -1));
       parent.children?.push(fileNode);
     }
   }
 
-  const topLevel = [...root.values()].filter((node) => {
-    const segments = node.path.split('/');
-    return segments.length === 1;
-  });
+  const topDirs = [...dirs.values()].filter((node) => !node.path.includes('/'));
+  const topLevel = [...topDirs, ...topFiles.values()];
 
   return sortNodes(topLevel);
 };

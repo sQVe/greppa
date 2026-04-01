@@ -1,3 +1,5 @@
+import { execSync } from 'node:child_process';
+
 import { NodeServices } from '@effect/platform-node';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -5,6 +7,21 @@ import { describe, expect, it } from 'vitest';
 import { GitService, GitServiceLive, parseNameStatus, RepoPath } from './GitService';
 
 const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
+
+const resolveRef = (ref: string): string | null => {
+  try {
+    return execSync(`git rev-parse --verify ${ref}`, {
+      cwd: monorepoRoot,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return null;
+  }
+};
+
+const parentSha = resolveRef('HEAD~1');
+const headSha = resolveRef('HEAD');
 
 const TestLayer = Layer.mergeAll(
   GitServiceLive,
@@ -68,9 +85,12 @@ describe('GitService', () => {
     });
   });
 
-  describe('listFiles', () => {
+  describe.runIf(parentSha != null && headSha != null)('listFiles', () => {
+    const oldRef = parentSha ?? '';
+    const newRef = headSha ?? '';
+
     it('lists changed files between two refs', async () => {
-      const result = await runGitService((git) => git.listFiles('HEAD~1', 'HEAD'));
+      const result = await runGitService((git) => git.listFiles(oldRef, newRef));
 
       expect(result.length).toBeGreaterThan(0);
       for (const entry of result) {

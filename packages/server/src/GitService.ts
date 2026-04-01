@@ -41,7 +41,9 @@ const collectString = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.runCollect(stream).pipe(
     Effect.map((chunks) => {
       const decoder = new TextDecoder();
-      return chunks.map((chunk) => decoder.decode(chunk)).join('');
+      const parts = chunks.map((chunk) => decoder.decode(chunk, { stream: true }));
+      parts.push(decoder.decode());
+      return parts.join('');
     }),
   );
 
@@ -53,7 +55,7 @@ const validateRef = (ref: string): Effect.Effect<void, GitError> => {
 };
 
 const validatePath = (path: string): Effect.Effect<void, GitError> => {
-  if (path === '' || path.startsWith('/') || path.includes('..')) {
+  if (path === '' || path.startsWith('/') || path.split('/').includes('..')) {
     return Effect.fail(new GitError({ message: `Invalid path: ${path}` }));
   }
   return Effect.void;

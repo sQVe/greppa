@@ -93,8 +93,25 @@ const handleFullFileRequest = async (
 ): Promise<HighlightResponse> => {
   const highlighter = await getOrCreateHighlighter();
   const { filePath, language, theme, lines, oldContent, newContent } = request;
-  const resolvedLanguage = await resolveLanguage(highlighter, language);
 
+  const tokens: Record<string, HighlightToken[]> = {};
+  const uncachedLines: typeof lines = [];
+
+  for (const line of lines) {
+    const cacheKey = `${theme}:${filePath}:${line.key}`;
+    const cached = cache.get(cacheKey);
+    if (cached != null) {
+      tokens[line.key] = cached;
+    } else {
+      uncachedLines.push(line);
+    }
+  }
+
+  if (uncachedLines.length === 0) {
+    return { type: 'highlight-result', filePath, tokens };
+  }
+
+  const resolvedLanguage = await resolveLanguage(highlighter, language);
   const oldTokens = highlightFullContent(highlighter, oldContent ?? '', resolvedLanguage, theme);
   const newTokens = highlightFullContent(highlighter, newContent ?? '', resolvedLanguage, theme);
 
@@ -102,15 +119,8 @@ const handleFullFileRequest = async (
     cache.clear();
   }
 
-  const tokens: Record<string, HighlightToken[]> = {};
-  for (const line of lines) {
+  for (const line of uncachedLines) {
     const cacheKey = `${theme}:${filePath}:${line.key}`;
-    const cached = cache.get(cacheKey);
-    if (cached != null) {
-      tokens[line.key] = cached;
-      continue;
-    }
-
     const parsed = parseLineKey(line.key);
     if (parsed == null) {
       continue;

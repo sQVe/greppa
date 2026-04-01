@@ -67,7 +67,7 @@ const FilesHandlers = HttpApiBuilder.group(Api, 'files', (handlers) =>
 const extractFilePath = (url: string, oldRef: string, newRef: string) => {
   const parsed = new URL(url, 'http://localhost');
   const decoded = decodeURIComponent(parsed.pathname);
-  const prefix = `/api/diff/${decodeURIComponent(oldRef)}/${decodeURIComponent(newRef)}/`;
+  const prefix = `/api/diff/${oldRef}/${newRef}/`;
   return decoded.slice(prefix.length);
 };
 

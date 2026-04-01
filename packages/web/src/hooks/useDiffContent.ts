@@ -6,7 +6,13 @@ export const fetchDiffContent = async (
   newRef: string,
   path: string,
 ): Promise<DiffResponse> => {
-  const response = await fetch(`/api/diff/${oldRef}/${newRef}/${path}`);
+  const encodedPath = path
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+  const response = await fetch(
+    `/api/diff/${encodeURIComponent(oldRef)}/${encodeURIComponent(newRef)}/${encodedPath}`,
+  );
   if (!response.ok) {
     throw new Error(`Failed to fetch diff: ${response.status}`);
   }

@@ -30,6 +30,7 @@ export const useDiffComputation = (
 
     const currentId = ++requestIdRef.current;
     const worker = getOrCreateWorker();
+    setChanges(null);
     setError(null);
 
     const request: DiffRequest = {

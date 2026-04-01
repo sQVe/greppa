@@ -11,6 +11,7 @@ import { buildVirtualItems } from './buildVirtualItems';
 import { DiffRowRenderer } from './DiffRowRenderer';
 import { getFileSizeTier } from './getFileSizeTier';
 import { useDiffKeyboardNavigation } from './useDiffKeyboardNavigation';
+import { useDiffSelection } from './useDiffSelection';
 import { useSyntaxHighlighting } from './useSyntaxHighlighting';
 
 import styles from './DiffViewer.module.css';
@@ -83,6 +84,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
   });
 
   useDiffKeyboardNavigation({ items, virtualizer, enabled: diff != null && !isCollapsed });
+  useDiffSelection(scrollRef, diff != null && !isCollapsed);
 
   if (diff == null) {
     return <EmptyState>Select a file to view diff</EmptyState>;

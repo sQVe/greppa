@@ -2,6 +2,22 @@ import type { ChangeType, DiffFile, DiffHunk, DiffLine } from '../fixtures/types
 import { extractCharRanges } from '../components/DiffViewer/extractCharRanges';
 import type { DiffMapping } from '../workers/diffProtocol';
 
+interface HunkRange {
+  oldStart: number;
+  oldEnd: number;
+  newStart: number;
+  newEnd: number;
+}
+
+export interface BuildDiffFileInput {
+  filePath: string | null;
+  changeType: ChangeType | null;
+  oldPath?: string | null;
+  oldContent: string | null;
+  newContent: string | null;
+  changes?: DiffMapping[] | null;
+}
+
 const CONTEXT_LINES = 3;
 
 const extensionToLanguage: Record<string, string> = {
@@ -26,13 +42,6 @@ const getLanguage = (filePath: string): string => {
   const ext = filePath.split('.').pop() ?? '';
   return extensionToLanguage[ext] ?? ext;
 };
-
-interface HunkRange {
-  oldStart: number;
-  oldEnd: number;
-  newStart: number;
-  newEnd: number;
-}
 
 const computeHunkRanges = (
   changes: DiffMapping[],
@@ -139,15 +148,6 @@ const buildHunk = (
     lines,
   };
 };
-
-export interface BuildDiffFileInput {
-  filePath: string | null;
-  changeType: ChangeType | null;
-  oldPath?: string | null;
-  oldContent: string | null;
-  newContent: string | null;
-  changes?: DiffMapping[] | null;
-}
 
 export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
   const { filePath, changeType, oldPath, oldContent, newContent, changes } = input;

@@ -18,6 +18,7 @@
   color: var(--gr-color-text-muted);
   font-size: var(--gr-text-xs);
   text-align: left;
+  user-select: none;
 }
 
 .row {
@@ -99,4 +100,12 @@
   color: var(--gr-color-text-primary);
   font-size: var(--gr-text-sm);
   cursor: pointer;
+}
+
+.viewer[data-active-side='left'] [data-side='right'] {
+  user-select: none;
+}
+
+.viewer[data-active-side='right'] [data-side='left'] {
+  user-select: none;
 }

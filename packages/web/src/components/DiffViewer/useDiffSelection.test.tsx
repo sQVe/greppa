@@ -237,5 +237,24 @@ describe('useDiffSelection', () => {
       fireEvent.mouseDown(getContentCell('left', 0));
       expect(getViewer().getAttribute('data-active-side')).toBeNull();
     });
+
+    it('clears data-active-side when disabled with active selection', () => {
+      const { rerender } = render(<TestHost enabled />);
+      const leftContent = getContentCell('left', 0);
+      fireEvent.mouseDown(leftContent);
+
+      const range = document.createRange();
+      range.selectNodeContents(leftContent);
+      document.getSelection()?.removeAllRanges();
+      document.getSelection()?.addRange(range);
+
+      fireEvent.mouseUp(document);
+      expect(getViewer().getAttribute('data-active-side')).toBe('left');
+
+      rerender(<TestHost enabled={false} />);
+      expect(getViewer().getAttribute('data-active-side')).toBeNull();
+
+      document.getSelection()?.removeAllRanges();
+    });
   });
 });

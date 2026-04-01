@@ -26,8 +26,9 @@ const collectLines = (viewer: HTMLElement, side: string, range: Range) => {
       continue;
     }
 
-    if (cell.textContent !== '') {
-      lines.push(cell.textContent);
+    const text = cell.textContent ?? '';
+    if (text !== '') {
+      lines.push(text);
     }
   }
 
@@ -40,6 +41,7 @@ export const useDiffSelection = (
 ) => {
   useEffect(() => {
     if (!enabled) {
+      viewerRef.current?.removeAttribute('data-active-side');
       return;
     }
 
@@ -92,26 +94,32 @@ export const useDiffSelection = (
         return;
       }
 
+      const range = selection.getRangeAt(0);
+      if (!viewer.contains(range.commonAncestorContainer)) {
+        return;
+      }
+
       const side = resolveSide(activeSide, selection);
       if (side == null) {
         return;
       }
 
-      const lines = collectLines(viewer, side, selection.getRangeAt(0));
-      if (lines.length > 0) {
+      const lines = collectLines(viewer, side, range);
+      if (lines.length > 0 && event.clipboardData != null) {
         event.preventDefault();
-        event.clipboardData?.setData('text/plain', lines.join('\n'));
+        event.clipboardData.setData('text/plain', lines.join('\n'));
       }
     };
 
     viewer.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleMouseUp);
-    viewer.addEventListener('copy', handleCopy);
+    document.addEventListener('copy', handleCopy);
 
     return () => {
+      viewer.removeAttribute('data-active-side');
       viewer.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
-      viewer.removeEventListener('copy', handleCopy);
+      document.removeEventListener('copy', handleCopy);
     };
   }, [viewerRef, enabled]);
 };

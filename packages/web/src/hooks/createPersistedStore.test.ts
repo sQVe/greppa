@@ -143,4 +143,24 @@ describe('createPersistedStore', () => {
     const { result } = renderHook(() => useStore());
     expect(result.current.state).toEqual(defaults);
   });
+
+  it('set() does not notify listeners when localStorage.setItem throws', () => {
+    const useStore = createPersistedStore({
+      key: 'gr-test',
+      schema: TestSchema,
+      defaults,
+    });
+
+    const { result } = renderHook(() => useStore());
+
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    act(() => {
+      result.current.set({ color: 'green' });
+    });
+
+    expect(result.current.state).toEqual(defaults);
+  });
 });

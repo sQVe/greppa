@@ -57,10 +57,10 @@ export const createPersistedStore = <T>(config: StoreConfig<T>) => {
         const current = getSnapshot();
         const next = { ...current, ...partial };
         localStorage.setItem(config.key, JSON.stringify(next));
+        emitChange();
       } catch {
         // Ignore storage errors (private browsing, quota exceeded).
       }
-      emitChange();
     }, []);
 
     return { state, set, get: getSnapshot };

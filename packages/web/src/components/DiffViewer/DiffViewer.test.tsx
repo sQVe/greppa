@@ -5,11 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DiffFile } from '../../fixtures/types';
 import { DiffViewer } from './DiffViewer';
 
-vi.mock('../../hooks/useTheme', () => ({
-  useTheme: () => ({
-    theme: 'catppuccin-mocha',
-    setTheme: vi.fn(),
-    themes: ['catppuccin-mocha', 'catppuccin-latte'],
+vi.mock('../../hooks/usePreferences', () => ({
+  usePreferences: () => ({
+    state: { theme: 'catppuccin-mocha' },
+    set: vi.fn(),
   }),
 }));
 

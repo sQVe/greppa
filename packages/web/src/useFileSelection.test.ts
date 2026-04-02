@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-router';
 import type { RefObject } from 'react';
 import { createElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
 import { collectFiles, useFileSelection } from './useFileSelection';
@@ -96,6 +96,10 @@ const renderFileSelection = async (initialLocation = '/') => {
 
   return { result: resultRef as RefObject<HookResult>, router };
 };
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 afterEach(() => {
   cleanup();

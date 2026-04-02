@@ -7,7 +7,9 @@ import styles from './FileTree.module.css';
 interface FileTreeProps {
   files: FileNode[];
   selectedFilePath: string | null;
+  expandedKeys: Iterable<string>;
   onSelectFile: (path: string) => void;
+  onExpandedKeysChange: (keys: Set<string | number>) => void;
 }
 
 const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
@@ -17,7 +19,7 @@ const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
   renamed: 'R',
 };
 
-const collectDirectoryIds = (nodes: FileNode[]): string[] =>
+export const collectDirectoryIds = (nodes: FileNode[]): string[] =>
   nodes.flatMap((node) =>
     node.type === 'directory' ? [node.path, ...collectDirectoryIds(node.children ?? [])] : [],
   );
@@ -50,26 +52,29 @@ const renderItem = (node: FileNode) => {
   );
 };
 
-export const FileTree = ({ files, selectedFilePath, onSelectFile }: FileTreeProps) => {
-  const expandedKeys = collectDirectoryIds(files);
-
-  return (
-    <Tree.Root
-      aria-label="File tree"
-      selectionMode="single"
-      selectedKeys={selectedFilePath != null ? [selectedFilePath] : []}
-      defaultExpandedKeys={expandedKeys}
-      onSelectionChange={(keys) => {
-        if (keys === 'all') {
-          return;
-        }
-        const selected = [...keys][0];
-        if (typeof selected === 'string') {
-          onSelectFile(selected);
-        }
-      }}
-    >
-      <Tree.Collection items={files}>{renderItem}</Tree.Collection>
-    </Tree.Root>
-  );
-};
+export const FileTree = ({
+  files,
+  selectedFilePath,
+  expandedKeys,
+  onSelectFile,
+  onExpandedKeysChange,
+}: FileTreeProps) => (
+  <Tree.Root
+    aria-label="File tree"
+    selectionMode="single"
+    selectedKeys={selectedFilePath != null ? [selectedFilePath] : []}
+    expandedKeys={expandedKeys}
+    onExpandedChange={onExpandedKeysChange}
+    onSelectionChange={(keys) => {
+      if (keys === 'all') {
+        return;
+      }
+      const selected = [...keys][0];
+      if (typeof selected === 'string') {
+        onSelectFile(selected);
+      }
+    }}
+  >
+    <Tree.Collection items={files}>{renderItem}</Tree.Collection>
+  </Tree.Root>
+);

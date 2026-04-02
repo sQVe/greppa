@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-router';
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
 
@@ -29,14 +29,18 @@ vi.mock('./hooks/useDiffComputation', () => ({
   useDiffComputation: () => ({ changes: null, error: null }),
 }));
 
-vi.mock('./hooks/useTheme', () => ({
+vi.mock('./hooks/usePreferences', () => ({
   isTheme: (value: string) => ['catppuccin-mocha', 'catppuccin-latte'].includes(value),
-  useTheme: () => ({
-    theme: 'catppuccin-mocha' as const,
-    setTheme: vi.fn(),
-    themes: ['catppuccin-mocha', 'catppuccin-latte'] as const,
+  THEMES: ['catppuccin-mocha', 'catppuccin-latte'] as const,
+  usePreferences: () => ({
+    state: { theme: 'catppuccin-mocha' as const },
+    set: vi.fn(),
   }),
 }));
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 afterEach(() => {
   cleanup();

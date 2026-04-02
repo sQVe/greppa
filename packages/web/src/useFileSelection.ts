@@ -1,7 +1,8 @@
 import { useMatch, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
+import { useReviewState } from './hooks/useReviewState';
 
 export const collectFiles = (nodes: FileNode[]): FileNode[] =>
   nodes.flatMap((node) => (node.type === 'file' ? [node] : collectFiles(node.children ?? [])));
@@ -21,17 +22,32 @@ export const useFileSelection = (
 
   const selectedFilePath = urlFile != null && validPaths.has(urlFile) ? urlFile : null;
 
-  const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(
-    () => new Set(allFiles.filter((file) => file.status === 'reviewed').map((file) => file.path)),
+  const { state: reviewState, set: setReviewState } = useReviewState('default');
+  const reviewedPaths = useMemo(
+    () => new Set(reviewState.reviewedPaths),
+    [reviewState.reviewedPaths],
+  );
+
+  const initialReviewedPaths = useMemo(
+    () => allFiles.filter((file) => file.status === 'reviewed').map((file) => file.path),
+    [allFiles],
   );
 
   useEffect(() => {
-    if (selectedFilePath == null) {
-      return;
+    let paths = reviewState.reviewedPaths;
+
+    if (paths.length === 0 && initialReviewedPaths.length > 0) {
+      paths = initialReviewedPaths;
     }
 
-    setReviewedPaths((prev) => (prev.has(selectedFilePath) ? prev : new Set([...prev, selectedFilePath])));
-  }, [selectedFilePath]);
+    if (selectedFilePath != null && !new Set(paths).has(selectedFilePath)) {
+      paths = [...paths, selectedFilePath];
+    }
+
+    if (paths !== reviewState.reviewedPaths) {
+      setReviewState({ reviewedPaths: paths });
+    }
+  }, [selectedFilePath, initialReviewedPaths, reviewState.reviewedPaths, setReviewState]);
 
   const selectFile = useCallback(
     (path: string) => {

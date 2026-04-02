@@ -22,7 +22,7 @@ export const useFileSelection = (
 
   const selectedFilePath = urlFile != null && validPaths.has(urlFile) ? urlFile : null;
 
-  const { state: reviewState, set: setReviewState } = useReviewState('default');
+  const { state: reviewState, set: setReviewState, get: getReviewState } = useReviewState('default');
   const reviewedPaths = useMemo(
     () => new Set(reviewState.reviewedPaths),
     [reviewState.reviewedPaths],
@@ -34,20 +34,16 @@ export const useFileSelection = (
   );
 
   useEffect(() => {
-    let paths = reviewState.reviewedPaths;
+    if (reviewState.reviewedPaths.length > 0 || initialReviewedPaths.length === 0) return;
+    setReviewState({ reviewedPaths: initialReviewedPaths });
+  }, [reviewState.reviewedPaths, initialReviewedPaths, setReviewState]);
 
-    if (paths.length === 0 && initialReviewedPaths.length > 0) {
-      paths = initialReviewedPaths;
-    }
-
-    if (selectedFilePath != null && !new Set(paths).has(selectedFilePath)) {
-      paths = [...paths, selectedFilePath];
-    }
-
-    if (paths !== reviewState.reviewedPaths) {
-      setReviewState({ reviewedPaths: paths });
-    }
-  }, [selectedFilePath, initialReviewedPaths, reviewState.reviewedPaths, setReviewState]);
+  useEffect(() => {
+    if (selectedFilePath == null) return;
+    const current = getReviewState();
+    if (new Set(current.reviewedPaths).has(selectedFilePath)) return;
+    setReviewState({ reviewedPaths: [...current.reviewedPaths, selectedFilePath] });
+  }, [selectedFilePath, getReviewState, setReviewState]);
 
   const selectFile = useCallback(
     (path: string) => {

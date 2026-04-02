@@ -63,7 +63,7 @@ export const createPersistedStore = <T>(config: StoreConfig<T>) => {
       emitChange();
     }, []);
 
-    return { state, set };
+    return { state, set, get: getSnapshot };
   };
 
   return useStore;

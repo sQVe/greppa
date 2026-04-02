@@ -30,7 +30,10 @@ export const App = () => {
   const { state: reviewState, set: setReviewState } = useReviewState('default');
   const allDirectoryIds = useMemo(() => collectDirectoryIds(files), [files]);
   const expandedKeys = useMemo(
-    () => new Set(allDirectoryIds.filter((id) => !reviewState.collapsedPaths.includes(id))),
+    () => {
+      const collapsed = new Set(reviewState.collapsedPaths);
+      return new Set(allDirectoryIds.filter((id) => !collapsed.has(id)));
+    },
     [allDirectoryIds, reviewState.collapsedPaths],
   );
   const handleExpandedKeysChange = useCallback(

@@ -24,8 +24,8 @@ export const useFileSelection = (
 
   const { state: reviewState, set: setReviewState, get: getReviewState } = useReviewState('default');
   const reviewedPaths = useMemo(
-    () => new Set(reviewState.reviewedPaths),
-    [reviewState.reviewedPaths],
+    () => new Set(reviewState.reviewedPaths.filter((path) => validPaths.has(path))),
+    [reviewState.reviewedPaths, validPaths],
   );
 
   const initialReviewedPaths = useMemo(
@@ -34,9 +34,14 @@ export const useFileSelection = (
   );
 
   useEffect(() => {
-    if (reviewState.reviewedPaths.length > 0 || initialReviewedPaths.length === 0) return;
-    setReviewState({ reviewedPaths: initialReviewedPaths });
-  }, [reviewState.reviewedPaths, initialReviewedPaths, setReviewState]);
+    if (initialReviewedPaths.length === 0) return;
+    const current = getReviewState();
+    const existing = new Set(current.reviewedPaths);
+    const missing = initialReviewedPaths.filter((p) => !existing.has(p));
+    if (missing.length > 0) {
+      setReviewState({ reviewedPaths: [...current.reviewedPaths, ...missing] });
+    }
+  }, [initialReviewedPaths, getReviewState, setReviewState]);
 
   useEffect(() => {
     if (selectedFilePath == null) return;

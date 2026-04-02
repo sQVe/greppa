@@ -41,7 +41,6 @@ export const createPersistedStore = <T>(config: StoreConfig<T>) => {
       cachedSnapshot = Schema.decodeUnknownSync(config.schema)(parsed);
       return cachedSnapshot;
     } catch {
-      cachedRaw = undefined;
       cachedSnapshot = config.defaults;
       return cachedSnapshot;
     }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { EmptyState } from '@greppa/ui';
 
 import type { DiffFile } from '../../fixtures/types';
-import { useTheme } from '../../hooks/useTheme';
+import { usePreferences } from '../../hooks/usePreferences';
 import { buildRows } from './buildRows';
 import type { HunkData, VirtualItem } from './buildVirtualItems';
 import { buildVirtualItems } from './buildVirtualItems';
@@ -49,7 +49,7 @@ const useDeferredDiff = (diff: DiffFile | null, shouldDefer: boolean) => {
 };
 
 export const DiffViewer = ({ diff }: DiffViewerProps) => {
-  const { theme } = useTheme();
+  const { state: { theme } } = usePreferences();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [forceExpanded, setForceExpanded] = useState(false);
 

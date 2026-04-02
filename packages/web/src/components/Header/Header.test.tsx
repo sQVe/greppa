@@ -5,14 +5,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Header } from './Header';
 
-const mockSetTheme = vi.fn();
+const mockSet = vi.fn();
 
-vi.mock('../../hooks/useTheme', () => ({
+vi.mock('../../hooks/usePreferences', () => ({
   isTheme: (value: string) => ['catppuccin-mocha', 'catppuccin-latte'].includes(value),
-  useTheme: () => ({
-    theme: 'catppuccin-mocha' as const,
-    setTheme: mockSetTheme,
-    themes: ['catppuccin-mocha', 'catppuccin-latte'] as const,
+  THEMES: ['catppuccin-mocha', 'catppuccin-latte'] as const,
+  usePreferences: () => ({
+    state: { theme: 'catppuccin-mocha' as const },
+    set: mockSet,
   }),
 }));
 
@@ -46,7 +46,7 @@ describe('Header', () => {
     render(<Header />);
     const select = screen.getByRole('combobox');
     await userEvent.selectOptions(select, 'catppuccin-latte');
-    expect(mockSetTheme).toHaveBeenCalledWith('catppuccin-latte');
+    expect(mockSet).toHaveBeenCalledWith({ theme: 'catppuccin-latte' });
   });
 
   describe('file info', () => {

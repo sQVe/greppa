@@ -8,6 +8,7 @@
     "build": "vp build"
   },
   "dependencies": {
+    "effect": "4.0.0-beta.40",
     "@greppa/core": "workspace:*",
     "@greppa/ui": "workspace:*",
     "@tanstack/react-query": "5.95.2",

@@ -1,7 +1,8 @@
 import { useMatch, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
+import { useReviewState } from './hooks/useReviewState';
 
 export const collectFiles = (nodes: FileNode[]): FileNode[] =>
   nodes.flatMap((node) => (node.type === 'file' ? [node] : collectFiles(node.children ?? [])));
@@ -21,17 +22,33 @@ export const useFileSelection = (
 
   const selectedFilePath = urlFile != null && validPaths.has(urlFile) ? urlFile : null;
 
-  const [reviewedPaths, setReviewedPaths] = useState<Set<string>>(
-    () => new Set(allFiles.filter((file) => file.status === 'reviewed').map((file) => file.path)),
+  const { state: reviewState, set: setReviewState, get: getReviewState } = useReviewState('default');
+  const reviewedPaths = useMemo(
+    () => new Set(reviewState.reviewedPaths.filter((path) => validPaths.has(path))),
+    [reviewState.reviewedPaths, validPaths],
+  );
+
+  const initialReviewedPaths = useMemo(
+    () => allFiles.filter((file) => file.status === 'reviewed').map((file) => file.path),
+    [allFiles],
   );
 
   useEffect(() => {
-    if (selectedFilePath == null) {
-      return;
+    if (initialReviewedPaths.length === 0) return;
+    const current = getReviewState();
+    const existing = new Set(current.reviewedPaths);
+    const missing = initialReviewedPaths.filter((p) => !existing.has(p));
+    if (missing.length > 0) {
+      setReviewState({ reviewedPaths: [...current.reviewedPaths, ...missing] });
     }
+  }, [initialReviewedPaths, getReviewState, setReviewState]);
 
-    setReviewedPaths((prev) => (prev.has(selectedFilePath) ? prev : new Set([...prev, selectedFilePath])));
-  }, [selectedFilePath]);
+  useEffect(() => {
+    if (selectedFilePath == null) return;
+    const current = getReviewState();
+    if (new Set(current.reviewedPaths).has(selectedFilePath)) return;
+    setReviewState({ reviewedPaths: [...current.reviewedPaths, selectedFilePath] });
+  }, [selectedFilePath, getReviewState, setReviewState]);
 
   const selectFile = useCallback(
     (path: string) => {

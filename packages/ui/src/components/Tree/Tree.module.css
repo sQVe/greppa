@@ -41,7 +41,7 @@
 .item[data-selected] {
   background: color-mix(
     in srgb,
-    var(--gr-color-bg-interactive) 10%,
+    var(--gr-color-bg-interactive) 6%,
     var(--gr-color-bg-default)
   );
 }
@@ -49,17 +49,25 @@
 .root:focus-within .item[data-selected] {
   background: color-mix(
     in srgb,
-    var(--gr-color-bg-interactive) 20%,
+    var(--gr-color-bg-interactive) 12%,
     var(--gr-color-bg-default)
   );
 }
 
 .item[data-focused]:not([data-selected]) {
-  background: var(--gr-color-bg-surface-hover);
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-interactive) 8%,
+    var(--gr-color-bg-default)
+  );
 }
 
 .item[data-hovered]:not([data-selected]) {
-  background: var(--gr-color-bg-surface-hover);
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-interactive) 8%,
+    var(--gr-color-bg-default)
+  );
 }
 
 .chevron {

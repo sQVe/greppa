@@ -1,9 +1,9 @@
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
 import { DiffViewer } from './components/DiffViewer/DiffViewer';
-import { FileTree } from './components/FileTree/FileTree';
+import { collectDirectoryIds, FileTree } from './components/FileTree/FileTree';
 import { Header } from './components/Header/Header';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
@@ -11,6 +11,7 @@ import { buildDiffFile } from './hooks/buildDiffFile';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
+import { useReviewState } from './hooks/useReviewState';
 import { useFileSelection } from './useFileSelection';
 
 import styles from './App.module.css';
@@ -25,6 +26,23 @@ export const App = () => {
 
   const { files: apiFiles, isError } = useFileList('HEAD~1', 'HEAD');
   const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
+
+  const { state: reviewState, set: setReviewState } = useReviewState('default');
+  const allDirectoryIds = useMemo(() => collectDirectoryIds(files), [files]);
+  const expandedKeys = useMemo(
+    () => {
+      const collapsed = new Set(reviewState.collapsedPaths);
+      return new Set(allDirectoryIds.filter((id) => !collapsed.has(id)));
+    },
+    [allDirectoryIds, reviewState.collapsedPaths],
+  );
+  const handleExpandedKeysChange = useCallback(
+    (keys: Set<string | number>) => {
+      const collapsed = allDirectoryIds.filter((id) => !keys.has(id));
+      setReviewState({ collapsedPaths: collapsed });
+    },
+    [allDirectoryIds, setReviewState],
+  );
 
   const {
     selectedFilePath,
@@ -73,15 +91,35 @@ export const App = () => {
         onLayoutChanged={onLayoutChanged}
         className={styles.body}
       >
-        <Panel id="file-tree" defaultSize="20%" minSize={10} collapsible>
-          <FileTree files={files} selectedFilePath={selectedFilePath} onSelectFile={selectFile} />
+        <Panel
+          id="file-tree"
+          defaultSize={240}
+          minSize={160}
+          maxSize="35%"
+          collapsible
+          groupResizeBehavior="preserve-pixel-size"
+        >
+          <FileTree
+            files={files}
+            selectedFilePath={selectedFilePath}
+            expandedKeys={expandedKeys}
+            onSelectFile={selectFile}
+            onExpandedKeysChange={handleExpandedKeysChange}
+          />
         </Panel>
         <Separator className={styles.separator} />
-        <Panel id="diff-viewer" minSize={20}>
+        <Panel id="diff-viewer" minSize={300}>
           <DiffViewer diff={selectedDiff} />
         </Panel>
         <Separator className={styles.separator} />
-        <Panel id="detail-panel" defaultSize="25%" minSize={15} collapsible>
+        <Panel
+          id="detail-panel"
+          defaultSize={320}
+          minSize={200}
+          maxSize="35%"
+          collapsible
+          groupResizeBehavior="preserve-pixel-size"
+        >
           <DetailPanel threads={selectedThreads} fileInfo={selectedFileInfo} />
         </Panel>
       </Group>

@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react';
 import { Badge } from '@greppa/ui';
 
 import type { ChangeType } from '../../fixtures/types';
-import { isTheme, useTheme } from '../../hooks/useTheme';
+import { isTheme, THEMES, usePreferences } from '../../hooks/usePreferences';
 
 import styles from './Header.module.css';
 
@@ -21,12 +21,12 @@ const CHANGE_LABELS: Record<ChangeType, string> = {
 };
 
 export const Header = ({ filePath, oldPath, changeType }: HeaderProps) => {
-  const { theme, setTheme, themes } = useTheme();
+  const { state, set } = usePreferences();
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
     if (isTheme(value)) {
-      setTheme(value);
+      set({ theme: value });
     }
   };
 
@@ -43,10 +43,10 @@ export const Header = ({ filePath, oldPath, changeType }: HeaderProps) => {
       <select
         aria-label="Theme"
         className={styles.themePicker}
-        value={theme}
+        value={state.theme}
         onChange={handleChange}
       >
-        {themes.map((themeOption) => (
+        {THEMES.map((themeOption) => (
           <option key={themeOption} value={themeOption}>
             {themeOption}
           </option>

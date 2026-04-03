@@ -29,6 +29,11 @@ const resolveRef = (ref: string): string | null => {
 
 const parentSha = resolveRef('HEAD~1');
 const headSha = resolveRef('HEAD');
+const hasDefaultBranchRef =
+  resolveRef('main') != null ||
+  resolveRef('master') != null ||
+  resolveRef('refs/remotes/origin/main') != null ||
+  resolveRef('refs/remotes/origin/master') != null;
 
 const TestLayer = Layer.mergeAll(
   GitServiceLive,
@@ -171,7 +176,7 @@ describe('GitService', () => {
     });
   });
 
-  describe('detectDefaultBranch', () => {
+  describe.runIf(hasDefaultBranchRef)('detectDefaultBranch', () => {
     it('returns the default branch name', async () => {
       const result = await runGitService((git) => git.detectDefaultBranch());
 

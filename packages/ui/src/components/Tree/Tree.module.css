@@ -37,7 +37,7 @@
   pointer-events: none;
 }
 
-.item[data-selected] {
+.item.selected {
   background: color-mix(
     in srgb,
     var(--gr-color-bg-interactive) 6%,
@@ -45,26 +45,10 @@
   );
 }
 
-.root:focus-within .item[data-selected] {
+.root:focus-within .item.selected {
   background: color-mix(
     in srgb,
     var(--gr-color-bg-interactive) 12%,
-    var(--gr-color-bg-default)
-  );
-}
-
-.item[data-focused]:not([data-selected]) {
-  background: color-mix(
-    in srgb,
-    var(--gr-color-bg-interactive) 8%,
-    var(--gr-color-bg-default)
-  );
-}
-
-.item[data-hovered]:not([data-selected]) {
-  background: color-mix(
-    in srgb,
-    var(--gr-color-bg-interactive) 8%,
     var(--gr-color-bg-default)
   );
 }

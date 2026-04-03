@@ -73,13 +73,10 @@
 }
 
 .sectionCount {
+  font-family: var(--gr-font-ui);
   font-size: var(--gr-text-xs);
   font-weight: 500;
   color: var(--gr-color-text-muted);
-  background: var(--gr-color-bg-surface);
-  padding: 0 6px;
-  border-radius: 8px;
-  line-height: 1.6;
 }
 
 .sectionBody {

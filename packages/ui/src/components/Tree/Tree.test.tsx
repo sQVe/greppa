@@ -41,9 +41,10 @@ describe('Tree', () => {
     expect(row.className).toContain('item');
   });
 
-  it('renders Chevron with default character', () => {
+  it('renders Chevron with default icon', () => {
     renderTree();
-    expect(screen.getByText('▸')).toBeDefined();
+    const button = screen.getByRole('button');
+    expect(button.querySelector('svg')).not.toBeNull();
   });
 
   it('applies internal styles to Label', () => {

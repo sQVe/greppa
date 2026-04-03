@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { NodeHttpServer } from '@effect/platform-node';
 import { Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
+import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
 import { HttpApiBuilder } from 'effect/unstable/httpapi';
 
 import type { FileEntry } from '@greppa/core';
@@ -134,9 +135,11 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(RefsHandlers),
 );
 
-export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue) =>
-  HttpRouter.serve(ApiRoutes).pipe(
+export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDistPath: string) => {
+  const StaticFiles = HttpStaticServer.layer({ root: webDistPath, spa: true });
+  return HttpRouter.serve(Layer.mergeAll(ApiRoutes, StaticFiles)).pipe(
     Layer.provide(GitServiceLive),
     Layer.provide(Layer.succeed(RefsConfig, refsConfig)),
     Layer.provide(NodeHttpServer.layer(createServer, { port })),
   );
+};

@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+
 import { NodeServices } from '@effect/platform-node';
 import { GitService, GitServiceLive, makeHttpLayer, RepoPath } from '@greppa/server';
 import { Config, Effect, Layer, Option } from 'effect';
@@ -48,6 +50,7 @@ export const serve = Command.make(
         Layer.mergeAll(GitServiceLive, NodeServices.layer, Layer.succeed(RepoPath, process.cwd())),
       ),
     );
-    yield* Layer.launch(makeHttpLayer(listenPort, refsConfig));
+    const webDistPath = resolve(import.meta.dirname, 'web');
+    yield* Layer.launch(makeHttpLayer(listenPort, refsConfig, webDistPath));
   }),
 );

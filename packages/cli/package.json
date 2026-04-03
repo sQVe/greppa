@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "vp pack",
+    "build": "vp pack && cp -r ../web/dist dist/web",
     "dev": "tsx src/index.ts serve"
   },
   "dependencies": {
@@ -18,5 +18,8 @@
     "@greppa/core": "workspace:*",
     "@greppa/server": "workspace:*",
     "effect": "4.0.0-beta.40"
+  },
+  "devDependencies": {
+    "@greppa/web": "workspace:*"
   }
 }

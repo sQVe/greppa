@@ -1,9 +1,13 @@
 import { execSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { NodeHttpPlatform, NodeServices } from '@effect/platform-node';
 import { Layer } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
 import { layer as EtagLayer } from 'effect/unstable/http/Etag';
+import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { GitServiceLive, RefsConfig, RepoPath } from './GitService';
@@ -142,5 +146,68 @@ describe('Http', () => {
 
       expect(response.status).toBe(404);
     });
+  });
+});
+
+describe('static file serving', () => {
+  const tmpDir = mkdtempSync(join(tmpdir(), 'greppa-static-'));
+  const indexContent = '<html><body>greppa</body></html>';
+
+  beforeAll(() => {
+    writeFileSync(join(tmpDir, 'index.html'), indexContent);
+    mkdirSync(join(tmpDir, 'assets'), { recursive: true });
+    writeFileSync(join(tmpDir, 'assets', 'app.js'), 'console.log("app")');
+  });
+
+  afterAll(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const StaticFiles = HttpStaticServer.layer({ root: tmpDir, spa: true });
+  const StaticAppLayer = Layer.mergeAll(ApiRoutes, StaticFiles).pipe(Layer.provide(PlatformLayer));
+
+  let staticHandler: (request: Request) => Promise<Response>;
+  let staticDispose: () => Promise<void>;
+
+  beforeAll(() => {
+    const app = HttpRouter.toWebHandler(StaticAppLayer);
+    staticHandler = app.handler as (request: Request) => Promise<Response>;
+    staticDispose = app.dispose;
+  });
+
+  afterAll(async () => {
+    await staticDispose();
+  });
+
+  it('serves index.html at root', async () => {
+    const response = await staticHandler(new Request('http://localhost/'));
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(indexContent);
+  });
+
+  it('serves static assets', async () => {
+    const response = await staticHandler(new Request('http://localhost/assets/app.js'));
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('console.log("app")');
+  });
+
+  it('serves index.html for SPA fallback routes', async () => {
+    const response = await staticHandler(
+      new Request('http://localhost/file/some/path', {
+        headers: { Accept: 'text/html' },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(indexContent);
+  });
+
+  it('still serves API routes', async () => {
+    const response = await staticHandler(new Request('http://localhost/api/health'));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: 'ok' });
   });
 });

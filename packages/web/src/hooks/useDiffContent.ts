@@ -30,7 +30,7 @@ export const useDiffContent = (oldRef: string, newRef: string, path: string | nu
       }
       return fetchDiffContent(oldRef, newRef, path);
     },
-    enabled: path != null,
+    enabled: path != null && oldRef !== '' && newRef !== '',
     retry: false,
     staleTime: Infinity,
   });

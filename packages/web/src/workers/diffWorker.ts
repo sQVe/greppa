@@ -7,14 +7,15 @@ globalThis.addEventListener('message', (event: MessageEvent<DiffWorkerRequest>) 
     // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage does not accept targetOrigin
     globalThis.postMessage(response);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     const errorResponse: DiffWorkerResponse = {
       type: 'diff-result',
       filePath: event.data.filePath,
       changes: [],
       hitTimeout: false,
+      error: message,
     };
     // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage does not accept targetOrigin
     globalThis.postMessage(errorResponse);
-    console.error('[diffWorker]', error);
   }
 });

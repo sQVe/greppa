@@ -51,5 +51,6 @@ export const handleDiffRequest = (request: DiffRequest): DiffWorkerResponse => {
     filePath,
     changes,
     hitTimeout: result.hitTimeout,
+    error: null,
   };
 };

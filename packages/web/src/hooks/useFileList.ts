@@ -145,6 +145,7 @@ export const useFileList = (oldRef: string, newRef: string) => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['files', oldRef, newRef],
     queryFn: () => fetchFiles(oldRef, newRef),
+    enabled: oldRef !== '' && newRef !== '',
     retry: false,
     staleTime: Infinity,
     select: buildFileTree,

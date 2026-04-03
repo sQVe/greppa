@@ -21,6 +21,10 @@ vi.mock('./hooks/useFileList', () => ({
   useFileList: () => ({ files: null, isError: true, isLoading: false }),
 }));
 
+vi.mock('./hooks/useRefs', () => ({
+  useRefs: () => ({ oldRef: 'HEAD~1', newRef: 'HEAD', isLoading: false, isError: false }),
+}));
+
 vi.mock('./hooks/useDiffContent', () => ({
   useDiffContent: () => ({ diff: null, isLoading: false, isError: false }),
 }));

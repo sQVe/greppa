@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "greppa": "./src/index.ts"
+    "greppa": "./dist/index.mjs"
   },
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
+    "build": "vp pack",
     "dev": "tsx src/index.ts serve"
   },
   "dependencies": {

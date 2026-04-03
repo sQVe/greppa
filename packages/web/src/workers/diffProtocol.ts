@@ -33,6 +33,7 @@ export interface DiffWorkerResponse {
   filePath: string;
   changes: DiffMapping[];
   hitTimeout: boolean;
+  error: string | null;
 }
 
 export type DiffWorkerRequest = DiffRequest;

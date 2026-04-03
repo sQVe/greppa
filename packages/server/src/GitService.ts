@@ -7,8 +7,32 @@ export class GitError extends Data.TaggedError('GitError')<{
   message: string;
 }> {}
 
+export class ResolveRefError extends Data.TaggedError('ResolveRefError')<{
+  message: string;
+}> {}
+
+export class DetectDefaultBranchError extends Data.TaggedError('DetectDefaultBranchError')<{
+  message: string;
+}> {}
+
+export class MergeBaseError extends Data.TaggedError('MergeBaseError')<{
+  message: string;
+}> {}
+
+export interface RefsConfigValue {
+  oldRef: string;
+  newRef: string;
+  mergeBaseRef: string;
+}
+
 export const RepoPath = ServiceMap.Reference('greppa/RepoPath', {
   defaultValue: () => process.cwd(),
+});
+
+export const RefsConfig = ServiceMap.Reference<RefsConfigValue>('greppa/RefsConfig', {
+  defaultValue: () => {
+    throw new Error('RefsConfig must be provided');
+  },
 });
 
 const statusMap: Record<string, FileEntry['changeType']> = {
@@ -95,6 +119,18 @@ export class GitService extends ServiceMap.Service<
       ref: string,
       path: string,
     ) => Effect.Effect<string, GitError, ChildProcessSpawner | typeof RepoPath>;
+    resolveRef: (
+      ref: string,
+    ) => Effect.Effect<string, ResolveRefError, ChildProcessSpawner | typeof RepoPath>;
+    detectDefaultBranch: () => Effect.Effect<
+      string,
+      DetectDefaultBranchError,
+      ChildProcessSpawner | typeof RepoPath
+    >;
+    mergeBase: (
+      ref1: string,
+      ref2: string,
+    ) => Effect.Effect<string, MergeBaseError, ChildProcessSpawner | typeof RepoPath>;
   }
 >()('greppa/GitService') {}
 
@@ -109,6 +145,38 @@ export const GitServiceLive = Layer.succeed(
     getFileContent: (ref, path) =>
       Effect.all([validateRef(ref), validatePath(path)]).pipe(
         Effect.flatMap(() => runGit(['show', `${ref}:${path}`])),
+      ),
+    resolveRef: (ref) =>
+      validateRef(ref).pipe(
+        Effect.flatMap(() => runGit(['rev-parse', '--verify', ref])),
+        Effect.map(() => ref),
+        Effect.mapError((error) => new ResolveRefError({ message: error.message })),
+      ),
+    detectDefaultBranch: () => {
+      const checkRefExists = (ref: string, name: string) =>
+        runGit(['rev-parse', '--verify', ref]).pipe(Effect.map(() => name));
+
+      return runGit(['symbolic-ref', 'refs/remotes/origin/HEAD']).pipe(
+        Effect.map((output) => output.trim().replace('refs/remotes/origin/', '')),
+        Effect.catch(() =>
+          checkRefExists('main', 'main').pipe(
+            Effect.catch(() => checkRefExists('refs/remotes/origin/main', 'main')),
+            Effect.catch(() => checkRefExists('master', 'master')),
+            Effect.catch(() => checkRefExists('refs/remotes/origin/master', 'master')),
+          ),
+        ),
+        Effect.mapError((error) =>
+          error instanceof DetectDefaultBranchError
+            ? error
+            : new DetectDefaultBranchError({ message: error.message }),
+        ),
+      );
+    },
+    mergeBase: (ref1, ref2) =>
+      Effect.all([validateRef(ref1), validateRef(ref2)]).pipe(
+        Effect.flatMap(() => runGit(['merge-base', ref1, ref2])),
+        Effect.map((output) => output.trim()),
+        Effect.mapError((error) => new MergeBaseError({ message: error.message })),
       ),
   }),
 );

@@ -2,16 +2,25 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
   border-bottom: 1px solid
     color-mix(in srgb, var(--gr-color-border-muted) 30%, transparent);
 }
 
 .section:last-child {
   border-bottom: none;
+}
+
+.collapsed {
+  flex: 0 0 auto;
 }
 
 .sectionHeader {
@@ -41,11 +50,6 @@
   height: 14px;
   flex-shrink: 0;
   color: var(--gr-color-text-muted);
-  transition: transform 150ms;
-}
-
-.collapsed .sectionChevron {
-  transform: rotate(-90deg);
 }
 
 .sectionIcon {
@@ -79,16 +83,11 @@
 }
 
 .sectionBody {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
-  transition: grid-template-rows 200ms ease;
-  display: grid;
-  grid-template-rows: 1fr;
 }
 
 .collapsed .sectionBody {
-  grid-template-rows: 0fr;
-}
-
-.sectionBodyInner {
-  overflow: hidden;
+  flex: none;
 }

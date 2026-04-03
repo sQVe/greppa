@@ -1,0 +1,74 @@
+.container {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.fileNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px var(--gr-space-lg);
+  background: var(--gr-color-bg-default);
+  border-bottom: 1px solid var(--gr-color-border-default);
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-xs);
+  color: var(--gr-color-text-muted);
+}
+
+.fileNavArrows {
+  display: flex;
+  gap: 4px;
+}
+
+.fileNavButton {
+  border: 1px solid var(--gr-color-border-default);
+  background: var(--gr-color-bg-surface);
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+  font-size: var(--gr-text-xs);
+  color: var(--gr-color-text-muted);
+}
+
+.fileHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--gr-space-lg);
+  background: var(--gr-color-bg-subtle);
+  border-bottom: 1px solid var(--gr-color-border-default);
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-xs);
+  font-weight: 600;
+  color: var(--gr-color-text-secondary);
+}
+
+.filePath {
+  flex: 1;
+}
+
+.reviewButton {
+  font-size: var(--gr-text-xs);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--gr-color-border-default);
+  background: var(--gr-color-bg-default);
+  color: var(--gr-color-text-muted);
+  cursor: pointer;
+}
+
+.separator {
+  height: 24px;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    color-mix(in srgb, var(--gr-color-border-muted) 55%, transparent) 4px,
+    color-mix(in srgb, var(--gr-color-border-muted) 55%, transparent) 5px
+  );
+  border-top: 1px solid var(--gr-color-border-default);
+  border-bottom: 1px solid var(--gr-color-border-default);
+}

@@ -1,8 +1,7 @@
 .root {
   --gr-tree-indent: 20px;
 
-  height: 100%;
-  overflow: auto;
+  min-height: 0;
   padding: var(--gr-space-md) 0;
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-sm);

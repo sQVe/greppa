@@ -2,7 +2,7 @@ import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panel
 import { useCallback, useMemo } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
-import { DiffViewer } from './components/DiffViewer/DiffViewer';
+import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffViewer';
 import { collectDirectoryIds } from './components/FileTree/FileTree';
 import { FileTreePanel } from './components/FileTree/FileTreePanel';
 import { Header } from './components/Header/Header';
@@ -162,7 +162,7 @@ export const App = () => {
         </Panel>
         <Separator className={styles.separator} />
         <Panel id="diff-viewer" minSize={300}>
-          <DiffViewer diff={selectedDiff} />
+          <StackedDiffViewer diffs={selectedDiff != null ? [selectedDiff] : []} />
         </Panel>
         <Separator className={styles.separator} />
         <Panel

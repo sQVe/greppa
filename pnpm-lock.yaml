@@ -59,6 +59,10 @@ importers:
       effect:
         specifier: 4.0.0-beta.40
         version: 4.0.0-beta.40
+    devDependencies:
+      '@greppa/web':
+        specifier: workspace:*
+        version: link:../web
 
   packages/core:
     dependencies:

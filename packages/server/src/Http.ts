@@ -128,11 +128,76 @@ const RefsHandlers = HttpApiBuilder.group(Api, 'refs', (handlers) =>
   }),
 );
 
+const worktreeFileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
+const WORKTREE_CACHE_TTL_MS = 3_000;
+
+const getWorktreeFileList = () =>
+  Effect.gen(function* () {
+    const cached = worktreeFileListCache.get('worktree');
+    if (cached != null && Date.now() - cached.timestamp < WORKTREE_CACHE_TTL_MS) {
+      return cached.entries;
+    }
+    const git = yield* GitService;
+    const entries = yield* git.listWorkingTreeFiles();
+    worktreeFileListCache.set('worktree', { entries, timestamp: Date.now() });
+    return entries;
+  });
+
+const WorktreeFilesHandlers = HttpApiBuilder.group(Api, 'worktreeFiles', (handlers) =>
+  Effect.succeed(handlers.handle('getWorktreeFiles', () => getWorktreeFileList())),
+);
+
+const extractWorktreeFilePath = (url: string) => {
+  const parsed = new URL(url, 'http://localhost');
+  const decoded = decodeURIComponent(parsed.pathname);
+  const prefix = '/api/worktree/diff/';
+  return decoded.slice(prefix.length);
+};
+
+const WorktreeDiffHandlers = HttpApiBuilder.group(Api, 'worktreeDiff', (handlers) =>
+  Effect.gen(function* () {
+    const git = yield* GitService;
+
+    return handlers.handle('getWorktreeDiff', ({ request }) => {
+      const filePath = extractWorktreeFilePath(request.url);
+
+      if (filePath === '') {
+        return Effect.fail(new GitError({ message: 'File path is required' }));
+      }
+
+      return Effect.gen(function* () {
+        const entries = yield* getWorktreeFileList();
+        const entry = entries.find((e) => e.path === filePath);
+        if (entry == null) {
+          return yield* Effect.fail(
+            new GitError({ message: `File not found in working tree: ${filePath}` }),
+          );
+        }
+
+        const oldContent =
+          entry.changeType === 'added' ? '' : yield* git.getFileContent('HEAD', entry.oldPath ?? filePath);
+        const newContent =
+          entry.changeType === 'deleted' ? '' : yield* git.getWorkingTreeFileContent(filePath);
+
+        return {
+          path: filePath,
+          changeType: entry.changeType,
+          ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}),
+          oldContent,
+          newContent,
+        };
+      });
+    });
+  }),
+);
+
 export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(HealthHandlers),
   Layer.provide(FilesHandlers),
   Layer.provide(DiffHandlers),
   Layer.provide(RefsHandlers),
+  Layer.provide(WorktreeFilesHandlers),
+  Layer.provide(WorktreeDiffHandlers),
 );
 
 export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDistPath: string) => {

@@ -140,6 +140,26 @@ describe('Http', () => {
     });
   });
 
+  describe('GET /api/worktree/files', () => {
+    it('returns an array of file entries', async () => {
+      const response = await handler(new Request('http://localhost/api/worktree/files'));
+
+      expect(response.status).toBe(200);
+      const body: unknown = await response.json();
+      expect(Array.isArray(body)).toBe(true);
+    });
+  });
+
+  describe('GET /api/worktree/diff/*path', () => {
+    it('returns 500 for file not in working tree', async () => {
+      const response = await handler(
+        new Request('http://localhost/api/worktree/diff/nonexistent-file.xyz'),
+      );
+
+      expect(response.status).toBe(500);
+    });
+  });
+
   describe('unknown routes', () => {
     it('returns 404 for unknown routes', async () => {
       const response = await handler(new Request('http://localhost/api/unknown'));

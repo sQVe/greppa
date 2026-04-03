@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 import { NodeServices } from '@effect/platform-node';
 import { Effect, Layer } from 'effect';
@@ -200,6 +201,47 @@ describe('GitService', () => {
       }).pipe(Effect.provide(TestLayer), Effect.flip, Effect.runPromise);
 
       expect(result).toBeInstanceOf(MergeBaseError);
+    });
+  });
+
+  describe('listWorkingTreeFiles', () => {
+    it('returns an array of FileEntry', async () => {
+      const result = await runGitService((git) => git.listWorkingTreeFiles());
+
+      expect(Array.isArray(result)).toBe(true);
+      for (const entry of result) {
+        expect(['added', 'modified', 'deleted', 'renamed']).toContain(entry.changeType);
+        expect(entry.path).toBeTruthy();
+      }
+    });
+  });
+
+  describe('getWorkingTreeFileContent', () => {
+    it('reads a known file from the working tree', async () => {
+      const result = await runGitService((git) =>
+        git.getWorkingTreeFileContent('package.json'),
+      );
+
+      const expected = readFileSync(`${monorepoRoot}/package.json`, 'utf-8');
+      expect(result).toBe(expected);
+    });
+
+    it('fails for non-existent file', async () => {
+      await expect(
+        runGitService((git) => git.getWorkingTreeFileContent('does-not-exist.xyz')),
+      ).rejects.toThrow();
+    });
+
+    it('rejects path traversal', async () => {
+      await expect(
+        runGitService((git) => git.getWorkingTreeFileContent('../etc/passwd')),
+      ).rejects.toThrow('Invalid path');
+    });
+
+    it('rejects absolute paths', async () => {
+      await expect(
+        runGitService((git) => git.getWorkingTreeFileContent('/etc/passwd')),
+      ).rejects.toThrow('Invalid path');
     });
   });
 });

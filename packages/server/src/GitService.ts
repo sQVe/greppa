@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type { FileEntry } from '@greppa/core';
 import { Data, Effect, Layer, ServiceMap, Stream } from 'effect';
 import { ChildProcess } from 'effect/unstable/process';
@@ -131,6 +134,14 @@ export class GitService extends ServiceMap.Service<
       ref1: string,
       ref2: string,
     ) => Effect.Effect<string, MergeBaseError, ChildProcessSpawner | typeof RepoPath>;
+    listWorkingTreeFiles: () => Effect.Effect<
+      FileEntry[],
+      GitError,
+      ChildProcessSpawner | typeof RepoPath
+    >;
+    getWorkingTreeFileContent: (
+      path: string,
+    ) => Effect.Effect<string, GitError, typeof RepoPath>;
   }
 >()('greppa/GitService') {}
 
@@ -177,6 +188,24 @@ export const GitServiceLive = Layer.succeed(
         Effect.flatMap(() => runGit(['merge-base', ref1, ref2])),
         Effect.map((output) => output.trim()),
         Effect.mapError((error) => new MergeBaseError({ message: error.message })),
+      ),
+    listWorkingTreeFiles: () =>
+      runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
+    getWorkingTreeFileContent: (path) =>
+      validatePath(path).pipe(
+        Effect.flatMap(() =>
+          Effect.gen(function* () {
+            const repoPath = yield* RepoPath;
+            return Effect.try({
+              try: () => readFileSync(resolve(repoPath, path), 'utf-8'),
+              catch: (error) =>
+                new GitError({
+                  message: error instanceof Error ? error.message : `Failed to read file: ${path}`,
+                }),
+            });
+          }),
+        ),
+        Effect.flatten,
       ),
   }),
 );

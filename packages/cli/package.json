@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "vp pack && cp -r ../web/dist dist/web",
+    "build": "vp pack && rm -rf dist/web && cp -r ../web/dist dist/web",
     "dev": "tsx src/index.ts serve"
   },
   "dependencies": {

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { NodeServices } from '@effect/platform-node';
@@ -50,7 +51,9 @@ export const serve = Command.make(
         Layer.mergeAll(GitServiceLive, NodeServices.layer, Layer.succeed(RepoPath, process.cwd())),
       ),
     );
-    const webDistPath = resolve(import.meta.dirname, 'web');
+    const packagedPath = resolve(import.meta.dirname, 'web');
+    const workspacePath = resolve(import.meta.dirname, '..', '..', '..', 'web', 'dist');
+    const webDistPath = existsSync(packagedPath) ? packagedPath : workspacePath;
     yield* Layer.launch(makeHttpLayer(listenPort, refsConfig, webDistPath));
   }),
 );

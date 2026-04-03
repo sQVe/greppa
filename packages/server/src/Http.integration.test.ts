@@ -210,4 +210,10 @@ describe('static file serving', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: 'ok' });
   });
+
+  it('returns 404 for unknown API routes with SPA fallback enabled', async () => {
+    const response = await staticHandler(new Request('http://localhost/api/unknown'));
+
+    expect(response.status).toBe(404);
+  });
 });

@@ -4,6 +4,7 @@ export {
   GitServiceLive,
   MergeBaseError,
   RefsConfig,
+  type RefsConfigValue,
   RepoPath,
   ResolveRefError,
 } from './GitService';

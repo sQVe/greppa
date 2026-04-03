@@ -23,11 +23,13 @@ export const RepoPath = ServiceMap.Reference('greppa/RepoPath', {
   defaultValue: () => process.cwd(),
 });
 
-export const RefsConfig = ServiceMap.Reference<{
+export interface RefsConfigValue {
   oldRef: string;
   newRef: string;
   mergeBaseRef: string;
-}>('greppa/RefsConfig', {
+}
+
+export const RefsConfig = ServiceMap.Reference<RefsConfigValue>('greppa/RefsConfig', {
   defaultValue: () => {
     throw new Error('RefsConfig must be provided');
   },

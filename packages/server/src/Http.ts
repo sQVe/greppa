@@ -9,6 +9,7 @@ import type { FileEntry } from '@greppa/core';
 
 import { Api } from './Api';
 import { GitError, GitService, GitServiceLive, RefsConfig } from './GitService';
+import type { RefsConfigValue } from './GitService';
 
 const fileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
 const CACHE_TTL_MS = 30_000;
@@ -128,12 +129,6 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(DiffHandlers),
   Layer.provide(RefsHandlers),
 );
-
-interface RefsConfigValue {
-  oldRef: string;
-  newRef: string;
-  mergeBaseRef: string;
-}
 
 export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue) =>
   HttpRouter.serve(ApiRoutes).pipe(

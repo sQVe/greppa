@@ -6,11 +6,13 @@ import { DiffViewer } from './components/DiffViewer/DiffViewer';
 import { collectDirectoryIds, FileTree } from './components/FileTree/FileTree';
 import { Header } from './components/Header/Header';
 import { StatusBar } from './components/StatusBar/StatusBar';
+import type { FileNode } from './fixtures/types';
 import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
 import { buildDiffFile } from './hooks/buildDiffFile';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
+import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
 import { useFileSelection } from './useFileSelection';
 
@@ -18,15 +20,7 @@ import styles from './App.module.css';
 
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
 
-export const App = () => {
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: 'gr-panels',
-    panelIds: PANEL_IDS,
-  });
-
-  const { files: apiFiles, isError } = useFileList('HEAD~1', 'HEAD');
-  const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
-
+const useTreeState = (files: FileNode[]) => {
   const { state: reviewState, set: setReviewState } = useReviewState('default');
   const allDirectoryIds = useMemo(() => collectDirectoryIds(files), [files]);
   const expandedKeys = useMemo(
@@ -44,17 +38,16 @@ export const App = () => {
     [allDirectoryIds, setReviewState],
   );
 
-  const {
-    selectedFilePath,
-    selectFile,
-    reviewedCount,
-    totalCount,
-    selectedDiff: fixtureDiff,
-    selectedThreads,
-    selectedFileInfo,
-  } = useFileSelection(files, diffs, comments, fileInfoMap);
+  return { expandedKeys, handleExpandedKeysChange };
+};
 
-  const { diff: apiDiff } = useDiffContent('HEAD~1', 'HEAD', selectedFilePath);
+const useSelectedDiff = (
+  files: FileNode[],
+  selectedFilePath: string | null,
+  oldRef: string | null,
+  newRef: string | null,
+) => {
+  const { diff: apiDiff } = useDiffContent(oldRef ?? '', newRef ?? '', selectedFilePath);
   const { changes: computedChanges } = useDiffComputation(
     apiDiff?.path ?? null,
     apiDiff?.oldContent ?? null,
@@ -75,7 +68,44 @@ export const App = () => {
     });
   }, [apiDiff, computedChanges]);
 
-  const selectedDiff = computedDiff ?? fixtureDiff;
+  const {
+    selectedDiff: fixtureDiff,
+    selectedThreads,
+    selectedFileInfo,
+  } = useFileSelection(files, diffs, comments, fileInfoMap);
+
+  return {
+    selectedDiff: computedDiff ?? fixtureDiff,
+    selectedThreads,
+    selectedFileInfo,
+  };
+};
+
+export const App = () => {
+  const { oldRef, newRef, isLoading: refsLoading } = useRefs();
+
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'gr-panels',
+    panelIds: PANEL_IDS,
+  });
+
+  const { files: apiFiles, isError } = useFileList(oldRef ?? '', newRef ?? '');
+  const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
+
+  const { expandedKeys, handleExpandedKeysChange } = useTreeState(files);
+
+  const {
+    selectedFilePath,
+    selectFile,
+    reviewedCount,
+    totalCount,
+  } = useFileSelection(files, diffs, comments, fileInfoMap);
+
+  const { selectedDiff, selectedThreads, selectedFileInfo } = useSelectedDiff(files, selectedFilePath, oldRef, newRef);
+
+  if (refsLoading) {
+    return <div className={styles.app} />;
+  }
 
   return (
     <div className={styles.app}>

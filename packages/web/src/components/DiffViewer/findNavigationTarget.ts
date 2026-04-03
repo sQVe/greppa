@@ -19,42 +19,38 @@ const isChangedRow = (item: VirtualItem) => {
   return leftType === 'removed' || leftType === 'added' || rightType === 'removed' || rightType === 'added';
 };
 
-export const findNavigationTarget = ({
-  items,
-  currentIndex,
-  action,
-}: FindNavigationTargetOptions): number | null => {
-  if (action === 'nextHunk') {
-    for (let i = currentIndex + 1; i < items.length; i++) {
-      if (items[i]?.kind === 'hunk-header') {
-        return i;
-      }
+const findNextHunk = (items: VirtualItem[], currentIndex: number): number | null => {
+  for (let i = currentIndex + 1; i < items.length; i++) {
+    if (items[i]?.kind === 'hunk-header') {
+      return i;
     }
-
-    return null;
   }
 
-  if (action === 'prevHunk') {
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      if (items[i]?.kind === 'hunk-header') {
-        return i;
-      }
-    }
+  return null;
+};
 
-    return null;
+const findPrevHunk = (items: VirtualItem[], currentIndex: number): number | null => {
+  for (let i = currentIndex - 1; i >= 0; i--) {
+    if (items[i]?.kind === 'hunk-header') {
+      return i;
+    }
   }
 
-  if (action === 'nextChange') {
-    for (let i = currentIndex + 1; i < items.length; i++) {
-      const item = items[i];
-      if (item != null && isChangedRow(item)) {
-        return i;
-      }
-    }
+  return null;
+};
 
-    return null;
+const findNextChange = (items: VirtualItem[], currentIndex: number): number | null => {
+  for (let i = currentIndex + 1; i < items.length; i++) {
+    const item = items[i];
+    if (item != null && isChangedRow(item)) {
+      return i;
+    }
   }
 
+  return null;
+};
+
+const findPrevChange = (items: VirtualItem[], currentIndex: number): number | null => {
   for (let i = currentIndex - 1; i >= 0; i--) {
     const item = items[i];
     if (item != null && isChangedRow(item)) {
@@ -63,4 +59,21 @@ export const findNavigationTarget = ({
   }
 
   return null;
+};
+
+export const findNavigationTarget = ({
+  items,
+  currentIndex,
+  action,
+}: FindNavigationTargetOptions): number | null => {
+  switch (action) {
+    case 'nextHunk':
+      return findNextHunk(items, currentIndex);
+    case 'prevHunk':
+      return findPrevHunk(items, currentIndex);
+    case 'nextChange':
+      return findNextChange(items, currentIndex);
+    case 'prevChange':
+      return findPrevChange(items, currentIndex);
+  }
 };

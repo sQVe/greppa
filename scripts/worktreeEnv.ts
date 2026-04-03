@@ -101,9 +101,6 @@ export const reloadCaddy = (caddyfilePath: string) => {
     if (code === 'ENOENT') {
       return;
     }
-    console.warn(
-      `caddy reload failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
   }
 };
 

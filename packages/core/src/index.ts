@@ -25,3 +25,9 @@ export const DiffResponse = Schema.Struct({
   newContent: Schema.String,
 });
 export type DiffResponse = typeof DiffResponse.Type;
+
+export const RefsResponse = Schema.Struct({
+  oldRef: Schema.String,
+  newRef: Schema.String,
+});
+export type RefsResponse = typeof RefsResponse.Type;

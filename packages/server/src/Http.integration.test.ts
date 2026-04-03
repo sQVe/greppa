@@ -6,7 +6,7 @@ import { HttpRouter } from 'effect/unstable/http';
 import { layer as EtagLayer } from 'effect/unstable/http/Etag';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { GitServiceLive, RepoPath } from './GitService';
+import { GitServiceLive, RefsConfig, RepoPath } from './GitService';
 import { ApiRoutes } from './Http';
 
 const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
@@ -32,6 +32,7 @@ const PlatformLayer = Layer.mergeAll(
   EtagLayer,
   GitServiceLive,
   Layer.succeed(RepoPath, monorepoRoot),
+  Layer.succeed(RefsConfig, { oldRef: 'main', newRef: 'HEAD', mergeBaseRef: 'abc123' }),
 );
 
 const TestAppLayer = ApiRoutes.pipe(Layer.provide(PlatformLayer));
@@ -123,6 +124,15 @@ describe('Http', () => {
       );
 
       expect(response.status).toBe(500);
+    });
+  });
+
+  describe('GET /api/refs', () => {
+    it('returns refs from config', async () => {
+      const response = await handler(new Request('http://localhost/api/refs'));
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ oldRef: 'main', newRef: 'HEAD' });
     });
   });
 

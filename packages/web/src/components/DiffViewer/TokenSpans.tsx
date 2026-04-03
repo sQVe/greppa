@@ -28,9 +28,8 @@ export const TokenSpans = ({ content, tokens, charRanges, lineType }: TokenSpans
     const hlClass = highlightClass(lineType);
 
     return segments.map((segment, i) => (
-      // Token lists are static per render; index keys are safe
-      // oxlint-disable-next-line react/no-array-index-key
       <span
+        // eslint-disable-next-line react/no-array-index-key
         key={i}
         className={segment.highlighted ? hlClass : undefined}
         style={segment.color != null ? { color: segment.color } : undefined}
@@ -45,8 +44,7 @@ export const TokenSpans = ({ content, tokens, charRanges, lineType }: TokenSpans
   }
 
   return tokens.map((token, i) => (
-    // Token lists are static per render; index keys are safe
-    // oxlint-disable-next-line react/no-array-index-key
+    // eslint-disable-next-line react/no-array-index-key
     <span key={i} style={{ color: token.color }}>
       {token.content}
     </span>

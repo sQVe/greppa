@@ -26,9 +26,8 @@ const collectLines = (viewer: HTMLElement, side: string, range: Range) => {
       continue;
     }
 
-    const text = cell.textContent ?? '';
-    if (text !== '') {
-      lines.push(text);
+    if (cell.textContent) {
+      lines.push(cell.textContent);
     }
   }
 

@@ -8,7 +8,7 @@ import { HttpApiBuilder } from 'effect/unstable/httpapi';
 import type { FileEntry } from '@greppa/core';
 
 import { Api } from './Api';
-import { GitError, GitService, GitServiceLive } from './GitService';
+import { GitError, GitService, GitServiceLive, RefsConfig } from './GitService';
 
 const fileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
 const CACHE_TTL_MS = 30_000;
@@ -113,14 +113,31 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
   }),
 );
 
+const RefsHandlers = HttpApiBuilder.group(Api, 'refs', (handlers) =>
+  Effect.gen(function* () {
+    const refs = yield* RefsConfig;
+    return handlers.handle('getRefs', () =>
+      Effect.succeed({ oldRef: refs.oldRef, newRef: refs.newRef }),
+    );
+  }),
+);
+
 export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(HealthHandlers),
   Layer.provide(FilesHandlers),
   Layer.provide(DiffHandlers),
+  Layer.provide(RefsHandlers),
 );
 
-export const makeHttpLayer = (port: number) =>
+interface RefsConfigValue {
+  oldRef: string;
+  newRef: string;
+  mergeBaseRef: string;
+}
+
+export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue) =>
   HttpRouter.serve(ApiRoutes).pipe(
     Layer.provide(GitServiceLive),
+    Layer.provide(Layer.succeed(RefsConfig, refsConfig)),
     Layer.provide(NodeHttpServer.layer(createServer, { port })),
   );

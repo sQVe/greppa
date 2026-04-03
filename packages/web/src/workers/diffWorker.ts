@@ -6,7 +6,7 @@ globalThis.addEventListener('message', (event: MessageEvent<DiffWorkerRequest>) 
     const response = handleDiffRequest(event.data);
     // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage does not accept targetOrigin
     globalThis.postMessage(response);
-  } catch (error) {
+  } catch {
     const errorResponse: DiffWorkerResponse = {
       type: 'diff-result',
       filePath: event.data.filePath,
@@ -15,6 +15,5 @@ globalThis.addEventListener('message', (event: MessageEvent<DiffWorkerRequest>) 
     };
     // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage does not accept targetOrigin
     globalThis.postMessage(errorResponse);
-    console.error('[diffWorker]', error);
   }
 });

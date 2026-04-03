@@ -19,15 +19,15 @@ export class MergeBaseError extends Data.TaggedError('MergeBaseError')<{
   message: string;
 }> {}
 
-export const RepoPath = ServiceMap.Reference('greppa/RepoPath', {
-  defaultValue: () => process.cwd(),
-});
-
 export interface RefsConfigValue {
   oldRef: string;
   newRef: string;
   mergeBaseRef: string;
 }
+
+export const RepoPath = ServiceMap.Reference('greppa/RepoPath', {
+  defaultValue: () => process.cwd(),
+});
 
 export const RefsConfig = ServiceMap.Reference<RefsConfigValue>('greppa/RefsConfig', {
   defaultValue: () => {
@@ -153,14 +153,16 @@ export const GitServiceLive = Layer.succeed(
         Effect.mapError((error) => new ResolveRefError({ message: error.message })),
       ),
     detectDefaultBranch: () => {
-      const checkRefExists = (ref: string) =>
-        runGit(['rev-parse', '--verify', ref]).pipe(Effect.map(() => ref));
+      const checkRefExists = (ref: string, name: string) =>
+        runGit(['rev-parse', '--verify', ref]).pipe(Effect.map(() => name));
 
       return runGit(['symbolic-ref', 'refs/remotes/origin/HEAD']).pipe(
         Effect.map((output) => output.trim().replace('refs/remotes/origin/', '')),
         Effect.catch(() =>
-          checkRefExists('main').pipe(
-            Effect.catch(() => checkRefExists('master')),
+          checkRefExists('main', 'main').pipe(
+            Effect.catch(() => checkRefExists('refs/remotes/origin/main', 'main')),
+            Effect.catch(() => checkRefExists('master', 'master')),
+            Effect.catch(() => checkRefExists('refs/remotes/origin/master', 'master')),
           ),
         ),
         Effect.mapError((error) =>

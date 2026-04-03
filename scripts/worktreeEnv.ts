@@ -101,6 +101,9 @@ export const reloadCaddy = (caddyfilePath: string) => {
     if (code === 'ENOENT') {
       return;
     }
+
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`warning: caddy reload failed: ${message}\n`);
   }
 };
 

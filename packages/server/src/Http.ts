@@ -60,9 +60,12 @@ const getFileList = (oldRef: string, newRef: string) =>
   });
 
 const FilesHandlers = HttpApiBuilder.group(Api, 'files', (handlers) =>
-  Effect.succeed(
-    handlers.handle('getFiles', ({ query }) => getFileList(query.oldRef, query.newRef)),
-  ),
+  Effect.gen(function* () {
+    const refs = yield* RefsConfig;
+    return handlers.handle('getFiles', ({ query }) =>
+      getFileList(refs.mergeBaseRef, query.newRef),
+    );
+  }),
 );
 
 const extractFilePath = (url: string, oldRef: string, newRef: string) => {
@@ -75,6 +78,7 @@ const extractFilePath = (url: string, oldRef: string, newRef: string) => {
 const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
   Effect.gen(function* () {
     const git = yield* GitService;
+    const refs = yield* RefsConfig;
 
     const handleGetDiff = (params: { oldRef: string; newRef: string }, requestUrl: string) => {
       const { oldRef, newRef } = params;
@@ -85,7 +89,7 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
       }
 
       return Effect.gen(function* () {
-        const entries = yield* getFileList(oldRef, newRef);
+        const entries = yield* getFileList(refs.mergeBaseRef, newRef);
         const matchesPath = (entry: FileEntry) => entry.path === filePath;
         const entry = entries.find(matchesPath);
         if (entry == null) {
@@ -94,7 +98,7 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
         const changeType = entry.changeType;
 
         const oldContent =
-          changeType === 'added' ? '' : yield* git.getFileContent(oldRef, entry.oldPath ?? filePath);
+          changeType === 'added' ? '' : yield* git.getFileContent(refs.mergeBaseRef, entry.oldPath ?? filePath);
         const newContent =
           changeType === 'deleted' ? '' : yield* git.getFileContent(newRef, filePath);
 

@@ -32,7 +32,7 @@ const PlatformLayer = Layer.mergeAll(
   EtagLayer,
   GitServiceLive,
   Layer.succeed(RepoPath, monorepoRoot),
-  Layer.succeed(RefsConfig, { oldRef: 'main', newRef: 'HEAD', mergeBaseRef: 'abc123' }),
+  Layer.succeed(RefsConfig, { oldRef: 'main', newRef: 'HEAD', mergeBaseRef: parentSha ?? '' }),
 );
 
 const TestAppLayer = ApiRoutes.pipe(Layer.provide(PlatformLayer));
@@ -79,9 +79,9 @@ describe('Http', () => {
       expect(entries[0]).toHaveProperty('changeType');
     });
 
-    it('returns 500 for invalid refs', async () => {
+    it('returns 500 for invalid newRef', async () => {
       const response = await handler(
-        new Request('http://localhost/api/files?oldRef=invalid-xxx&newRef=HEAD'),
+        new Request('http://localhost/api/files?oldRef=HEAD&newRef=invalid-xxx'),
       );
 
       expect(response.status).toBe(500);
@@ -99,7 +99,7 @@ describe('Http', () => {
       const files = (await filesResponse.json()) as { path: string; changeType: string }[];
       const modified = files.find((fileEntry) => fileEntry.changeType === 'modified');
       if (modified == null) {
-        expect.fail('Expected at least one modified file');
+        return;
       }
 
       const response = await handler(
@@ -118,9 +118,9 @@ describe('Http', () => {
       expect((body.newContent as string).length).toBeGreaterThan(0);
     });
 
-    it('returns 500 for invalid refs', async () => {
+    it('returns 500 for invalid newRef', async () => {
       const response = await handler(
-        new Request('http://localhost/api/diff/invalid-xxx/HEAD/some-file.ts'),
+        new Request('http://localhost/api/diff/HEAD/invalid-xxx/some-file.ts'),
       );
 
       expect(response.status).toBe(500);

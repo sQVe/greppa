@@ -12,24 +12,22 @@ worker), DetailPanel with tabs, StatusBar, TanStack Router with URL-synced file 
 constrained text selection, localStorage persistence for review state and preferences, hunk keyboard
 nav (`j`/`k`/`n`/`p`).
 
-**Missing:** Ref selection (hardcoded `HEAD~1` vs `HEAD` in `App.tsx`), comments (read-only fixture
-display only), review sessions, keyboard file navigation, inline comment markers, SQLite
-persistence.
-
-**Single blocker to dogfooding:** Two hardcoded strings in `App.tsx`.
+**Missing:** Comments (read-only fixture display only), review sessions, keyboard file navigation,
+inline comment markers, SQLite persistence.
 
 ---
 
-## Slice 1: Review any diff
+## Slice 1: Review any diff (done)
 
-**Goal:** Run `greppa serve main..feature-branch` and review that diff in the browser.
+**Goal:** Run `greppa serve [old-ref] [new-ref]` and review that diff in the browser.
 
-| Deliverable              | Detail                                                                        |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| CLI positional arg       | `serve.ts` accepts a ref-spec (e.g. `main..HEAD`), defaults to `HEAD~1..HEAD` |
-| `GET /api/refs` endpoint | Returns the resolved `{ oldRef, newRef }` pair                                |
-| `useRefs` hook           | Fetches once at startup, `staleTime: Infinity`                                |
-| `App.tsx` wiring         | Replace hardcoded `'HEAD~1'`/`'HEAD'` with hook values                        |
+| Deliverable              | Detail                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| CLI positional args      | `serve.ts` accepts `[old-ref]` and `[new-ref]`, defaults to default branch + HEAD |
+| Merge-base semantics     | Diffs use `git merge-base` so only branch-introduced changes are shown            |
+| `GET /api/refs` endpoint | Returns the resolved `{ oldRef, newRef }` pair                                    |
+| `useRefs` hook           | Fetches once at startup, `staleTime: Infinity`                                    |
+| `App.tsx` wiring         | Refs flow from hook through file list and diff content queries                    |
 
 **Not included:** No in-browser ref switching (that's slice 3). Restart server to change refs.
 

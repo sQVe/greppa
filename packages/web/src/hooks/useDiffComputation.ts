@@ -45,6 +45,11 @@ export const useDiffComputation = (
         return;
       }
 
+      if (event.data.error != null) {
+        setError(event.data.error);
+        return;
+      }
+
       setChanges(event.data.changes);
     };
 

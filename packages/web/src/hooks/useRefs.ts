@@ -12,7 +12,7 @@ export const fetchRefs = async (): Promise<RefsResponse> => {
 };
 
 export const useRefs = () => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['refs'],
     queryFn: fetchRefs,
     retry: false,
@@ -23,5 +23,6 @@ export const useRefs = () => {
     oldRef: data?.oldRef ?? null,
     newRef: data?.newRef ?? null,
     isLoading,
+    isError,
   };
 };

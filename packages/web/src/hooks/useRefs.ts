@@ -7,8 +7,17 @@ export const fetchRefs = async (): Promise<RefsResponse> => {
     throw new Error(`Failed to fetch refs: ${response.status}`);
   }
 
-  // oxlint-disable-next-line no-unsafe-type-assertion -- JSON response matches API schema
-  return response.json() as Promise<RefsResponse>;
+  const json: unknown = await response.json();
+  if (
+    json == null ||
+    typeof json !== 'object' ||
+    !('oldRef' in json) || typeof json.oldRef !== 'string' ||
+    !('newRef' in json) || typeof json.newRef !== 'string'
+  ) {
+    throw new Error('Invalid refs response payload');
+  }
+
+  return { oldRef: json.oldRef, newRef: json.newRef };
 };
 
 export const useRefs = () => {

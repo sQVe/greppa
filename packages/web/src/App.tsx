@@ -3,7 +3,8 @@ import { useCallback, useMemo } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
 import { DiffViewer } from './components/DiffViewer/DiffViewer';
-import { collectDirectoryIds, FileTree } from './components/FileTree/FileTree';
+import { collectDirectoryIds } from './components/FileTree/FileTree';
+import { FileTreePanel } from './components/FileTree/FileTreePanel';
 import { Header } from './components/Header/Header';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { DiffFile, FileNode } from './fixtures/types';
@@ -14,6 +15,9 @@ import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
 import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
+import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
+import { useWorktreeFiles } from './hooks/useWorktreeFiles';
+import type { FileSource } from './useFileSelection';
 import { useFileSelection } from './useFileSelection';
 
 import styles from './App.module.css';
@@ -43,11 +47,19 @@ const useTreeState = (files: FileNode[]) => {
 
 const useComputedDiff = (
   selectedFilePath: string | null,
+  selectedSource: FileSource | null,
   oldRef: string,
   newRef: string,
   fixtureDiff: DiffFile | null,
 ) => {
-  const { diff: apiDiff } = useDiffContent(oldRef, newRef, selectedFilePath);
+  const committedPath = selectedSource === 'committed' ? selectedFilePath : null;
+  const worktreePath = selectedSource === 'worktree' ? selectedFilePath : null;
+
+  const { diff: committedDiff } = useDiffContent(oldRef, newRef, committedPath);
+  const { diff: worktreeDiff } = useWorktreeDiffContent(worktreePath);
+
+  const apiDiff = committedDiff ?? worktreeDiff;
+
   const { changes: computedChanges } = useDiffComputation(
     apiDiff?.path ?? null,
     apiDiff?.oldContent ?? null,
@@ -81,19 +93,33 @@ export const App = () => {
   const { files: apiFiles, isError } = useFileList(oldRef ?? '', newRef ?? '');
   const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
 
+  const { files: worktreeFiles } = useWorktreeFiles();
+
   const { expandedKeys, handleExpandedKeysChange } = useTreeState(files);
+  const {
+    expandedKeys: worktreeExpandedKeys,
+    handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
+  } = useTreeState(worktreeFiles ?? []);
 
   const {
     selectedFilePath,
-    selectFile,
+    selectedSource,
+    selectCommittedFile,
+    selectWorktreeFile,
     reviewedCount,
     totalCount,
     selectedDiff: fixtureDiff,
     selectedThreads,
     selectedFileInfo,
-  } = useFileSelection(files, diffs, comments, fileInfoMap);
+  } = useFileSelection(files, worktreeFiles ?? [], diffs, comments, fileInfoMap);
 
-  const selectedDiff = useComputedDiff(selectedFilePath, oldRef ?? '', newRef ?? '', fixtureDiff);
+  const selectedDiff = useComputedDiff(
+    selectedFilePath,
+    selectedSource,
+    oldRef ?? '',
+    newRef ?? '',
+    fixtureDiff,
+  );
 
   if (refsLoading || refsError) {
     return <div className={styles.app} />;
@@ -121,12 +147,17 @@ export const App = () => {
           collapsible
           groupResizeBehavior="preserve-pixel-size"
         >
-          <FileTree
-            files={files}
+          <FileTreePanel
+            committedFiles={files}
+            worktreeFiles={worktreeFiles ?? []}
             selectedFilePath={selectedFilePath}
-            expandedKeys={expandedKeys}
-            onSelectFile={selectFile}
-            onExpandedKeysChange={handleExpandedKeysChange}
+            selectedSource={selectedSource}
+            committedExpandedKeys={expandedKeys}
+            worktreeExpandedKeys={worktreeExpandedKeys}
+            onSelectCommittedFile={selectCommittedFile}
+            onSelectWorktreeFile={selectWorktreeFile}
+            onCommittedExpandedKeysChange={handleExpandedKeysChange}
+            onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
           />
         </Panel>
         <Separator className={styles.separator} />

@@ -4,23 +4,63 @@ import { useCallback, useEffect, useMemo } from 'react';
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
 import { useReviewState } from './hooks/useReviewState';
 
+export type FileSource = 'committed' | 'worktree';
+
 export const collectFiles = (nodes: FileNode[]): FileNode[] =>
   nodes.flatMap((node) => (node.type === 'file' ? [node] : collectFiles(node.children ?? [])));
 
 export const useFileSelection = (
   files: FileNode[],
+  worktreeFiles: FileNode[],
   diffs: Map<string, DiffFile>,
   comments: CommentThread[],
   fileInfoMap: Map<string, FileInfo>,
 ) => {
-  const allFiles = useMemo(() => collectFiles(files), [files]);
-  const validPaths = useMemo(() => new Set(allFiles.map((file) => file.path)), [allFiles]);
+  const allCommittedFiles = useMemo(() => collectFiles(files), [files]);
+  const allWorktreeFiles = useMemo(() => collectFiles(worktreeFiles), [worktreeFiles]);
+  const committedPaths = useMemo(
+    () => new Set(allCommittedFiles.map((file) => file.path)),
+    [allCommittedFiles],
+  );
+  const worktreePaths = useMemo(
+    () => new Set(allWorktreeFiles.map((file) => file.path)),
+    [allWorktreeFiles],
+  );
 
   const fileMatch = useMatch({ from: '/file/$', shouldThrow: false });
+  const wtMatch = useMatch({ from: '/wt/$', shouldThrow: false });
   const urlFile = fileMatch?.params._splat ?? null;
+  const urlWtFile = wtMatch?.params._splat ?? null;
   const navigate = useNavigate();
 
-  const selectedFilePath = urlFile != null && validPaths.has(urlFile) ? urlFile : null;
+  const selectedSource: FileSource | null = useMemo(() => {
+    if (urlFile != null && committedPaths.has(urlFile)) {
+      return 'committed';
+    }
+    if (urlWtFile != null && worktreePaths.has(urlWtFile)) {
+      return 'worktree';
+    }
+    return null;
+  }, [urlFile, urlWtFile, committedPaths, worktreePaths]);
+
+  const selectedFilePath = useMemo(() => {
+    if (selectedSource === 'committed') {
+      return urlFile;
+    }
+    if (selectedSource === 'worktree') {
+      return urlWtFile;
+    }
+    return null;
+  }, [selectedSource, urlFile, urlWtFile]);
+
+  const allFiles = useMemo(
+    () => [...allCommittedFiles, ...allWorktreeFiles],
+    [allCommittedFiles, allWorktreeFiles],
+  );
+  const validPaths = useMemo(
+    () => new Set(allFiles.map((file) => file.path)),
+    [allFiles],
+  );
 
   const { state: reviewState, set: setReviewState, get: getReviewState } = useReviewState('default');
   const reviewedPaths = useMemo(
@@ -50,9 +90,16 @@ export const useFileSelection = (
     setReviewState({ reviewedPaths: [...current.reviewedPaths, selectedFilePath] });
   }, [selectedFilePath, getReviewState, setReviewState]);
 
-  const selectFile = useCallback(
+  const selectCommittedFile = useCallback(
     (path: string) => {
       void navigate({ to: '/file/$', params: { _splat: path } });
+    },
+    [navigate],
+  );
+
+  const selectWorktreeFile = useCallback(
+    (path: string) => {
+      void navigate({ to: '/wt/$', params: { _splat: path } });
     },
     [navigate],
   );
@@ -69,7 +116,9 @@ export const useFileSelection = (
 
   return {
     selectedFilePath,
-    selectFile,
+    selectedSource,
+    selectCommittedFile,
+    selectWorktreeFile,
     reviewedCount: reviewedPaths.size,
     totalCount: allFiles.length,
     selectedDiff,

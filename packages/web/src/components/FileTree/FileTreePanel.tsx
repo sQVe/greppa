@@ -23,12 +23,14 @@ const transition = { type: 'spring' as const, duration: 0.25, bounce: 0 };
 interface FileTreePanelProps {
   committedFiles: FileNode[];
   worktreeFiles: FileNode[];
-  selectedFilePath: string | null;
+  selectedPaths: Set<string>;
   selectedSource: 'committed' | 'worktree' | null;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
-  onSelectCommittedFile: (path: string) => void;
-  onSelectWorktreeFile: (path: string) => void;
+  onSelectCommittedFile: (path: string, shiftKey: boolean) => void;
+  onSelectWorktreeFile: (path: string, shiftKey: boolean) => void;
+  onSelectAllCommitted: () => void;
+  onSelectAllWorktree: () => void;
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
 }
@@ -39,12 +41,14 @@ const ICON_STROKE = 2;
 export const FileTreePanel = ({
   committedFiles,
   worktreeFiles,
-  selectedFilePath,
+  selectedPaths,
   selectedSource,
   committedExpandedKeys,
   worktreeExpandedKeys,
   onSelectCommittedFile,
   onSelectWorktreeFile,
+  onSelectAllCommitted,
+  onSelectAllWorktree,
   onCommittedExpandedKeysChange,
   onWorktreeExpandedKeysChange,
 }: FileTreePanelProps) => {
@@ -93,7 +97,13 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() =>{  toggleSection('committed'); }}
+            onClick={() => {
+              if (expandedSection === 'committed') {
+                onSelectAllCommitted();
+              } else {
+                toggleSection('committed');
+              }
+            }}
           >
             <motion.span
               className={styles.sectionChevron}
@@ -120,7 +130,7 @@ export const FileTreePanel = ({
           >
             <FileTree
               files={committedFiles}
-              selectedFilePath={selectedSource === 'committed' ? selectedFilePath : null}
+              selectedPaths={selectedSource === 'committed' ? selectedPaths : new Set()}
               expandedKeys={committedExpandedKeys}
               onSelectFile={onSelectCommittedFile}
               onExpandedKeysChange={onCommittedExpandedKeysChange}
@@ -135,7 +145,13 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() =>{  toggleSection('worktree'); }}
+            onClick={() => {
+              if (expandedSection === 'worktree') {
+                onSelectAllWorktree();
+              } else {
+                toggleSection('worktree');
+              }
+            }}
           >
             <motion.span
               className={styles.sectionChevron}
@@ -162,7 +178,7 @@ export const FileTreePanel = ({
           >
             <FileTree
               files={worktreeFiles}
-              selectedFilePath={selectedSource === 'worktree' ? selectedFilePath : null}
+              selectedPaths={selectedSource === 'worktree' ? selectedPaths : new Set()}
               expandedKeys={worktreeExpandedKeys}
               onSelectFile={onSelectWorktreeFile}
               onExpandedKeysChange={onWorktreeExpandedKeysChange}

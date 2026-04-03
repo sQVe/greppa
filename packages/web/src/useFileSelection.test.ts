@@ -12,7 +12,7 @@ import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
-import { collectFiles, useFileSelection } from './useFileSelection';
+import { collectDescendantFilePaths, collectFiles, useFileSelection } from './useFileSelection';
 
 const testFiles: FileNode[] = [
   {
@@ -119,6 +119,21 @@ describe('collectFiles', () => {
 
   it('returns empty array for empty input', () => {
     expect(collectFiles([])).toEqual([]);
+  });
+});
+
+describe('collectDescendantFilePaths', () => {
+  it('returns file paths under the given directory', () => {
+    const result = collectDescendantFilePaths(testFiles, 'src');
+    expect(result).toEqual(['src/a.ts', 'src/b.ts']);
+  });
+
+  it('returns empty array for unknown directory', () => {
+    expect(collectDescendantFilePaths(testFiles, 'unknown')).toEqual([]);
+  });
+
+  it('returns empty array for file paths', () => {
+    expect(collectDescendantFilePaths(testFiles, 'c.ts')).toEqual([]);
   });
 });
 

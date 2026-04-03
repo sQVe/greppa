@@ -10,15 +10,17 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import type { DiffFile, FileNode } from './fixtures/types';
 import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
 import { buildDiffFile } from './hooks/buildDiffFile';
+import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
+import { useMultiSelect } from './hooks/useMultiSelect';
 import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
 import type { FileSource } from './useFileSelection';
-import { useFileSelection } from './useFileSelection';
+import { collectDescendantFilePaths, collectFiles, useFileSelection } from './useFileSelection';
 
 import styles from './App.module.css';
 
@@ -45,13 +47,21 @@ const useTreeState = (files: FileNode[]) => {
   return { expandedKeys, handleExpandedKeysChange };
 };
 
-const useComputedDiff = (
-  selectedFilePath: string | null,
-  selectedSource: FileSource | null,
-  oldRef: string,
-  newRef: string,
-  fixtureDiff: DiffFile | null,
-) => {
+interface ComputedDiffInput {
+  selectedFilePath: string | null;
+  selectedSource: FileSource | null;
+  oldRef: string;
+  newRef: string;
+  fixtureDiff: DiffFile | null;
+}
+
+const useComputedDiff = ({
+  selectedFilePath,
+  selectedSource,
+  oldRef,
+  newRef,
+  fixtureDiff,
+}: ComputedDiffInput) => {
   const committedPath = selectedSource === 'committed' ? selectedFilePath : null;
   const worktreePath = selectedSource === 'worktree' ? selectedFilePath : null;
 
@@ -80,6 +90,96 @@ const useComputedDiff = (
       changes: computedChanges,
     });
   }, [apiDiff, computedChanges, fixtureDiff]);
+};
+
+const useFileSelectionHandlers = (
+  files: FileNode[],
+  worktreeFiles: FileNode[],
+  multiSelect: ReturnType<typeof useMultiSelect>,
+  selectCommittedFile: (path: string) => void,
+  selectWorktreeFile: (path: string) => void,
+) => {
+  const committedFilePaths = useMemo(
+    () => collectFiles(files).map((f) => f.path),
+    [files],
+  );
+  const allCommittedFilePaths = useMemo(
+    () => new Set(committedFilePaths),
+    [committedFilePaths],
+  );
+  const worktreeFilePaths = useMemo(
+    () => collectFiles(worktreeFiles).map((f) => f.path),
+    [worktreeFiles],
+  );
+  const allWorktreeFilePaths = useMemo(
+    () => new Set(worktreeFilePaths),
+    [worktreeFilePaths],
+  );
+
+  const handleSelectAllCommitted = useCallback(() => {
+    multiSelect.selectAll(committedFilePaths, 'committed');
+  }, [committedFilePaths, multiSelect]);
+
+  const handleSelectAllWorktree = useCallback(() => {
+    multiSelect.selectAll(worktreeFilePaths, 'worktree');
+  }, [worktreeFilePaths, multiSelect]);
+
+  const handleSelectCommittedFile = useCallback(
+    (path: string, shiftKey: boolean) => {
+      const isFile = allCommittedFilePaths.has(path);
+      if (isFile) {
+        if (shiftKey) {
+          multiSelect.toggle(path, 'committed');
+        } else {
+          multiSelect.select(path, 'committed');
+          selectCommittedFile(path);
+        }
+      } else {
+        const children = collectDescendantFilePaths(files, path);
+        if (children.length > 0) {
+          if (shiftKey) {
+            multiSelect.toggleAll(children, 'committed');
+          } else {
+            multiSelect.selectAll(children, 'committed');
+          }
+        }
+      }
+    },
+    [allCommittedFilePaths, files, multiSelect, selectCommittedFile],
+  );
+
+  const handleSelectWorktreeFile = useCallback(
+    (path: string, shiftKey: boolean) => {
+      const isFile = allWorktreeFilePaths.has(path);
+      if (isFile) {
+        if (shiftKey) {
+          multiSelect.toggle(path, 'worktree');
+        } else {
+          multiSelect.select(path, 'worktree');
+          selectWorktreeFile(path);
+        }
+      } else {
+        const children = collectDescendantFilePaths(worktreeFiles, path);
+        if (children.length > 0) {
+          if (shiftKey) {
+            multiSelect.toggleAll(children, 'worktree');
+          } else {
+            multiSelect.selectAll(children, 'worktree');
+          }
+        }
+      }
+    },
+    [allWorktreeFilePaths, worktreeFiles, multiSelect, selectWorktreeFile],
+  );
+
+  return {
+    committedFilePaths,
+    worktreeFilePaths,
+    handleSelectAllCommitted,
+    handleSelectAllWorktree,
+    handleSelectCommittedFile,
+    handleSelectWorktreeFile,
+  };
 };
 
 export const App = () => {
@@ -113,13 +213,49 @@ export const App = () => {
     selectedFileInfo,
   } = useFileSelection(files, worktreeFiles ?? [], diffs, comments, fileInfoMap);
 
-  const selectedDiff = useComputedDiff(
+  const multiSelect = useMultiSelect();
+
+  const {
+    committedFilePaths,
+    worktreeFilePaths,
+    handleSelectAllCommitted,
+    handleSelectAllWorktree,
+    handleSelectCommittedFile,
+    handleSelectWorktreeFile,
+  } = useFileSelectionHandlers(
+    files,
+    worktreeFiles ?? [],
+    multiSelect,
+    selectCommittedFile,
+    selectWorktreeFile,
+  );
+
+  const selectedDiff = useComputedDiff({
     selectedFilePath,
     selectedSource,
+    oldRef: oldRef ?? '',
+    newRef: newRef ?? '',
+    fixtureDiff,
+  });
+
+  const orderedFilePaths = multiSelect.activeSource === 'worktree' ? worktreeFilePaths : committedFilePaths;
+  const multiDiffPaths = useMemo(
+    () => (multiSelect.isMultiSelect ? orderedFilePaths.filter((p) => multiSelect.selectedPaths.has(p)) : []),
+    [multiSelect.isMultiSelect, multiSelect.selectedPaths, orderedFilePaths],
+  );
+  const multiDiffs = useComputedDiffs(
+    multiDiffPaths,
+    multiSelect.activeSource,
     oldRef ?? '',
     newRef ?? '',
-    fixtureDiff,
   );
+
+  const selectedDiffs = useMemo(() => {
+    if (multiSelect.isMultiSelect) {
+      return multiDiffs;
+    }
+    return selectedDiff != null ? [selectedDiff] : [];
+  }, [multiSelect.isMultiSelect, multiDiffs, selectedDiff]);
 
   if (refsLoading || refsError) {
     return <div className={styles.app} />;
@@ -127,11 +263,7 @@ export const App = () => {
 
   return (
     <div className={styles.app}>
-      <Header
-        filePath={selectedDiff?.path}
-        oldPath={selectedDiff?.oldPath}
-        changeType={selectedDiff?.changeType}
-      />
+      <Header />
       <Group
         id="gr-panels"
         orientation="horizontal"
@@ -150,19 +282,21 @@ export const App = () => {
           <FileTreePanel
             committedFiles={files}
             worktreeFiles={worktreeFiles ?? []}
-            selectedFilePath={selectedFilePath}
-            selectedSource={selectedSource}
+            selectedPaths={multiSelect.selectedPaths}
+            selectedSource={multiSelect.activeSource}
             committedExpandedKeys={expandedKeys}
             worktreeExpandedKeys={worktreeExpandedKeys}
-            onSelectCommittedFile={selectCommittedFile}
-            onSelectWorktreeFile={selectWorktreeFile}
+            onSelectCommittedFile={handleSelectCommittedFile}
+            onSelectWorktreeFile={handleSelectWorktreeFile}
+            onSelectAllCommitted={handleSelectAllCommitted}
+            onSelectAllWorktree={handleSelectAllWorktree}
             onCommittedExpandedKeysChange={handleExpandedKeysChange}
             onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
           />
         </Panel>
         <Separator className={styles.separator} />
         <Panel id="diff-viewer" minSize={300}>
-          <StackedDiffViewer diffs={selectedDiff != null ? [selectedDiff] : []} />
+          <StackedDiffViewer diffs={selectedDiffs} />
         </Panel>
         <Separator className={styles.separator} />
         <Panel

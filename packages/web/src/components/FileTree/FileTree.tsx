@@ -1,4 +1,5 @@
 import { Badge, FileIcon, Tree } from '@greppa/ui';
+import type { ReactNode } from 'react';
 
 import type { ChangeType, FileNode } from '../../fixtures/types';
 
@@ -6,9 +7,9 @@ import styles from './FileTree.module.css';
 
 interface FileTreeProps {
   files: FileNode[];
-  selectedFilePath: string | null;
+  selectedPaths: Set<string>;
   expandedKeys: Iterable<string>;
-  onSelectFile: (path: string) => void;
+  onSelectFile: (path: string, shiftKey: boolean) => void;
   onExpandedKeysChange: (keys: Set<string | number>) => void;
 }
 
@@ -24,57 +25,58 @@ export const collectDirectoryIds = (nodes: FileNode[]): string[] =>
     node.type === 'directory' ? [node.path, ...collectDirectoryIds(node.children ?? [])] : [],
   );
 
-const renderItem = (node: FileNode) => {
-  const isDirectory = node.type === 'directory';
-  const { changeType } = node;
-  const label = node.displayName ?? node.name;
-
-  return (
-    <Tree.Item key={node.path} id={node.path} textValue={label}>
-      <Tree.ItemContent>
-        {({ isExpanded }) => (
-          <>
-            {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
-            <FileIcon name={node.name} isDirectory={isDirectory} isExpanded={isExpanded} />
-            <Tree.Label className={changeType != null ? styles[changeType] : undefined}>
-              {label}
-            </Tree.Label>
-            {changeType != null && !isDirectory ? (
-              <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
-            ) : null}
-          </>
-        )}
-      </Tree.ItemContent>
-      {isDirectory ? (
-        <Tree.Collection items={node.children ?? []}>{renderItem}</Tree.Collection>
-      ) : null}
-    </Tree.Item>
-  );
-};
-
 export const FileTree = ({
   files,
-  selectedFilePath,
+  selectedPaths,
   expandedKeys,
   onSelectFile,
   onExpandedKeysChange,
-}: FileTreeProps) => (
-  <Tree.Root
-    aria-label="File tree"
-    selectionMode="single"
-    selectedKeys={selectedFilePath != null ? [selectedFilePath] : []}
-    expandedKeys={expandedKeys}
-    onExpandedChange={onExpandedKeysChange}
-    onSelectionChange={(keys) => {
-      if (keys === 'all') {
-        return;
-      }
-      const selected = [...keys][0];
-      if (typeof selected === 'string') {
-        onSelectFile(selected);
-      }
-    }}
-  >
-    <Tree.Collection items={files}>{renderItem}</Tree.Collection>
-  </Tree.Root>
-);
+}: FileTreeProps) => {
+  const renderItem = (node: FileNode): ReactNode => {
+    const isDirectory = node.type === 'directory';
+    const { changeType } = node;
+    const label = node.displayName ?? node.name;
+
+    return (
+      <Tree.Item
+        key={node.path}
+        id={node.path}
+        textValue={label}
+        selected={selectedPaths.has(node.path)}
+        onPointerDown={(event) => {
+          onSelectFile(node.path, event.shiftKey);
+        }}
+      >
+        <Tree.ItemContent>
+          {({ isExpanded }) => (
+            <>
+              {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
+              <FileIcon name={node.name} isDirectory={isDirectory} isExpanded={isExpanded} />
+              <Tree.Label className={changeType != null ? styles[changeType] : undefined}>
+                {label}
+              </Tree.Label>
+              {changeType != null && !isDirectory ? (
+                <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
+              ) : null}
+            </>
+          )}
+        </Tree.ItemContent>
+        {isDirectory ? (
+          <Tree.Collection items={node.children ?? []}>{renderItem}</Tree.Collection>
+        ) : null}
+      </Tree.Item>
+    );
+  };
+
+  return (
+    <Tree.Root
+      aria-label="File tree"
+      selectionMode="multiple"
+      selectedKeys={selectedPaths}
+      expandedKeys={expandedKeys}
+      onExpandedChange={onExpandedKeysChange}
+    >
+      <Tree.Collection items={files}>{renderItem}</Tree.Collection>
+    </Tree.Root>
+  );
+};

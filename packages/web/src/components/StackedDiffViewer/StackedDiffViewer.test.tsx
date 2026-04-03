@@ -95,11 +95,11 @@ afterEach(() => {
 });
 
 describe('StackedDiffViewer', () => {
-  describe('single file fallback', () => {
-    it('renders DiffViewer directly when given one file', () => {
+  describe('single file', () => {
+    it('renders within stacked container with file header', () => {
       render(<StackedDiffViewer diffs={[fileA]} />);
-      expect(screen.getByTestId('diff-viewer')).toBeDefined();
-      expect(screen.queryByTestId('stacked-diff-viewer')).toBeNull();
+      expect(screen.getByTestId('stacked-diff-viewer')).toBeDefined();
+      expect(screen.getAllByTestId('file-header')).toHaveLength(1);
     });
 
     it('renders empty state when given no files', () => {
@@ -142,25 +142,6 @@ describe('StackedDiffViewer', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       const viewers = screen.getAllByTestId('diff-viewer');
       expect(viewers).toHaveLength(2);
-    });
-  });
-
-  describe('navigation bar', () => {
-    it('shows file count in navigation bar', () => {
-      render(<StackedDiffViewer diffs={[fileA, fileB, fileC]} />);
-      expect(screen.getByTestId('file-nav')).toBeDefined();
-      expect(screen.getByText('File 1 of 3')).toBeDefined();
-    });
-
-    it('does not show navigation bar for single file', () => {
-      render(<StackedDiffViewer diffs={[fileA]} />);
-      expect(screen.queryByTestId('file-nav')).toBeNull();
-    });
-
-    it('has previous and next buttons', () => {
-      render(<StackedDiffViewer diffs={[fileA, fileB]} />);
-      expect(screen.getByRole('button', { name: /previous file/i })).toBeDefined();
-      expect(screen.getByRole('button', { name: /next file/i })).toBeDefined();
     });
   });
 

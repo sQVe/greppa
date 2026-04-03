@@ -41,7 +41,7 @@ const allExpandedKeys = collectDirectoryIds(files);
 
 const defaultProps = {
   files,
-  selectedFilePath: null as string | null,
+  selectedPaths: new Set<string>(),
   expandedKeys: allExpandedKeys,
   onSelectFile: vi.fn(),
   onExpandedKeysChange: vi.fn(),
@@ -79,8 +79,37 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn();
     render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
     await userEvent.click(screen.getByText('validateToken.ts'));
-    expect(onSelectFile).toHaveBeenCalledWith('src/auth/validateToken.ts');
+    expect(onSelectFile).toHaveBeenCalledWith('src/auth/validateToken.ts', false);
   });
+
+  it('calls onSelectFile with shiftKey true when shift-clicking', async () => {
+    const user = userEvent.setup();
+    const onSelectFile = vi.fn();
+    render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
+    await user.keyboard('{Shift>}');
+    await user.click(screen.getByText('rateLimiter.ts'));
+    await user.keyboard('{/Shift}');
+    expect(onSelectFile).toHaveBeenCalledWith('src/middleware/rateLimiter.ts', true);
+  });
+
+  it('highlights all paths in selectedPaths', () => {
+    render(
+      <FileTree
+        {...defaultProps}
+        selectedPaths={new Set(['src/auth/validateToken.ts', 'src/middleware/rateLimiter.ts'])}
+      />,
+    );
+    const tree = screen.getByRole('treegrid');
+    const selectedRows = tree.querySelectorAll('[aria-selected="true"]');
+    expect(selectedRows).toHaveLength(2);
+  });
+
+  it('uses multiple selection mode', () => {
+    render(<FileTree {...defaultProps} />);
+    const tree = screen.getByRole('treegrid');
+    expect(tree.getAttribute('aria-multiselectable')).toBe('true');
+  });
+
 
   it('renders file icons as img elements', () => {
     const { container } = render(<FileTree {...defaultProps} />);

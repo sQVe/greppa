@@ -9,6 +9,22 @@ export type FileSource = 'committed' | 'worktree';
 export const collectFiles = (nodes: FileNode[]): FileNode[] =>
   nodes.flatMap((node) => (node.type === 'file' ? [node] : collectFiles(node.children ?? [])));
 
+export const collectDescendantFilePaths = (nodes: FileNode[], directoryPath: string): string[] => {
+  for (const node of nodes) {
+    if (node.path === directoryPath && node.type === 'directory') {
+      return collectFiles(node.children ?? []).map((f) => f.path);
+    }
+    if (node.children != null) {
+      const result = collectDescendantFilePaths(node.children, directoryPath);
+      if (result.length > 0) {
+        return result;
+      }
+    }
+  }
+  return [];
+};
+
+// eslint-disable-next-line max-params
 export const useFileSelection = (
   files: FileNode[],
   worktreeFiles: FileNode[],

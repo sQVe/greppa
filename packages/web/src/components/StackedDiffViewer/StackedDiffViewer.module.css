@@ -3,33 +3,6 @@
   overflow-y: auto;
 }
 
-.fileNav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px var(--gr-space-lg);
-  background: var(--gr-color-bg-default);
-  border-bottom: 1px solid var(--gr-color-border-default);
-  font-family: var(--gr-font-ui);
-  font-size: var(--gr-text-xs);
-  color: var(--gr-color-text-muted);
-}
-
-.fileNavArrows {
-  display: flex;
-  gap: 4px;
-}
-
-.fileNavButton {
-  border: 1px solid var(--gr-color-border-default);
-  background: var(--gr-color-bg-surface);
-  border-radius: 3px;
-  padding: 1px 6px;
-  cursor: pointer;
-  font-size: var(--gr-text-xs);
-  color: var(--gr-color-text-muted);
-}
-
 .fileHeader {
   position: sticky;
   top: 0;

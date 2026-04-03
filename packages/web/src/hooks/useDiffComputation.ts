@@ -4,7 +4,7 @@ import type { DiffMapping, DiffRequest, DiffWorkerResponse } from '../workers/di
 
 let sharedWorker: Worker | null = null;
 
-const getOrCreateWorker = () => {
+export const getOrCreateWorker = () => {
   sharedWorker ??= new Worker(new URL('../workers/diffWorker.ts', import.meta.url), {
     type: 'module',
   });

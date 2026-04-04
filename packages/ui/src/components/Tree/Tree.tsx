@@ -21,15 +21,11 @@ const Root = ({ className, ...props }: ComponentProps<typeof RACTree>) => (
   />
 );
 
-const Item = ({
-  className,
-  selected,
-  ...props
-}: ComponentProps<typeof TreeItem> & { selected?: boolean }) => (
+const Item = ({ className, ...props }: ComponentProps<typeof TreeItem>) => (
   <TreeItem
     {...props}
-    className={composeRenderProps(className, (resolved) =>
-      clsx(styles.item, selected && styles.selected, resolved),
+    className={composeRenderProps(className, (resolved, { isSelected }) =>
+      clsx(styles.item, isSelected && styles.selected, resolved),
     )}
   />
 );

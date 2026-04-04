@@ -1,4 +1,5 @@
 import { Badge, FileIcon, Tree } from '@greppa/ui';
+import { useRef } from 'react';
 import type { ReactNode } from 'react';
 
 import type { ChangeType, FileNode } from '../../fixtures/types';
@@ -10,6 +11,7 @@ interface FileTreeProps {
   selectedPaths: Set<string>;
   expandedKeys: Iterable<string>;
   onSelectFile: (path: string, shiftKey: boolean) => void;
+  onSelectDirectory?: (path: string) => void;
   onExpandedKeysChange: (keys: Set<string | number>) => void;
 }
 
@@ -30,8 +32,12 @@ export const FileTree = ({
   selectedPaths,
   expandedKeys,
   onSelectFile,
+  onSelectDirectory,
   onExpandedKeysChange,
 }: FileTreeProps) => {
+  const expandedKeysRef = useRef(expandedKeys);
+  expandedKeysRef.current = expandedKeys;
+
   const renderItem = (node: FileNode): ReactNode => {
     const isDirectory = node.type === 'directory';
     const { changeType } = node;
@@ -42,8 +48,23 @@ export const FileTree = ({
         key={node.path}
         id={node.path}
         textValue={label}
-        selected={selectedPaths.has(node.path)}
         onPointerDown={(event) => {
+          if (isDirectory) {
+            if (event.shiftKey) {
+              onSelectFile(node.path, true);
+            } else if (event.metaKey || event.ctrlKey) {
+              onSelectDirectory?.(node.path);
+            } else {
+              const keys = new Set<string | number>(expandedKeysRef.current);
+              if (keys.has(node.path)) {
+                keys.delete(node.path);
+              } else {
+                keys.add(node.path);
+              }
+              onExpandedKeysChange(keys);
+            }
+            return;
+          }
           onSelectFile(node.path, event.shiftKey);
         }}
       >

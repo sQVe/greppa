@@ -31,6 +31,8 @@ interface FileTreePanelProps {
   onSelectWorktreeFile: (path: string, shiftKey: boolean) => void;
   onSelectAllCommitted: () => void;
   onSelectAllWorktree: () => void;
+  onSelectCommittedDirectory: (path: string) => void;
+  onSelectWorktreeDirectory: (path: string) => void;
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
 }
@@ -49,6 +51,8 @@ export const FileTreePanel = ({
   onSelectWorktreeFile,
   onSelectAllCommitted,
   onSelectAllWorktree,
+  onSelectCommittedDirectory,
+  onSelectWorktreeDirectory,
   onCommittedExpandedKeysChange,
   onWorktreeExpandedKeysChange,
 }: FileTreePanelProps) => {
@@ -133,6 +137,7 @@ export const FileTreePanel = ({
               selectedPaths={selectedSource === 'committed' ? selectedPaths : new Set()}
               expandedKeys={committedExpandedKeys}
               onSelectFile={onSelectCommittedFile}
+              onSelectDirectory={onSelectCommittedDirectory}
               onExpandedKeysChange={onCommittedExpandedKeysChange}
             />
           </motion.div>
@@ -181,6 +186,7 @@ export const FileTreePanel = ({
               selectedPaths={selectedSource === 'worktree' ? selectedPaths : new Set()}
               expandedKeys={worktreeExpandedKeys}
               onSelectFile={onSelectWorktreeFile}
+              onSelectDirectory={onSelectWorktreeDirectory}
               onExpandedKeysChange={onWorktreeExpandedKeysChange}
             />
           </motion.div>

@@ -152,6 +152,66 @@ describe('FileTree', () => {
     expect(screen.getByText('src/events')).toBeDefined();
   });
 
+  it('does not call onSelectFile when clicking a directory', async () => {
+    const onSelectFile = vi.fn();
+    render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
+    await userEvent.click(screen.getByText('auth'));
+    expect(onSelectFile).not.toHaveBeenCalled();
+  });
+
+  it('toggles expansion when clicking a directory', async () => {
+    const onExpandedKeysChange = vi.fn();
+    render(
+      <FileTree {...defaultProps} onExpandedKeysChange={onExpandedKeysChange} />,
+    );
+    await userEvent.click(screen.getByText('auth'));
+    expect(onExpandedKeysChange).toHaveBeenCalled();
+    const keys = onExpandedKeysChange.mock.calls[0][0] as Set<string | number>;
+    expect(keys.has('src/auth')).toBe(false);
+    expect(keys.has('src/middleware')).toBe(true);
+  });
+
+  it('calls onSelectDirectory when cmd-clicking a directory', async () => {
+    const user = userEvent.setup();
+    const onSelectDirectory = vi.fn();
+    render(<FileTree {...defaultProps} onSelectDirectory={onSelectDirectory} />);
+    await user.keyboard('{Meta>}');
+    await user.click(screen.getByText('auth'));
+    await user.keyboard('{/Meta}');
+    expect(onSelectDirectory).toHaveBeenCalledWith('src/auth');
+  });
+
+  it('does not call onSelectDirectory when cmd-clicking a file', async () => {
+    const user = userEvent.setup();
+    const onSelectDirectory = vi.fn();
+    render(<FileTree {...defaultProps} onSelectDirectory={onSelectDirectory} />);
+    await user.keyboard('{Meta>}');
+    await user.click(screen.getByText('validateToken.ts'));
+    await user.keyboard('{/Meta}');
+    expect(onSelectDirectory).not.toHaveBeenCalled();
+  });
+
+  it('calls onSelectFile with shiftKey when shift-clicking a directory', async () => {
+    const user = userEvent.setup();
+    const onSelectFile = vi.fn();
+    render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
+    await user.keyboard('{Shift>}');
+    await user.click(screen.getByText('auth'));
+    await user.keyboard('{/Shift}');
+    expect(onSelectFile).toHaveBeenCalledWith('src/auth', true);
+  });
+
+  it('expands a collapsed directory when clicked', async () => {
+    const onExpandedKeysChange = vi.fn();
+    render(
+      <FileTree {...defaultProps} expandedKeys={['src/middleware']} onExpandedKeysChange={onExpandedKeysChange} />,
+    );
+    await userEvent.click(screen.getByText('auth'));
+    const keys = onExpandedKeysChange.mock.calls[0][0] as Set<string | number>;
+    expect(keys.has('src/auth')).toBe(true);
+    expect(keys.has('src/middleware')).toBe(true);
+  });
+
   it('does not render badges on directories with changeType', () => {
     const dirWithChange: FileNode[] = [
       {

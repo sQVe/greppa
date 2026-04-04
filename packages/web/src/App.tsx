@@ -14,13 +14,14 @@ import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
+import { useFileSelectionHandlers } from './hooks/useFileSelectionHandlers';
 import { useMultiSelect } from './hooks/useMultiSelect';
 import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
+import { useFileSelection } from './useFileSelection';
 import type { FileSource } from './useFileSelection';
-import { collectDescendantFilePaths, collectFiles, useFileSelection } from './useFileSelection';
 
 import styles from './App.module.css';
 
@@ -92,95 +93,6 @@ const useComputedDiff = ({
   }, [apiDiff, computedChanges, fixtureDiff]);
 };
 
-const useFileSelectionHandlers = (
-  files: FileNode[],
-  worktreeFiles: FileNode[],
-  multiSelect: ReturnType<typeof useMultiSelect>,
-  selectCommittedFile: (path: string) => void,
-  selectWorktreeFile: (path: string) => void,
-) => {
-  const committedFilePaths = useMemo(
-    () => collectFiles(files).map((f) => f.path),
-    [files],
-  );
-  const allCommittedFilePaths = useMemo(
-    () => new Set(committedFilePaths),
-    [committedFilePaths],
-  );
-  const worktreeFilePaths = useMemo(
-    () => collectFiles(worktreeFiles).map((f) => f.path),
-    [worktreeFiles],
-  );
-  const allWorktreeFilePaths = useMemo(
-    () => new Set(worktreeFilePaths),
-    [worktreeFilePaths],
-  );
-
-  const handleSelectAllCommitted = useCallback(() => {
-    multiSelect.selectAll(committedFilePaths, 'committed');
-  }, [committedFilePaths, multiSelect]);
-
-  const handleSelectAllWorktree = useCallback(() => {
-    multiSelect.selectAll(worktreeFilePaths, 'worktree');
-  }, [worktreeFilePaths, multiSelect]);
-
-  const handleSelectCommittedFile = useCallback(
-    (path: string, shiftKey: boolean) => {
-      const isFile = allCommittedFilePaths.has(path);
-      if (isFile) {
-        if (shiftKey) {
-          multiSelect.toggle(path, 'committed');
-        } else {
-          multiSelect.select(path, 'committed');
-          selectCommittedFile(path);
-        }
-      } else {
-        const children = collectDescendantFilePaths(files, path);
-        if (children.length > 0) {
-          if (shiftKey) {
-            multiSelect.toggleAll(children, 'committed');
-          } else {
-            multiSelect.selectAll(children, 'committed');
-          }
-        }
-      }
-    },
-    [allCommittedFilePaths, files, multiSelect, selectCommittedFile],
-  );
-
-  const handleSelectWorktreeFile = useCallback(
-    (path: string, shiftKey: boolean) => {
-      const isFile = allWorktreeFilePaths.has(path);
-      if (isFile) {
-        if (shiftKey) {
-          multiSelect.toggle(path, 'worktree');
-        } else {
-          multiSelect.select(path, 'worktree');
-          selectWorktreeFile(path);
-        }
-      } else {
-        const children = collectDescendantFilePaths(worktreeFiles, path);
-        if (children.length > 0) {
-          if (shiftKey) {
-            multiSelect.toggleAll(children, 'worktree');
-          } else {
-            multiSelect.selectAll(children, 'worktree');
-          }
-        }
-      }
-    },
-    [allWorktreeFilePaths, worktreeFiles, multiSelect, selectWorktreeFile],
-  );
-
-  return {
-    committedFilePaths,
-    worktreeFilePaths,
-    handleSelectAllCommitted,
-    handleSelectAllWorktree,
-    handleSelectCommittedFile,
-    handleSelectWorktreeFile,
-  };
-};
 
 export const App = () => {
   const { oldRef, newRef, isLoading: refsLoading, isError: refsError } = useRefs();
@@ -222,6 +134,8 @@ export const App = () => {
     handleSelectAllWorktree,
     handleSelectCommittedFile,
     handleSelectWorktreeFile,
+    handleSelectCommittedDirectory,
+    handleSelectWorktreeDirectory,
   } = useFileSelectionHandlers(
     files,
     worktreeFiles ?? [],
@@ -290,6 +204,8 @@ export const App = () => {
             onSelectWorktreeFile={handleSelectWorktreeFile}
             onSelectAllCommitted={handleSelectAllCommitted}
             onSelectAllWorktree={handleSelectAllWorktree}
+            onSelectCommittedDirectory={handleSelectCommittedDirectory}
+            onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
             onCommittedExpandedKeysChange={handleExpandedKeysChange}
             onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
           />

@@ -1,0 +1,21 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 4px;
+  background: var(--gr-color-bg-surface);
+  flex-shrink: 0;
+}
+
+.segment {
+  border-bottom: 1px solid var(--gr-color-bg-default);
+  cursor: pointer;
+}
+
+.segment:last-child {
+  border-bottom: none;
+}
+
+.active {
+  background: var(--gr-color-accent-blue);
+  border-radius: 2px;
+}

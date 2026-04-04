@@ -1,8 +1,10 @@
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
+import { FileMinimap } from './components/StackedDiffViewer/FileMinimap';
 import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffViewer';
+import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { collectDirectoryIds } from './components/FileTree/FileTree';
 import { FileTreePanel } from './components/FileTree/FileTreePanel';
 import { Header } from './components/Header/Header';
@@ -45,7 +47,23 @@ const useTreeState = (files: FileNode[]) => {
     [allDirectoryIds, setReviewState],
   );
 
-  return { expandedKeys, handleExpandedKeysChange };
+  const reviewedPaths = useMemo(
+    () => new Set(reviewState.reviewedPaths),
+    [reviewState.reviewedPaths],
+  );
+
+  const toggleReviewed = useCallback(
+    (path: string) => {
+      const current = reviewState.reviewedPaths;
+      const next = current.includes(path)
+        ? current.filter((p) => p !== path)
+        : [...current, path];
+      setReviewState({ reviewedPaths: next });
+    },
+    [reviewState.reviewedPaths, setReviewState],
+  );
+
+  return { expandedKeys, handleExpandedKeysChange, reviewedPaths, toggleReviewed };
 };
 
 interface ComputedDiffInput {
@@ -93,8 +111,58 @@ const useComputedDiff = ({
   }, [apiDiff, computedChanges, fixtureDiff]);
 };
 
+interface SelectedDiffsInput {
+  selectedFilePath: string | null;
+  selectedSource: FileSource | null;
+  oldRef: string;
+  newRef: string;
+  fixtureDiff: DiffFile | null;
+  multiSelect: ReturnType<typeof useMultiSelect>;
+  committedFilePaths: string[];
+  worktreeFilePaths: string[];
+}
+
+const useSelectedDiffs = ({
+  selectedFilePath,
+  selectedSource,
+  oldRef,
+  newRef,
+  fixtureDiff,
+  multiSelect,
+  committedFilePaths,
+  worktreeFilePaths,
+}: SelectedDiffsInput) => {
+  const selectedDiff = useComputedDiff({
+    selectedFilePath,
+    selectedSource,
+    oldRef,
+    newRef,
+    fixtureDiff,
+  });
+
+  const orderedFilePaths = multiSelect.activeSource === 'worktree' ? worktreeFilePaths : committedFilePaths;
+  const multiDiffPaths = useMemo(
+    () => (multiSelect.isMultiSelect ? orderedFilePaths.filter((p) => multiSelect.selectedPaths.has(p)) : []),
+    [multiSelect.isMultiSelect, multiSelect.selectedPaths, orderedFilePaths],
+  );
+  const multiDiffs = useComputedDiffs(
+    multiDiffPaths,
+    multiSelect.activeSource,
+    oldRef,
+    newRef,
+  );
+
+  return useMemo(() => {
+    if (multiSelect.isMultiSelect) {
+      return multiDiffs;
+    }
+    return selectedDiff != null ? [selectedDiff] : [];
+  }, [multiSelect.isMultiSelect, multiDiffs, selectedDiff]);
+};
 
 export const App = () => {
+  const stackedDiffRef = useRef<StackedDiffViewerHandle>(null);
+  const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const { oldRef, newRef, isLoading: refsLoading, isError: refsError } = useRefs();
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
@@ -107,7 +175,7 @@ export const App = () => {
 
   const { files: worktreeFiles } = useWorktreeFiles();
 
-  const { expandedKeys, handleExpandedKeysChange } = useTreeState(files);
+  const { expandedKeys, handleExpandedKeysChange, reviewedPaths, toggleReviewed } = useTreeState(files);
   const {
     expandedKeys: worktreeExpandedKeys,
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
@@ -144,32 +212,16 @@ export const App = () => {
     selectWorktreeFile,
   );
 
-  const selectedDiff = useComputedDiff({
+  const selectedDiffs = useSelectedDiffs({
     selectedFilePath,
     selectedSource,
     oldRef: oldRef ?? '',
     newRef: newRef ?? '',
     fixtureDiff,
+    multiSelect,
+    committedFilePaths,
+    worktreeFilePaths,
   });
-
-  const orderedFilePaths = multiSelect.activeSource === 'worktree' ? worktreeFilePaths : committedFilePaths;
-  const multiDiffPaths = useMemo(
-    () => (multiSelect.isMultiSelect ? orderedFilePaths.filter((p) => multiSelect.selectedPaths.has(p)) : []),
-    [multiSelect.isMultiSelect, multiSelect.selectedPaths, orderedFilePaths],
-  );
-  const multiDiffs = useComputedDiffs(
-    multiDiffPaths,
-    multiSelect.activeSource,
-    oldRef ?? '',
-    newRef ?? '',
-  );
-
-  const selectedDiffs = useMemo(() => {
-    if (multiSelect.isMultiSelect) {
-      return multiDiffs;
-    }
-    return selectedDiff != null ? [selectedDiff] : [];
-  }, [multiSelect.isMultiSelect, multiDiffs, selectedDiff]);
 
   if (refsLoading || refsError) {
     return <div className={styles.app} />;
@@ -212,7 +264,20 @@ export const App = () => {
         </Panel>
         <Separator className={styles.separator} />
         <Panel id="diff-viewer" minSize={300}>
-          <StackedDiffViewer diffs={selectedDiffs} />
+          <div className={styles.diffPane}>
+            <FileMinimap
+              diffs={selectedDiffs}
+              activeFilePath={activeFilePath}
+              onSegmentClick={(path) => stackedDiffRef.current?.scrollToFile(path)}
+            />
+            <StackedDiffViewer
+              ref={stackedDiffRef}
+              diffs={selectedDiffs}
+              reviewedPaths={reviewedPaths}
+              onToggleReviewed={toggleReviewed}
+              onActiveFileChange={setActiveFilePath}
+            />
+          </div>
         </Panel>
         <Separator className={styles.separator} />
         <Panel

@@ -1,9 +1,37 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { createRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DiffFile } from '../../fixtures/types';
 import { StackedDiffViewer } from './StackedDiffViewer';
+import type { StackedDiffViewerHandle } from './StackedDiffViewer';
+
+let intersectionCallback: IntersectionObserverCallback;
+const mockObserve = vi.fn();
+const mockDisconnect = vi.fn();
+
+const fakeEntry = (target: Element): IntersectionObserverEntry => ({
+  isIntersecting: true,
+  target,
+  boundingClientRect: target.getBoundingClientRect(),
+  intersectionRatio: 1,
+  intersectionRect: target.getBoundingClientRect(),
+  rootBounds: null,
+  time: 0,
+});
+
+class MockIntersectionObserver {
+  constructor(callback: IntersectionObserverCallback) {
+    intersectionCallback = callback;
+  }
+  observe = mockObserve;
+  disconnect = mockDisconnect;
+  unobserve = vi.fn();
+}
+
+vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 
 vi.mock('../../hooks/usePreferences', () => ({
   usePreferences: () => ({
@@ -150,6 +178,58 @@ describe('StackedDiffViewer', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       const buttons = screen.getAllByRole('button', { name: /mark reviewed/i });
       expect(buttons).toHaveLength(2);
+    });
+
+    it('shows reviewed state for files in reviewedPaths', () => {
+      render(
+        <StackedDiffViewer
+          diffs={[fileA, fileB]}
+          reviewedPaths={new Set(['src/Api.ts'])}
+          onToggleReviewed={vi.fn()}
+        />,
+      );
+      const buttons = screen.getAllByRole('button');
+      const reviewButtons = buttons.filter((b) => b.textContent?.includes('eviewed'));
+      expect(reviewButtons).toHaveLength(2);
+      expect(reviewButtons.at(0)?.textContent).toBe('\u2713 Reviewed');
+      expect(reviewButtons.at(1)?.textContent).toBe('Mark reviewed');
+    });
+
+    it('calls onToggleReviewed with file path when clicked', async () => {
+      const onToggle = vi.fn();
+      render(
+        <StackedDiffViewer
+          diffs={[fileA, fileB]}
+          reviewedPaths={new Set()}
+          onToggleReviewed={onToggle}
+        />,
+      );
+      const firstButton = screen.getAllByRole('button', { name: /mark reviewed/i }).at(0);
+      expect(firstButton).toBeDefined();
+      await userEvent.click(firstButton as HTMLElement);
+      expect(onToggle).toHaveBeenCalledWith('src/Api.ts');
+    });
+  });
+
+  describe('scroll sync', () => {
+    it('calls onActiveFileChange when intersection observer fires', () => {
+      const onActiveFileChange = vi.fn();
+      render(
+        <StackedDiffViewer diffs={[fileA, fileB]} onActiveFileChange={onActiveFileChange} />,
+      );
+      const secondHeader = screen.getAllByTestId('file-header').at(1);
+      expect(secondHeader).toBeDefined();
+      intersectionCallback(
+        [fakeEntry(secondHeader as HTMLElement)],
+        new MockIntersectionObserver(() => {}) as unknown as IntersectionObserver,
+      );
+      expect(onActiveFileChange).toHaveBeenCalledWith('src/GitService.ts');
+    });
+
+    it('exposes scrollToFile via ref', () => {
+      const ref = createRef<StackedDiffViewerHandle>();
+      render(<StackedDiffViewer ref={ref} diffs={[fileA, fileB]} />);
+      expect(ref.current?.scrollToFile).toBeDefined();
     });
   });
 });

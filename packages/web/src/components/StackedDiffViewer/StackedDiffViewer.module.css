@@ -1,4 +1,6 @@
 .container {
+  flex: 1;
+  min-width: 0;
   height: 100%;
   overflow-y: auto;
 }
@@ -31,6 +33,16 @@
   background: var(--gr-color-bg-default);
   color: var(--gr-color-text-muted);
   cursor: pointer;
+}
+
+.reviewed {
+  background: color-mix(
+    in srgb,
+    var(--gr-color-change-added) 12%,
+    var(--gr-color-bg-default)
+  );
+  border-color: var(--gr-color-change-added);
+  color: var(--gr-color-change-added);
 }
 
 .separator {

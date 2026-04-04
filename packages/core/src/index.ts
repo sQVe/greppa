@@ -31,3 +31,12 @@ export const RefsResponse = Schema.Struct({
   newRef: Schema.String,
 });
 export type RefsResponse = typeof RefsResponse.Type;
+
+export const CommitEntry = Schema.Struct({
+  sha: Schema.String,
+  abbrevSha: Schema.String,
+  subject: Schema.String,
+  author: Schema.String,
+  date: Schema.String,
+});
+export type CommitEntry = typeof CommitEntry.Type;

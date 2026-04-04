@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { FileEntry } from '@greppa/core';
+import type { CommitEntry, FileEntry } from '@greppa/core';
 import { Data, Effect, Layer, ServiceMap, Stream } from 'effect';
 import { ChildProcess } from 'effect/unstable/process';
 import type { ChildProcessSpawner } from 'effect/unstable/process/ChildProcessSpawner';
@@ -62,6 +62,28 @@ export const parseNameStatus = (output: string): FileEntry[] =>
       }
 
       return [{ path: parts[1] ?? '', changeType }];
+    });
+
+const COMMIT_FIELD_SEP = '\x1f';
+
+export const parseCommitLog = (output: string): CommitEntry[] =>
+  output
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .flatMap((line): CommitEntry[] => {
+      const parts = line.split(COMMIT_FIELD_SEP);
+      if (parts.length !== 5) {
+        return [];
+      }
+      return [
+        {
+          sha: parts[0] ?? '',
+          abbrevSha: parts[1] ?? '',
+          subject: parts[2] ?? '',
+          author: parts[3] ?? '',
+          date: parts[4] ?? '',
+        },
+      ];
     });
 
 const collectString = <E>(stream: Stream.Stream<Uint8Array, E>) =>
@@ -142,6 +164,10 @@ export class GitService extends ServiceMap.Service<
     getWorkingTreeFileContent: (
       path: string,
     ) => Effect.Effect<string, GitError, typeof RepoPath>;
+    listCommits: (
+      oldRef: string,
+      newRef: string,
+    ) => Effect.Effect<CommitEntry[], GitError, ChildProcessSpawner | typeof RepoPath>;
   }
 >()('greppa/GitService') {}
 
@@ -206,6 +232,17 @@ export const GitServiceLive = Layer.succeed(
           }),
         ),
         Effect.flatten,
+      ),
+    listCommits: (oldRef, newRef) =>
+      Effect.all([validateRef(oldRef), validateRef(newRef)]).pipe(
+        Effect.flatMap(() =>
+          runGit([
+            'log',
+            '--format=%H\x1f%h\x1f%s\x1f%an\x1f%aI',
+            `${oldRef}..${newRef}`,
+          ]),
+        ),
+        Effect.map(parseCommitLog),
       ),
   }),
 );

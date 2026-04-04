@@ -1,9 +1,11 @@
-import { IconChevronRight, IconFileDiff, IconGitBranch } from '@tabler/icons-react';
+import type { CommitEntry } from '@greppa/core';
+import { IconChevronRight, IconFileDiff, IconGitBranch, IconGitCommit } from '@tabler/icons-react';
 import { motion } from 'motion/react';
 import { useRef, useState } from 'react';
 
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
+import { CommitList } from '../CommitList/CommitList';
 import { FileTree } from './FileTree';
 
 import styles from './FileTreePanel.module.css';
@@ -23,8 +25,10 @@ const transition = { type: 'spring' as const, duration: 0.25, bounce: 0 };
 interface FileTreePanelProps {
   committedFiles: FileNode[];
   worktreeFiles: FileNode[];
+  commits: CommitEntry[];
   selectedPaths: Set<string>;
   selectedSource: 'committed' | 'worktree' | null;
+  selectedCommitShas: Set<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
   onSelectCommittedFile: (path: string, shiftKey: boolean) => void;
@@ -33,6 +37,7 @@ interface FileTreePanelProps {
   onSelectAllWorktree: () => void;
   onSelectCommittedDirectory: (path: string) => void;
   onSelectWorktreeDirectory: (path: string) => void;
+  onSelectCommit: (sha: string, shiftKey: boolean) => void;
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
 }
@@ -43,8 +48,10 @@ const ICON_STROKE = 2;
 export const FileTreePanel = ({
   committedFiles,
   worktreeFiles,
+  commits,
   selectedPaths,
   selectedSource,
+  selectedCommitShas,
   committedExpandedKeys,
   worktreeExpandedKeys,
   onSelectCommittedFile,
@@ -53,17 +60,20 @@ export const FileTreePanel = ({
   onSelectAllWorktree,
   onSelectCommittedDirectory,
   onSelectWorktreeDirectory,
+  onSelectCommit,
   onCommittedExpandedKeysChange,
   onWorktreeExpandedKeysChange,
 }: FileTreePanelProps) => {
   const hasCommitted = committedFiles.length > 0;
   const hasWorktree = worktreeFiles.length > 0;
+  const hasCommits = commits.length > 0;
 
   const defaultSection = hasCommitted ? 'committed' : 'worktree';
   const [expandedSection, setExpandedSection] = useState<string>(defaultSection);
 
   const committedBodyRef = useRef<HTMLDivElement>(null);
   const worktreeBodyRef = useRef<HTMLDivElement>(null);
+  const commitsBodyRef = useRef<HTMLDivElement>(null);
 
   const committedCount = collectFiles(committedFiles).length;
   const worktreeCount = collectFiles(worktreeFiles).length;
@@ -74,6 +84,9 @@ export const FileTreePanel = ({
     }
     if (worktreeBodyRef.current) {
       worktreeBodyRef.current.style.overflowY = 'hidden';
+    }
+    if (commitsBodyRef.current) {
+      commitsBodyRef.current.style.overflowY = 'hidden';
     }
   };
 
@@ -86,8 +99,13 @@ export const FileTreePanel = ({
     if (section !== expandedSection) {
       return;
     }
-    const ref = section === 'committed' ? committedBodyRef : worktreeBodyRef;
-    if (ref.current) {
+    const refMap: Record<string, React.RefObject<HTMLDivElement | null>> = {
+      committed: committedBodyRef,
+      worktree: worktreeBodyRef,
+      commits: commitsBodyRef,
+    };
+    const ref = refMap[section];
+    if (ref?.current) {
       ref.current.style.overflowY = 'auto';
     }
   };
@@ -188,6 +206,48 @@ export const FileTreePanel = ({
               onSelectFile={onSelectWorktreeFile}
               onSelectDirectory={onSelectWorktreeDirectory}
               onExpandedKeysChange={onWorktreeExpandedKeysChange}
+            />
+          </motion.div>
+        </div>
+      )}
+      {hasCommits && (
+        <div
+          className={`${styles.section} ${expandedSection !== 'commits' ? styles.collapsed : ''}`}
+        >
+          <div
+            className={styles.sectionHeader}
+            role="button"
+            onClick={() => {
+              toggleSection('commits');
+            }}
+          >
+            <motion.span
+              className={styles.sectionChevron}
+              variants={chevronVariants}
+              animate={expandedSection === 'commits' ? 'expanded' : 'collapsed'}
+              transition={transition}
+            >
+              <IconChevronRight size={12} stroke={2.5} />
+            </motion.span>
+            <span className={styles.sectionIcon}>
+              <IconGitCommit size={ICON_SIZE} stroke={ICON_STROKE} />
+            </span>
+            <span className={styles.sectionTitle}>Commits</span>
+            <span className={styles.sectionCount}>{commits.length}</span>
+          </div>
+          <motion.div
+            ref={commitsBodyRef}
+            className={styles.sectionBody}
+            variants={sectionBodyVariants}
+            animate={expandedSection === 'commits' ? 'expanded' : 'collapsed'}
+            initial={false}
+            transition={transition}
+            onAnimationComplete={() => { handleExpandComplete('commits'); }}
+          >
+            <CommitList
+              commits={commits}
+              selectedShas={selectedCommitShas}
+              onSelectCommit={onSelectCommit}
             />
           </motion.div>
         </div>

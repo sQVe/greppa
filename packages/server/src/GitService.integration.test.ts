@@ -9,6 +9,7 @@ import {
   GitService,
   GitServiceLive,
   MergeBaseError,
+  parseCommitLog,
   parseNameStatus,
   RepoPath,
   ResolveRefError,
@@ -95,6 +96,47 @@ describe('GitService', () => {
         { path: 'a.ts', changeType: 'modified' },
         { path: 'b.ts', changeType: 'added' },
       ]);
+    });
+  });
+
+  describe('parseCommitLog', () => {
+    it('parses a single commit', () => {
+      const output = 'abc123full\x1fabc123\x1ffix: some bug\x1fAlice\x1f2026-04-03T10:00:00+00:00';
+      expect(parseCommitLog(output)).toEqual([
+        {
+          sha: 'abc123full',
+          abbrevSha: 'abc123',
+          subject: 'fix: some bug',
+          author: 'Alice',
+          date: '2026-04-03T10:00:00+00:00',
+        },
+      ]);
+    });
+
+    it('parses multiple commits', () => {
+      const output = [
+        'sha1\x1fab1\x1ffeat: first\x1fAlice\x1f2026-04-03T10:00:00+00:00',
+        'sha2\x1fab2\x1ffix: second\x1fBob\x1f2026-04-02T09:00:00+00:00',
+      ].join('\n');
+
+      expect(parseCommitLog(output)).toEqual([
+        { sha: 'sha1', abbrevSha: 'ab1', subject: 'feat: first', author: 'Alice', date: '2026-04-03T10:00:00+00:00' },
+        { sha: 'sha2', abbrevSha: 'ab2', subject: 'fix: second', author: 'Bob', date: '2026-04-02T09:00:00+00:00' },
+      ]);
+    });
+
+    it('skips empty lines', () => {
+      const output = 'sha1\x1fab1\x1ffeat: first\x1fAlice\x1f2026-04-03T10:00:00+00:00\n\n';
+      expect(parseCommitLog(output)).toHaveLength(1);
+    });
+
+    it('returns empty array for empty input', () => {
+      expect(parseCommitLog('')).toEqual([]);
+    });
+
+    it('skips malformed lines with wrong field count', () => {
+      const output = 'sha1\x1fab1\x1fincomplete';
+      expect(parseCommitLog(output)).toEqual([]);
     });
   });
 
@@ -213,6 +255,32 @@ describe('GitService', () => {
         expect(['added', 'modified', 'deleted', 'renamed']).toContain(entry.changeType);
         expect(entry.path).toBeTruthy();
       }
+    });
+  });
+
+  describe.runIf(parentSha != null && headSha != null)('listCommits', () => {
+    it('returns commits between two refs', async () => {
+      const result = await runGitService((git) => git.listCommits('HEAD~3', 'HEAD'));
+
+      expect(result.length).toBeGreaterThan(0);
+      for (const entry of result) {
+        expect(entry.sha).toMatch(/^[0-9a-f]{40}$/);
+        expect(entry.abbrevSha.length).toBeGreaterThan(0);
+        expect(entry.subject.length).toBeGreaterThan(0);
+        expect(entry.author.length).toBeGreaterThan(0);
+        expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      }
+    });
+
+    it('returns empty array when refs are identical', async () => {
+      const result = await runGitService((git) => git.listCommits('HEAD', 'HEAD'));
+      expect(result).toEqual([]);
+    });
+
+    it('rejects refs starting with a dash', async () => {
+      await expect(
+        runGitService((git) => git.listCommits('--output=/tmp/pwned', 'HEAD')),
+      ).rejects.toThrow('Invalid ref');
     });
   });
 

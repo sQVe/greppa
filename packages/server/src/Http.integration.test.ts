@@ -131,6 +131,36 @@ describe('Http', () => {
     });
   });
 
+  describe.runIf(parentSha != null && headSha != null)('GET /api/commits', () => {
+    const oldRef = parentSha ?? '';
+    const newRef = headSha ?? '';
+
+    it('returns commit list for valid refs', async () => {
+      const response = await handler(
+        new Request(`http://localhost/api/commits?oldRef=${oldRef}&newRef=${newRef}`),
+      );
+
+      expect(response.status).toBe(200);
+      const body: unknown = await response.json();
+      expect(Array.isArray(body)).toBe(true);
+      const entries = body as Record<string, unknown>[];
+      expect(entries.length).toBeGreaterThan(0);
+      expect(entries[0]).toHaveProperty('sha');
+      expect(entries[0]).toHaveProperty('abbrevSha');
+      expect(entries[0]).toHaveProperty('subject');
+      expect(entries[0]).toHaveProperty('author');
+      expect(entries[0]).toHaveProperty('date');
+    });
+
+    it('returns 500 for invalid ref', async () => {
+      const response = await handler(
+        new Request('http://localhost/api/commits?oldRef=HEAD&newRef=invalid-xxx'),
+      );
+
+      expect(response.status).toBe(500);
+    });
+  });
+
   describe('GET /api/refs', () => {
     it('returns refs from config', async () => {
       const response = await handler(new Request('http://localhost/api/refs'));

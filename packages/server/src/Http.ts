@@ -119,6 +119,15 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
   }),
 );
 
+const CommitsHandlers = HttpApiBuilder.group(Api, 'commits', (handlers) =>
+  Effect.gen(function* () {
+    const git = yield* GitService;
+    return handlers.handle('getCommits', ({ query }) =>
+      git.listCommits(query.oldRef, query.newRef),
+    );
+  }),
+);
+
 const RefsHandlers = HttpApiBuilder.group(Api, 'refs', (handlers) =>
   Effect.gen(function* () {
     const refs = yield* RefsConfig;
@@ -196,6 +205,7 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(FilesHandlers),
   Layer.provide(DiffHandlers),
   Layer.provide(RefsHandlers),
+  Layer.provide(CommitsHandlers),
   Layer.provide(WorktreeFilesHandlers),
   Layer.provide(WorktreeDiffHandlers),
 );

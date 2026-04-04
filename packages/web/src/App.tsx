@@ -15,6 +15,8 @@ import { buildDiffFile } from './hooks/buildDiffFile';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
+import { useCommitList } from './hooks/useCommitList';
+import { useCommitSelection } from './hooks/useCommitSelection';
 import { useFileList } from './hooks/useFileList';
 import { useFileSelectionHandlers } from './hooks/useFileSelectionHandlers';
 import { useMultiSelect } from './hooks/useMultiSelect';
@@ -22,7 +24,7 @@ import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
-import { useFileSelection } from './useFileSelection';
+import { collectFiles, useFileSelection } from './useFileSelection';
 import type { FileSource } from './useFileSelection';
 
 import styles from './App.module.css';
@@ -195,6 +197,17 @@ export const App = () => {
 
   const multiSelect = useMultiSelect();
 
+  const { commits } = useCommitList(oldRef ?? '', newRef ?? '');
+  const commitSelection = useCommitSelection(commits);
+
+  const handleSelectCommit = useCallback(
+    (sha: string, shiftKey: boolean) => {
+      multiSelect.clear();
+      commitSelection.selectCommit(sha, shiftKey);
+    },
+    [multiSelect, commitSelection],
+  );
+
   const {
     committedFilePaths,
     worktreeFilePaths,
@@ -212,7 +225,29 @@ export const App = () => {
     selectWorktreeFile,
   );
 
-  const selectedDiffs = useSelectedDiffs({
+  const clearCommitsOnFileSelect = useCallback(
+    <T extends unknown[]>(handler: (...args: T) => void) =>
+      (...args: T) => {
+        commitSelection.clear();
+        handler(...args);
+      },
+    [commitSelection],
+  );
+
+  const commitDiffRange = commitSelection.diffRange;
+  const commitFilePaths = useFileList(commitDiffRange?.oldRef ?? '', commitDiffRange?.newRef ?? '');
+  const commitFilePathsList = useMemo(
+    () => (commitFilePaths.files != null ? collectFiles(commitFilePaths.files).map((f) => f.path) : []),
+    [commitFilePaths.files],
+  );
+  const commitDiffs = useComputedDiffs(
+    commitSelection.isActive ? commitFilePathsList : [],
+    'committed',
+    commitDiffRange?.oldRef ?? '',
+    commitDiffRange?.newRef ?? '',
+  );
+
+  const fileDiffs = useSelectedDiffs({
     selectedFilePath,
     selectedSource,
     oldRef: oldRef ?? '',
@@ -222,6 +257,8 @@ export const App = () => {
     committedFilePaths,
     worktreeFilePaths,
   });
+
+  const selectedDiffs = commitSelection.isActive ? commitDiffs : fileDiffs;
 
   if (refsLoading || refsError) {
     return <div className={styles.app} />;
@@ -248,16 +285,19 @@ export const App = () => {
           <FileTreePanel
             committedFiles={files}
             worktreeFiles={worktreeFiles ?? []}
+            commits={commits}
             selectedPaths={multiSelect.selectedPaths}
             selectedSource={multiSelect.activeSource}
+            selectedCommitShas={commitSelection.selectedShas}
             committedExpandedKeys={expandedKeys}
             worktreeExpandedKeys={worktreeExpandedKeys}
-            onSelectCommittedFile={handleSelectCommittedFile}
-            onSelectWorktreeFile={handleSelectWorktreeFile}
-            onSelectAllCommitted={handleSelectAllCommitted}
-            onSelectAllWorktree={handleSelectAllWorktree}
-            onSelectCommittedDirectory={handleSelectCommittedDirectory}
-            onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
+            onSelectCommittedFile={clearCommitsOnFileSelect(handleSelectCommittedFile)}
+            onSelectWorktreeFile={clearCommitsOnFileSelect(handleSelectWorktreeFile)}
+            onSelectAllCommitted={clearCommitsOnFileSelect(handleSelectAllCommitted)}
+            onSelectAllWorktree={clearCommitsOnFileSelect(handleSelectAllWorktree)}
+            onSelectCommittedDirectory={clearCommitsOnFileSelect(handleSelectCommittedDirectory)}
+            onSelectWorktreeDirectory={clearCommitsOnFileSelect(handleSelectWorktreeDirectory)}
+            onSelectCommit={handleSelectCommit}
             onCommittedExpandedKeysChange={handleExpandedKeysChange}
             onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
           />

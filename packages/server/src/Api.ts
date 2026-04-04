@@ -1,5 +1,6 @@
 import { HttpApi } from 'effect/unstable/httpapi';
 
+import { CommitsApi } from './CommitsApi';
 import { DiffApi } from './DiffApi';
 import { FilesApi } from './FilesApi';
 import { HealthApi } from './HealthApi';
@@ -12,5 +13,6 @@ export class Api extends HttpApi.make('greppa')
   .add(FilesApi)
   .add(DiffApi)
   .add(RefsApi)
+  .add(CommitsApi)
   .add(WorktreeFilesApi)
   .add(WorktreeDiffApi) {}

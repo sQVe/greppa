@@ -33,7 +33,7 @@ describe('useCommitSelection', () => {
   it('selects a single commit on click without shift', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
-    act(() => { result.current.selectCommit('bbb', false); });
+    act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: false }); });
 
     expect(result.current.selectedShas).toEqual(new Set(['bbb']));
     expect(result.current.isActive).toBe(true);
@@ -42,8 +42,8 @@ describe('useCommitSelection', () => {
   it('replaces selection on click without shift', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
-    act(() => { result.current.selectCommit('aaa', false); });
-    act(() => { result.current.selectCommit('ccc', false); });
+    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    act(() => { result.current.selectCommit('ccc', { shiftKey: false, metaKey: false }); });
 
     expect(result.current.selectedShas).toEqual(new Set(['ccc']));
   });
@@ -51,8 +51,8 @@ describe('useCommitSelection', () => {
   it('selects range on shift+click', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
-    act(() => { result.current.selectCommit('aaa', false); });
-    act(() => { result.current.selectCommit('ccc', true); });
+    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    act(() => { result.current.selectCommit('ccc', { shiftKey: true, metaKey: false }); });
 
     expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb', 'ccc']));
   });
@@ -60,8 +60,8 @@ describe('useCommitSelection', () => {
   it('selects range in reverse order on shift+click', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
-    act(() => { result.current.selectCommit('ccc', false); });
-    act(() => { result.current.selectCommit('aaa', true); });
+    act(() => { result.current.selectCommit('ccc', { shiftKey: false, metaKey: false }); });
+    act(() => { result.current.selectCommit('aaa', { shiftKey: true, metaKey: false }); });
 
     expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb', 'ccc']));
   });
@@ -69,7 +69,7 @@ describe('useCommitSelection', () => {
   it('computes diffRange for single commit', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
-    act(() => { result.current.selectCommit('bbb', false); });
+    act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: false }); });
 
     expect(result.current.diffRange).toEqual({
       oldRef: 'bbb~1',
@@ -80,8 +80,8 @@ describe('useCommitSelection', () => {
   it('computes diffRange for commit range', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
-    act(() => { result.current.selectCommit('aaa', false); });
-    act(() => { result.current.selectCommit('ccc', true); });
+    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    act(() => { result.current.selectCommit('ccc', { shiftKey: true, metaKey: false }); });
 
     expect(result.current.diffRange).toEqual({
       oldRef: 'ccc~1',
@@ -92,7 +92,7 @@ describe('useCommitSelection', () => {
   it('clears selection', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
-    act(() => { result.current.selectCommit('aaa', false); });
+    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
     act(() => { result.current.clear(); });
 
     expect(result.current.selectedShas.size).toBe(0);

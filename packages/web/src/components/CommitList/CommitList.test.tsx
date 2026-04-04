@@ -41,7 +41,7 @@ describe('CommitList', () => {
 
     await user.click(screen.getByText('feat: first commit'));
 
-    expect(onSelectCommit).toHaveBeenCalledWith('aaa111', false);
+    expect(onSelectCommit).toHaveBeenCalledWith('aaa111', { shiftKey: false, metaKey: false });
   });
 
   it('calls onSelectCommit with shiftKey=true on shift+click', async () => {
@@ -53,7 +53,7 @@ describe('CommitList', () => {
     await user.click(screen.getByText('fix: second commit'));
     await user.keyboard('{/Shift}');
 
-    expect(onSelectCommit).toHaveBeenCalledWith('bbb222', true);
+    expect(onSelectCommit).toHaveBeenCalledWith('bbb222', { shiftKey: true, metaKey: false });
   });
 
   it('highlights selected commits', () => {

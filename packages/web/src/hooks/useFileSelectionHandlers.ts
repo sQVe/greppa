@@ -4,13 +4,26 @@ import type { FileNode } from '../fixtures/types';
 import type { useMultiSelect } from './useMultiSelect';
 import { collectDescendantFilePaths, collectFiles } from '../useFileSelection';
 
-export const useFileSelectionHandlers = (
-  files: FileNode[],
-  worktreeFiles: FileNode[],
-  multiSelect: ReturnType<typeof useMultiSelect>,
-  selectCommittedFile: (path: string) => void,
-  selectWorktreeFile: (path: string) => void,
-) => {
+interface SelectModifiers {
+  shiftKey: boolean;
+  metaKey: boolean;
+}
+
+interface FileSelectionHandlersOptions {
+  files: FileNode[];
+  worktreeFiles: FileNode[];
+  multiSelect: ReturnType<typeof useMultiSelect>;
+  selectCommittedFile: (path: string) => void;
+  selectWorktreeFile: (path: string) => void;
+}
+
+export const useFileSelectionHandlers = ({
+  files,
+  worktreeFiles,
+  multiSelect,
+  selectCommittedFile,
+  selectWorktreeFile,
+}: FileSelectionHandlersOptions) => {
   const committedFilePaths = useMemo(
     () => collectFiles(files).map((f) => f.path),
     [files],
@@ -33,8 +46,13 @@ export const useFileSelectionHandlers = (
   );
 
   const handleSelectCommittedFile = useCallback(
-    (path: string, shiftKey: boolean) => {
-      if (shiftKey) {
+    (path: string, modifiers: SelectModifiers) => {
+      if (modifiers.shiftKey) {
+        multiSelect.selectRange(path, committedFilePaths, 'committed');
+        return;
+      }
+
+      if (modifiers.metaKey) {
         const isFile = allCommittedFilePaths.has(path);
         if (isFile) {
           multiSelect.toggle(path, 'committed');
@@ -44,12 +62,13 @@ export const useFileSelectionHandlers = (
             multiSelect.toggleAll(children, 'committed');
           }
         }
-      } else {
-        multiSelect.select(path, 'committed');
-        selectCommittedFile(path);
+        return;
       }
+
+      multiSelect.select(path, 'committed');
+      selectCommittedFile(path);
     },
-    [allCommittedFilePaths, files, multiSelect, selectCommittedFile],
+    [allCommittedFilePaths, committedFilePaths, files, multiSelect, selectCommittedFile],
   );
 
   const handleSelectCommittedDirectory = useCallback(
@@ -68,8 +87,13 @@ export const useFileSelectionHandlers = (
   );
 
   const handleSelectWorktreeFile = useCallback(
-    (path: string, shiftKey: boolean) => {
-      if (shiftKey) {
+    (path: string, modifiers: SelectModifiers) => {
+      if (modifiers.shiftKey) {
+        multiSelect.selectRange(path, worktreeFilePaths, 'worktree');
+        return;
+      }
+
+      if (modifiers.metaKey) {
         const isFile = allWorktreeFilePaths.has(path);
         if (isFile) {
           multiSelect.toggle(path, 'worktree');
@@ -79,12 +103,13 @@ export const useFileSelectionHandlers = (
             multiSelect.toggleAll(children, 'worktree');
           }
         }
-      } else {
-        multiSelect.select(path, 'worktree');
-        selectWorktreeFile(path);
+        return;
       }
+
+      multiSelect.select(path, 'worktree');
+      selectWorktreeFile(path);
     },
-    [allWorktreeFilePaths, worktreeFiles, multiSelect, selectWorktreeFile],
+    [allWorktreeFilePaths, worktreeFilePaths, worktreeFiles, multiSelect, selectWorktreeFile],
   );
 
   const handleSelectWorktreeDirectory = useCallback(

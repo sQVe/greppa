@@ -61,12 +61,9 @@ const getFileList = (oldRef: string, newRef: string) =>
   });
 
 const FilesHandlers = HttpApiBuilder.group(Api, 'files', (handlers) =>
-  Effect.gen(function* () {
-    const refs = yield* RefsConfig;
-    return handlers.handle('getFiles', ({ query }) =>
-      getFileList(refs.mergeBaseRef, query.newRef),
-    );
-  }),
+  Effect.succeed(handlers.handle('getFiles', ({ query }) =>
+    getFileList(query.oldRef, query.newRef),
+  )),
 );
 
 const extractFilePath = (url: string, oldRef: string, newRef: string) => {
@@ -79,7 +76,6 @@ const extractFilePath = (url: string, oldRef: string, newRef: string) => {
 const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
   Effect.gen(function* () {
     const git = yield* GitService;
-    const refs = yield* RefsConfig;
 
     const handleGetDiff = (params: { oldRef: string; newRef: string }, requestUrl: string) => {
       const { oldRef, newRef } = params;
@@ -90,7 +86,7 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
       }
 
       return Effect.gen(function* () {
-        const entries = yield* getFileList(refs.mergeBaseRef, newRef);
+        const entries = yield* getFileList(oldRef, newRef);
         const matchesPath = (entry: FileEntry) => entry.path === filePath;
         const entry = entries.find(matchesPath);
         if (entry == null) {
@@ -99,7 +95,7 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
         const changeType = entry.changeType;
 
         const oldContent =
-          changeType === 'added' ? '' : yield* git.getFileContent(refs.mergeBaseRef, entry.oldPath ?? filePath);
+          changeType === 'added' ? '' : yield* git.getFileContent(oldRef, entry.oldPath ?? filePath);
         const newContent =
           changeType === 'deleted' ? '' : yield* git.getFileContent(newRef, filePath);
 
@@ -132,7 +128,7 @@ const RefsHandlers = HttpApiBuilder.group(Api, 'refs', (handlers) =>
   Effect.gen(function* () {
     const refs = yield* RefsConfig;
     return handlers.handle('getRefs', () =>
-      Effect.succeed({ oldRef: refs.oldRef, newRef: refs.newRef }),
+      Effect.succeed({ oldRef: refs.mergeBaseRef, newRef: refs.newRef }),
     );
   }),
 );
@@ -163,41 +159,41 @@ const extractWorktreeFilePath = (url: string) => {
   return decoded.slice(prefix.length);
 };
 
-const WorktreeDiffHandlers = HttpApiBuilder.group(Api, 'worktreeDiff', (handlers) =>
+const handleGetWorktreeDiff = (filePath: string) =>
   Effect.gen(function* () {
     const git = yield* GitService;
+    const entries = yield* getWorktreeFileList();
+    const entry = entries.find((e) => e.path === filePath);
+    if (entry == null) {
+      return yield* Effect.fail(
+        new GitError({ message: `File not found in working tree: ${filePath}` }),
+      );
+    }
 
-    return handlers.handle('getWorktreeDiff', ({ request }) => {
-      const filePath = extractWorktreeFilePath(request.url);
+    const oldContent =
+      entry.changeType === 'added' ? '' : yield* git.getFileContent('HEAD', entry.oldPath ?? filePath);
+    const newContent =
+      entry.changeType === 'deleted' ? '' : yield* git.getWorkingTreeFileContent(filePath);
 
-      if (filePath === '') {
-        return Effect.fail(new GitError({ message: 'File path is required' }));
-      }
+    return {
+      path: filePath,
+      changeType: entry.changeType,
+      ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}),
+      oldContent,
+      newContent,
+    };
+  });
 
-      return Effect.gen(function* () {
-        const entries = yield* getWorktreeFileList();
-        const entry = entries.find((e) => e.path === filePath);
-        if (entry == null) {
-          return yield* Effect.fail(
-            new GitError({ message: `File not found in working tree: ${filePath}` }),
-          );
-        }
+const WorktreeDiffHandlers = HttpApiBuilder.group(Api, 'worktreeDiff', (handlers) =>
+  Effect.succeed(handlers.handle('getWorktreeDiff', ({ request }) => {
+    const filePath = extractWorktreeFilePath(request.url);
 
-        const oldContent =
-          entry.changeType === 'added' ? '' : yield* git.getFileContent('HEAD', entry.oldPath ?? filePath);
-        const newContent =
-          entry.changeType === 'deleted' ? '' : yield* git.getWorkingTreeFileContent(filePath);
+    if (filePath === '') {
+      return Effect.fail(new GitError({ message: 'File path is required' }));
+    }
 
-        return {
-          path: filePath,
-          changeType: entry.changeType,
-          ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}),
-          oldContent,
-          newContent,
-        };
-      });
-    });
-  }),
+    return handleGetWorktreeDiff(filePath);
+  })),
 );
 
 export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(

@@ -3,7 +3,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 
 import { Badge, EmptyState } from '@greppa/ui';
 
 import type { ChangeType, DiffFile } from '../../fixtures/types';
-import { DiffViewer } from '../DiffViewer/DiffViewer';
+import { LazyDiffViewer } from './LazyDiffViewer';
 
 import styles from './StackedDiffViewer.module.css';
 
@@ -97,7 +97,7 @@ export const StackedDiffViewer = forwardRef<StackedDiffViewerHandle, StackedDiff
                 {reviewedPaths?.has(diff.path) ? '\u2713 Reviewed' : 'Mark reviewed'}
               </button>
             </div>
-            <DiffViewer diff={diff} />
+            <LazyDiffViewer diff={diff} />
             {index < diffs.length - 1 ? (
               <div className={styles.separator} data-testid="file-separator" />
             ) : null}

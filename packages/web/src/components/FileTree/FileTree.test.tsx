@@ -79,7 +79,7 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn();
     render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
     await userEvent.click(screen.getByText('validateToken.ts'));
-    expect(onSelectFile).toHaveBeenCalledWith('src/auth/validateToken.ts', false);
+    expect(onSelectFile).toHaveBeenCalledWith('src/auth/validateToken.ts', { shiftKey: false, metaKey: false });
   });
 
   it('calls onSelectFile with shiftKey true when shift-clicking', async () => {
@@ -89,7 +89,7 @@ describe('FileTree', () => {
     await user.keyboard('{Shift>}');
     await user.click(screen.getByText('rateLimiter.ts'));
     await user.keyboard('{/Shift}');
-    expect(onSelectFile).toHaveBeenCalledWith('src/middleware/rateLimiter.ts', true);
+    expect(onSelectFile).toHaveBeenCalledWith('src/middleware/rateLimiter.ts', { shiftKey: true, metaKey: false });
   });
 
   it('highlights all paths in selectedPaths', () => {
@@ -171,14 +171,14 @@ describe('FileTree', () => {
     expect(keys.has('src/middleware')).toBe(true);
   });
 
-  it('calls onSelectDirectory when cmd-clicking a directory', async () => {
+  it('calls onSelectFile with metaKey when cmd-clicking a directory', async () => {
     const user = userEvent.setup();
-    const onSelectDirectory = vi.fn();
-    render(<FileTree {...defaultProps} onSelectDirectory={onSelectDirectory} />);
+    const onSelectFile = vi.fn();
+    render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
     await user.keyboard('{Meta>}');
     await user.click(screen.getByText('auth'));
     await user.keyboard('{/Meta}');
-    expect(onSelectDirectory).toHaveBeenCalledWith('src/auth');
+    expect(onSelectFile).toHaveBeenCalledWith('src/auth', { shiftKey: false, metaKey: true });
   });
 
   it('does not call onSelectDirectory when cmd-clicking a file', async () => {
@@ -191,14 +191,14 @@ describe('FileTree', () => {
     expect(onSelectDirectory).not.toHaveBeenCalled();
   });
 
-  it('calls onSelectFile with shiftKey when shift-clicking a directory', async () => {
+  it('calls onSelectDirectory when shift-clicking a directory', async () => {
     const user = userEvent.setup();
-    const onSelectFile = vi.fn();
-    render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
+    const onSelectDirectory = vi.fn();
+    render(<FileTree {...defaultProps} onSelectDirectory={onSelectDirectory} />);
     await user.keyboard('{Shift>}');
     await user.click(screen.getByText('auth'));
     await user.keyboard('{/Shift}');
-    expect(onSelectFile).toHaveBeenCalledWith('src/auth', true);
+    expect(onSelectDirectory).toHaveBeenCalledWith('src/auth');
   });
 
   it('expands a collapsed directory when clicked', async () => {

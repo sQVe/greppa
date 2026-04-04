@@ -201,9 +201,9 @@ export const App = () => {
   const commitSelection = useCommitSelection(commits);
 
   const handleSelectCommit = useCallback(
-    (sha: string, shiftKey: boolean) => {
+    (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => {
       multiSelect.clear();
-      commitSelection.selectCommit(sha, shiftKey);
+      commitSelection.selectCommit(sha, modifiers);
     },
     [multiSelect, commitSelection],
   );
@@ -217,13 +217,13 @@ export const App = () => {
     handleSelectWorktreeFile,
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
-  } = useFileSelectionHandlers(
+  } = useFileSelectionHandlers({
     files,
-    worktreeFiles ?? [],
+    worktreeFiles: worktreeFiles ?? [],
     multiSelect,
     selectCommittedFile,
     selectWorktreeFile,
-  );
+  });
 
   const clearCommitsOnFileSelect = useCallback(
     <T extends unknown[]>(handler: (...args: T) => void) =>

@@ -10,7 +10,7 @@ interface FileTreeProps {
   files: FileNode[];
   selectedPaths: Set<string>;
   expandedKeys: Iterable<string>;
-  onSelectFile: (path: string, shiftKey: boolean) => void;
+  onSelectFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectDirectory?: (path: string) => void;
   onExpandedKeysChange: (keys: Set<string | number>) => void;
 }
@@ -49,10 +49,11 @@ export const FileTree = ({
         id={node.path}
         textValue={label}
         onPointerDown={(event) => {
+          const metaKey = event.metaKey || event.ctrlKey;
           if (isDirectory) {
-            if (event.shiftKey) {
-              onSelectFile(node.path, true);
-            } else if (event.metaKey || event.ctrlKey) {
+            if (metaKey) {
+              onSelectFile(node.path, { shiftKey: false, metaKey: true });
+            } else if (event.shiftKey) {
               onSelectDirectory?.(node.path);
             } else {
               const keys = new Set<string | number>(expandedKeysRef.current);
@@ -65,7 +66,7 @@ export const FileTree = ({
             }
             return;
           }
-          onSelectFile(node.path, event.shiftKey);
+          onSelectFile(node.path, { shiftKey: event.shiftKey, metaKey });
         }}
       >
         <Tree.ItemContent>

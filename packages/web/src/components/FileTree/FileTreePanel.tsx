@@ -31,13 +31,13 @@ interface FileTreePanelProps {
   selectedCommitShas: Set<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
-  onSelectCommittedFile: (path: string, shiftKey: boolean) => void;
-  onSelectWorktreeFile: (path: string, shiftKey: boolean) => void;
+  onSelectCommittedFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
+  onSelectWorktreeFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectAllCommitted: () => void;
   onSelectAllWorktree: () => void;
   onSelectCommittedDirectory: (path: string) => void;
   onSelectWorktreeDirectory: (path: string) => void;
-  onSelectCommit: (sha: string, shiftKey: boolean) => void;
+  onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
 }
@@ -78,21 +78,27 @@ export const FileTreePanel = ({
   const committedCount = collectFiles(committedFiles).length;
   const worktreeCount = collectFiles(worktreeFiles).length;
 
+  const sectionRefs = [committedBodyRef, worktreeBodyRef, commitsBodyRef];
+
   const lockScroll = () => {
-    if (committedBodyRef.current) {
-      committedBodyRef.current.style.overflowY = 'hidden';
-    }
-    if (worktreeBodyRef.current) {
-      worktreeBodyRef.current.style.overflowY = 'hidden';
-    }
-    if (commitsBodyRef.current) {
-      commitsBodyRef.current.style.overflowY = 'hidden';
+    for (const ref of sectionRefs) {
+      if (ref.current) {
+        ref.current.style.overflowY = 'hidden';
+      }
     }
   };
 
   const toggleSection = (section: string) => {
     lockScroll();
     setExpandedSection(section);
+  };
+
+  const handleSectionClick = (section: string, onSelectAll?: () => void) => {
+    if (expandedSection === section && onSelectAll) {
+      onSelectAll();
+    } else {
+      toggleSection(section);
+    }
   };
 
   const handleExpandComplete = (section: string) => {
@@ -119,13 +125,7 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() => {
-              if (expandedSection === 'committed') {
-                onSelectAllCommitted();
-              } else {
-                toggleSection('committed');
-              }
-            }}
+            onClick={() => { handleSectionClick('committed', onSelectAllCommitted); }}
           >
             <motion.span
               className={styles.sectionChevron}
@@ -168,13 +168,7 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() => {
-              if (expandedSection === 'worktree') {
-                onSelectAllWorktree();
-              } else {
-                toggleSection('worktree');
-              }
-            }}
+            onClick={() => { handleSectionClick('worktree', onSelectAllWorktree); }}
           >
             <motion.span
               className={styles.sectionChevron}
@@ -217,9 +211,7 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() => {
-              toggleSection('commits');
-            }}
+            onClick={() => { handleSectionClick('commits'); }}
           >
             <motion.span
               className={styles.sectionChevron}

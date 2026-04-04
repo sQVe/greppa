@@ -15,6 +15,7 @@
   cursor: pointer;
   text-align: left;
   font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-xs);
   transition: background 80ms;
 }
 
@@ -25,8 +26,16 @@
 .item[data-selected='true'] {
   background: color-mix(
     in srgb,
-    var(--gr-color-accent-blue) 12%,
-    var(--gr-color-bg)
+    var(--gr-color-bg-interactive) 6%,
+    var(--gr-color-bg-default)
+  );
+}
+
+.list:focus-within .item[data-selected='true'] {
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-interactive) 12%,
+    var(--gr-color-bg-default)
   );
 }
 
@@ -42,7 +51,6 @@
 }
 
 .subject {
-  font-size: var(--gr-text-xs);
   color: var(--gr-color-text);
   flex: 1;
   overflow: hidden;

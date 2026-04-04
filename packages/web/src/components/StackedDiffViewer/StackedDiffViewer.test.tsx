@@ -23,10 +23,15 @@ const fakeEntry = (target: Element): IntersectionObserverEntry => ({
 });
 
 class MockIntersectionObserver {
+  _callback: IntersectionObserverCallback;
   constructor(callback: IntersectionObserverCallback) {
     intersectionCallback = callback;
+    this._callback = callback;
   }
-  observe = mockObserve;
+  observe = (target: Element) => {
+    mockObserve(target);
+    this._callback([fakeEntry(target)], this as unknown as IntersectionObserver);
+  };
   disconnect = mockDisconnect;
   unobserve = vi.fn();
 }

@@ -136,6 +136,77 @@ describe('useMultiSelect', () => {
     });
   });
 
+  describe('selectRange', () => {
+    it('selects all paths between anchor and target inclusive', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.select('b.ts', 'committed'); });
+      act(() => { result.current.selectRange('d.ts', ordered, 'committed'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['b.ts', 'c.ts', 'd.ts']));
+    });
+
+    it('selects range in reverse direction', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.select('d.ts', 'committed'); });
+      act(() => { result.current.selectRange('b.ts', ordered, 'committed'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['b.ts', 'c.ts', 'd.ts']));
+    });
+
+    it('selects only target when no anchor exists', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.selectRange('b.ts', ordered, 'committed'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['b.ts']));
+    });
+
+    it('preserves anchor for subsequent range selections', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.select('b.ts', 'committed'); });
+      act(() => { result.current.selectRange('d.ts', ordered, 'committed'); });
+      act(() => { result.current.selectRange('e.ts', ordered, 'committed'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['b.ts', 'c.ts', 'd.ts', 'e.ts']));
+    });
+
+    it('resets selection when source changes', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.select('a.ts', 'committed'); });
+      act(() => { result.current.selectRange('c.ts', ordered, 'worktree'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['c.ts']));
+      expect(result.current.activeSource).toBe('worktree');
+    });
+  });
+
+  describe('anchor tracking', () => {
+    it('sets anchor on select', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.select('a.ts', 'committed'); });
+      act(() => { result.current.selectRange('c.ts', ordered, 'committed'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['a.ts', 'b.ts', 'c.ts']));
+    });
+
+    it('sets anchor on toggle', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts', 'd.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.select('a.ts', 'committed'); });
+      act(() => { result.current.toggle('c.ts', 'committed'); });
+      act(() => { result.current.selectRange('d.ts', ordered, 'committed'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['c.ts', 'd.ts']));
+    });
+
+    it('clears anchor on clear', () => {
+      const ordered = ['a.ts', 'b.ts', 'c.ts'];
+      const { result } = renderHook(() => useMultiSelect());
+      act(() => { result.current.select('a.ts', 'committed'); });
+      act(() => { result.current.clear(); });
+      act(() => { result.current.selectRange('c.ts', ordered, 'committed'); });
+      expect(result.current.selectedPaths).toEqual(new Set(['c.ts']));
+    });
+  });
+
   describe('clear', () => {
     it('empties the selection', () => {
       const { result } = renderHook(() => useMultiSelect());

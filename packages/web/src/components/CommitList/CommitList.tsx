@@ -31,7 +31,7 @@ const formatRelativeTime = (iso: string): string => {
 interface CommitListProps {
   commits: CommitEntry[];
   selectedShas: Set<string>;
-  onSelectCommit: (sha: string, shiftKey: boolean) => void;
+  onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
 }
 
 export const CommitList = ({ commits, selectedShas, onSelectCommit }: CommitListProps) => (
@@ -43,7 +43,10 @@ export const CommitList = ({ commits, selectedShas, onSelectCommit }: CommitList
         className={styles.item}
         data-selected={selectedShas.has(commit.sha)}
         onClick={(event) => {
-          onSelectCommit(commit.sha, event.shiftKey);
+          onSelectCommit(commit.sha, {
+            shiftKey: event.shiftKey,
+            metaKey: event.metaKey || event.ctrlKey,
+          });
         }}
       >
         <span className={styles.hash}>{commit.abbrevSha}</span>

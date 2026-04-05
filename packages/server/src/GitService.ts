@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 import type { CommitEntry, FileEntry } from '@greppa/core';
@@ -222,8 +222,8 @@ export const GitServiceLive = Layer.succeed(
         Effect.flatMap(() =>
           Effect.gen(function* () {
             const repoPath = yield* RepoPath;
-            return Effect.try({
-              try: () => readFileSync(resolve(repoPath, path), 'utf-8'),
+            return Effect.tryPromise({
+              try: () => readFile(resolve(repoPath, path), 'utf-8'),
               catch: (error) =>
                 new GitError({
                   message: error instanceof Error ? error.message : `Failed to read file: ${path}`,

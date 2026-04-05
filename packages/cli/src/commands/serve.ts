@@ -50,7 +50,10 @@ export const serve = Command.make(
   'serve',
   { port, oldRef: oldRefArg, newRef: newRefArg },
   Effect.fn(function* ({ port: listenPort, oldRef: oldRefOption, newRef: newRefOption }) {
-    const repoRoot = detectRepoRoot();
+    const repoRoot = yield* Effect.try({
+      try: detectRepoRoot,
+      catch: () => new Error('Unable to detect repository root. Run this command inside a Git repository.'),
+    });
     const repoPathLayer = Layer.succeed(RepoPath, repoRoot);
 
     const refsConfig = yield* resolveRefs(oldRefOption, newRefOption).pipe(

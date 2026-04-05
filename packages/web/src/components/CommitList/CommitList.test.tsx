@@ -28,10 +28,10 @@ describe('CommitList', () => {
   it('should render commit items with hash and subject', () => {
     render(<CommitList {...defaultProps} />);
 
-    expect(screen.getByText('aaa')).toBeDefined();
-    expect(screen.getByText('feat: first commit')).toBeDefined();
-    expect(screen.getByText('bbb')).toBeDefined();
-    expect(screen.getByText('fix: second commit')).toBeDefined();
+    screen.getByText('aaa');
+    screen.getByText('feat: first commit');
+    screen.getByText('bbb');
+    screen.getByText('fix: second commit');
   });
 
   it('should call onSelectCommit with sha and shiftKey=false on click', async () => {

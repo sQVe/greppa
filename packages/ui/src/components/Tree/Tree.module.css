@@ -37,6 +37,14 @@
   pointer-events: none;
 }
 
+.item:not(.selected):is([data-hovered], [data-focused]) {
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-interactive) 4%,
+    var(--gr-color-bg-default)
+  );
+}
+
 .item.selected {
   background: color-mix(
     in srgb,

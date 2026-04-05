@@ -66,9 +66,17 @@ const FilesHandlers = HttpApiBuilder.group(Api, 'files', (handlers) =>
   )),
 );
 
+const safeDecodeURIComponent = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new GitError({ message: `Invalid percent-encoded path: ${value}` });
+  }
+};
+
 const extractFilePath = (url: string, oldRef: string, newRef: string) => {
   const parsed = new URL(url, 'http://localhost');
-  const decoded = decodeURIComponent(parsed.pathname);
+  const decoded = safeDecodeURIComponent(parsed.pathname);
   const prefix = `/api/diff/${oldRef}/${newRef}/`;
   return decoded.slice(prefix.length);
 };
@@ -94,10 +102,10 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
         }
         const changeType = entry.changeType;
 
-        const oldContent =
-          changeType === 'added' ? '' : yield* git.getFileContent(oldRef, entry.oldPath ?? filePath);
-        const newContent =
-          changeType === 'deleted' ? '' : yield* git.getFileContent(newRef, filePath);
+        const [oldContent, newContent] = yield* Effect.all([
+          changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
+          changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
+        ]);
 
         return {
           path: filePath,
@@ -128,7 +136,7 @@ const RefsHandlers = HttpApiBuilder.group(Api, 'refs', (handlers) =>
   Effect.gen(function* () {
     const refs = yield* RefsConfig;
     return handlers.handle('getRefs', () =>
-      Effect.succeed({ oldRef: refs.mergeBaseRef, newRef: refs.newRef }),
+      Effect.succeed({ oldRef: refs.oldRef, newRef: refs.newRef, mergeBaseRef: refs.mergeBaseRef }),
     );
   }),
 );
@@ -154,7 +162,7 @@ const WorktreeFilesHandlers = HttpApiBuilder.group(Api, 'worktreeFiles', (handle
 
 const extractWorktreeFilePath = (url: string) => {
   const parsed = new URL(url, 'http://localhost');
-  const decoded = decodeURIComponent(parsed.pathname);
+  const decoded = safeDecodeURIComponent(parsed.pathname);
   const prefix = '/api/worktree/diff/';
   return decoded.slice(prefix.length);
 };
@@ -170,10 +178,10 @@ const handleGetWorktreeDiff = (filePath: string) =>
       );
     }
 
-    const oldContent =
-      entry.changeType === 'added' ? '' : yield* git.getFileContent('HEAD', entry.oldPath ?? filePath);
-    const newContent =
-      entry.changeType === 'deleted' ? '' : yield* git.getWorkingTreeFileContent(filePath);
+    const [oldContent, newContent] = yield* Effect.all([
+      entry.changeType === 'added' ? Effect.succeed('') : git.getFileContent('HEAD', entry.oldPath ?? filePath),
+      entry.changeType === 'deleted' ? Effect.succeed('') : git.getWorkingTreeFileContent(filePath),
+    ]);
 
     return {
       path: filePath,

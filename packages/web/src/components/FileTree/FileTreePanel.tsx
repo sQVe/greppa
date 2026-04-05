@@ -85,6 +85,9 @@ export const FileTreePanel = ({
   };
 
   const toggleSection = (section: string) => {
+    if (section === expandedSection) {
+      return;
+    }
     lockScroll();
     setExpandedSection(section);
   };
@@ -110,9 +113,10 @@ export const FileTreePanel = ({
         <div
           className={`${styles.section} ${expandedSection !== 'committed' ? styles.collapsed : ''}`}
         >
-          <div
+          <button
+            type="button"
             className={styles.sectionHeader}
-            role="button"
+            aria-expanded={expandedSection === 'committed'}
             onClick={() => { toggleSection('committed'); }}
           >
             <motion.span
@@ -128,7 +132,7 @@ export const FileTreePanel = ({
             </span>
             <span className={styles.sectionTitle}>Changes</span>
             <span className={styles.sectionCount}>{committedCount}</span>
-          </div>
+          </button>
           <motion.div
             ref={committedBodyRef}
             className={styles.sectionBody}
@@ -153,9 +157,10 @@ export const FileTreePanel = ({
         <div
           className={`${styles.section} ${expandedSection !== 'worktree' ? styles.collapsed : ''}`}
         >
-          <div
+          <button
+            type="button"
             className={styles.sectionHeader}
-            role="button"
+            aria-expanded={expandedSection === 'worktree'}
             onClick={() => { toggleSection('worktree'); }}
           >
             <motion.span
@@ -171,7 +176,7 @@ export const FileTreePanel = ({
             </span>
             <span className={styles.sectionTitle}>Working tree</span>
             <span className={styles.sectionCount}>{worktreeCount}</span>
-          </div>
+          </button>
           <motion.div
             ref={worktreeBodyRef}
             className={styles.sectionBody}
@@ -196,9 +201,10 @@ export const FileTreePanel = ({
         <div
           className={`${styles.section} ${expandedSection !== 'commits' ? styles.collapsed : ''}`}
         >
-          <div
+          <button
+            type="button"
             className={styles.sectionHeader}
-            role="button"
+            aria-expanded={expandedSection === 'commits'}
             onClick={() => { toggleSection('commits'); }}
           >
             <motion.span
@@ -214,7 +220,7 @@ export const FileTreePanel = ({
             </span>
             <span className={styles.sectionTitle}>Commits</span>
             <span className={styles.sectionCount}>{commits.length}</span>
-          </div>
+          </button>
           <motion.div
             ref={commitsBodyRef}
             className={styles.sectionBody}

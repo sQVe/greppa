@@ -57,13 +57,17 @@ export const useMultiSelect = () => {
   );
 
   const selectAll = useCallback((paths: string[], source: FileSource) => {
-    setState((prev) => ({ paths: new Set(paths), source, anchorPath: prev.anchorPath }));
+    setState((prev) => ({
+      paths: new Set(paths),
+      source,
+      anchorPath: prev.source === source ? prev.anchorPath : null,
+    }));
   }, []);
 
   const toggleAll = useCallback((paths: string[], source: FileSource) => {
     setState((prev) => {
       if (prev.source !== source) {
-        return { paths: new Set(paths), source, anchorPath: prev.anchorPath };
+        return { paths: new Set(paths), source, anchorPath: null };
       }
       const allSelected = paths.every((path) => prev.paths.has(path));
       if (allSelected) {

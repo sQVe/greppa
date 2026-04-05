@@ -166,7 +166,7 @@ describe('Http', () => {
       const response = await handler(new Request('http://localhost/api/refs'));
 
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ oldRef: parentSha ?? '', newRef: 'HEAD' });
+      expect(await response.json()).toEqual({ oldRef: 'main', newRef: 'HEAD', mergeBaseRef: parentSha ?? '' });
     });
   });
 

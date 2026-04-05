@@ -163,14 +163,14 @@ const useSelectedDiffs = ({
 export const App = () => {
   const stackedDiffRef = useRef<StackedDiffViewerHandle>(null);
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
-  const { oldRef, newRef, isLoading: refsLoading, isError: refsError } = useRefs();
+  const { newRef, mergeBaseRef, isLoading: refsLoading, isError: refsError } = useRefs();
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: 'gr-panels',
     panelIds: PANEL_IDS,
   });
 
-  const { files: apiFiles, isError } = useFileList(oldRef ?? '', newRef ?? '');
+  const { files: apiFiles, isError } = useFileList(mergeBaseRef ?? '', newRef ?? '');
   const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
 
   const { files: worktreeFiles } = useWorktreeFiles();
@@ -179,6 +179,8 @@ export const App = () => {
   const {
     expandedKeys: worktreeExpandedKeys,
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
+    reviewedPaths: worktreeReviewedPaths,
+    toggleReviewed: toggleWorktreeReviewed,
   } = useTreeState(worktreeFiles ?? [], 'worktree');
 
   const {
@@ -208,7 +210,7 @@ export const App = () => {
   } = useSelectionCoordinator({
     files,
     worktreeFiles: worktreeFiles ?? [],
-    oldRef: oldRef ?? '',
+    oldRef: mergeBaseRef ?? '',
     newRef: newRef ?? '',
     selectCommittedFile,
     selectWorktreeFile,
@@ -217,7 +219,7 @@ export const App = () => {
   const fileDiffs = useSelectedDiffs({
     selectedFilePath,
     selectedSource,
-    oldRef: oldRef ?? '',
+    oldRef: mergeBaseRef ?? '',
     newRef: newRef ?? '',
     fixtureDiff,
     multiSelect,
@@ -278,8 +280,8 @@ export const App = () => {
             <StackedDiffViewer
               ref={stackedDiffRef}
               diffs={selectedDiffs}
-              reviewedPaths={reviewedPaths}
-              onToggleReviewed={toggleReviewed}
+              reviewedPaths={multiSelect.activeSource === 'worktree' ? worktreeReviewedPaths : reviewedPaths}
+              onToggleReviewed={multiSelect.activeSource === 'worktree' ? toggleWorktreeReviewed : toggleReviewed}
               onActiveFileChange={setActiveFilePath}
             />
           </div>

@@ -16,10 +16,12 @@ export const FileMinimap = ({ diffs, activeFilePath, onSegmentClick }: FileMinim
   return (
     <div className={styles.container}>
       {diffs.map((diff) => (
-        <div
+        <button
+          type="button"
           key={diff.path}
           className={`${styles.segment} ${activeFilePath === diff.path ? styles.active : ''}`}
           style={{ flex: Math.max(diff.hunks.length, 1) }}
+          aria-label={`Scroll to ${diff.path}`}
           data-testid="minimap-segment"
           data-active={activeFilePath === diff.path}
           onClick={() => { onSegmentClick(diff.path); }}

@@ -1,6 +1,5 @@
 import type { DiffResponse } from '@greppa/core';
 import { useQueries } from '@tanstack/react-query';
-import { useMemo } from 'react';
 
 import type { DiffFile } from '../fixtures/types';
 import type { DiffMapping, DiffWorkerResponse } from '../workers/diffProtocol';
@@ -84,7 +83,7 @@ export const useComputedDiffs = (
   oldRef: string,
   newRef: string,
 ): ComputedDiffsResult => {
-  const results = useQueries({
+  return useQueries({
     queries: paths.map((path) => ({
       queryKey:
         source === 'worktree'
@@ -95,24 +94,23 @@ export const useComputedDiffs = (
       retry: false,
       staleTime: source === 'worktree' ? 5_000 : Infinity,
     })),
+    combine: (results) => {
+      const diffs: DiffFile[] = [];
+      const failedPaths: string[] = [];
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result == null) {
+          continue;
+        }
+        if (result.data != null) {
+          diffs.push(result.data);
+        } else if (result.isError) {
+          failedPaths.push(paths[i] ?? '');
+        }
+      }
+
+      return { diffs, failedPaths };
+    },
   });
-
-  return useMemo(() => {
-    const diffs: DiffFile[] = [];
-    const failedPaths: string[] = [];
-
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      if (result == null) {
-        continue;
-      }
-      if (result.data != null) {
-        diffs.push(result.data);
-      } else if (result.isError) {
-        failedPaths.push(paths[i] ?? '');
-      }
-    }
-
-    return { diffs, failedPaths };
-  }, [results, paths]);
 };

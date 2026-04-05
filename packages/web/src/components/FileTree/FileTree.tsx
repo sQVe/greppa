@@ -1,5 +1,5 @@
 import { Badge, FileIcon, Tree } from '@greppa/ui';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 
 import type { ChangeType, FileNode } from '../../fixtures/types';
@@ -37,6 +37,8 @@ export const FileTree = ({
 }: FileTreeProps) => {
   const expandedKeysRef = useRef(expandedKeys);
   expandedKeysRef.current = expandedKeys;
+
+  const directoryPaths = useMemo(() => new Set(collectDirectoryIds(files)), [files]);
 
   const renderItem = (node: FileNode): ReactNode => {
     const isDirectory = node.type === 'directory';
@@ -97,6 +99,23 @@ export const FileTree = ({
       selectedKeys={selectedPaths}
       expandedKeys={expandedKeys}
       onExpandedChange={onExpandedKeysChange}
+      onSelectionChange={(keys) => {
+        if (keys === 'all') {
+          return;
+        }
+        for (const key of keys) {
+          if (typeof key === 'string' && !directoryPaths.has(key) && !selectedPaths.has(key)) {
+            onSelectFile(key, { shiftKey: false, metaKey: false });
+            return;
+          }
+        }
+        for (const key of selectedPaths) {
+          if (!keys.has(key)) {
+            onSelectFile(key, { shiftKey: false, metaKey: false });
+            return;
+          }
+        }
+      }}
     >
       <Tree.Collection items={files}>{renderItem}</Tree.Collection>
     </Tree.Root>

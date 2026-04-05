@@ -1,12 +1,15 @@
 # Routing design
 
+> **Note:** This document describes a proposed/future routing model. The current implementation uses
+> `/file/$` and `/wt/$` routes with commit selection handled in React state.
+
 ## URL structure
 
 Single `/review` route with search params for all selection state. `/` redirects to `/review`. View
 mode is inferred from which param is present — `file`, `wt`, and `commits` are mutually exclusive.
 Switching source clears the previous selection.
 
-```
+```text
 /review                                             landing, no selection
 /review?file=src/App.tsx                            single committed file
 /review?wt=src/hooks/useAuth.ts                     single worktree file
@@ -24,7 +27,7 @@ Switching source clears the previous selection.
 Hash fragment encodes the file to scroll into view within a stacked diff. Optional line anchor with
 `:L{n}`.
 
-```
+```text
 /review?file=src/a.ts&file=src/b.ts#src/b.ts        scroll to b.ts
 /review?file=src/a.ts&file=src/b.ts#src/b.ts:L42    scroll to line 42 of b.ts
 ```
@@ -35,7 +38,7 @@ Hash fragment encodes the file to scroll into view within a stacked diff. Option
 - Single `commits` param with `..` = continuous range (shift+click). All commits between the two
   endpoints.
 
-```
+```text
 ?commits=abc123&commits=def456       exactly these 2 commits
 ?commits=abc123..def456              all commits from abc123 to def456
 ```
@@ -124,7 +127,7 @@ fragments.
 
 Redirect old routes to the new scheme:
 
-```
+```text
 /                              →  /review
 /file/src/utils/parse.ts       →  /review?file=src%2Futils%2Fparse.ts
 /wt/src/hooks/useAuth.ts       →  /review?wt=src%2Fhooks%2FuseAuth.ts

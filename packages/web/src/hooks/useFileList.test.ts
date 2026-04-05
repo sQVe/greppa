@@ -147,6 +147,7 @@ describe('propagateChangeType', () => {
 
     const result = propagateChangeType(nodes);
 
+    expect(result).toHaveLength(1);
     expect(result[0]?.changeType).toBeUndefined();
   });
 

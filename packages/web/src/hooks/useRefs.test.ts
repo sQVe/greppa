@@ -15,7 +15,7 @@ describe('useRefs', () => {
     it('fetches from /api/refs', async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ oldRef: 'main', newRef: 'HEAD' }),
+        json: () => Promise.resolve({ oldRef: 'main', newRef: 'HEAD', mergeBaseRef: 'abc123' }),
       } as Response);
 
       await fetchRefs();
@@ -24,7 +24,7 @@ describe('useRefs', () => {
     });
 
     it('returns parsed response', async () => {
-      const expected = { oldRef: 'main', newRef: 'feature-branch' };
+      const expected = { oldRef: 'main', newRef: 'feature-branch', mergeBaseRef: 'def456' };
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(expected),

@@ -142,7 +142,7 @@ export const useFileSelection = (
     selectCommittedFile,
     selectWorktreeFile,
     reviewedCount: reviewedPaths.size,
-    totalCount: allFiles.length,
+    totalCount: validPaths.size,
     selectedDiff,
     selectedThreads,
     selectedFileInfo,

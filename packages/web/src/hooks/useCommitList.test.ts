@@ -5,14 +5,14 @@ import { fetchCommits } from './useCommitList';
 describe('useCommitList', () => {
   describe('fetchCommits', () => {
     beforeEach(() => {
-      vi.spyOn(globalThis, 'fetch').mockImplementation(vi.fn());
+      vi.spyOn(globalThis, 'fetch');
     });
 
     afterEach(() => {
       vi.restoreAllMocks();
     });
 
-    it('fetches from /api/commits with query params', async () => {
+    it('should fetch from /api/commits with query params', async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve([]),
@@ -23,7 +23,7 @@ describe('useCommitList', () => {
       expect(fetch).toHaveBeenCalledWith('/api/commits?oldRef=main&newRef=HEAD');
     });
 
-    it('returns parsed commit entries', async () => {
+    it('should return parsed commit entries', async () => {
       const expected = [
         { sha: 'abc123', abbrevSha: 'abc', subject: 'feat: thing', author: 'Alice', date: '2026-04-03T10:00:00+00:00' },
       ];
@@ -37,7 +37,7 @@ describe('useCommitList', () => {
       expect(result).toEqual(expected);
     });
 
-    it('throws on non-ok response', async () => {
+    it('should throw on non-ok response', async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: false,
         status: 500,

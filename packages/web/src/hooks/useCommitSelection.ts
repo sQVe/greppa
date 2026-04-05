@@ -34,15 +34,15 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
             return { selectedShas: new Set([sha]), anchorSha: sha };
           }
 
-          const anchorIndex = commits.findIndex((c) => c.sha === anchor);
-          const targetIndex = commits.findIndex((c) => c.sha === sha);
+          const anchorIndex = commits.findIndex((commit) => commit.sha === anchor);
+          const targetIndex = commits.findIndex((commit) => commit.sha === sha);
           if (anchorIndex === -1 || targetIndex === -1) {
             return { selectedShas: new Set([sha]), anchorSha: sha };
           }
 
           const start = Math.min(anchorIndex, targetIndex);
           const end = Math.max(anchorIndex, targetIndex);
-          const rangeShas = new Set(commits.slice(start, end + 1).map((c) => c.sha));
+          const rangeShas = new Set(commits.slice(start, end + 1).map((commit) => commit.sha));
 
           return { selectedShas: rangeShas, anchorSha: anchor };
         });

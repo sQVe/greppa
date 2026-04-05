@@ -62,90 +62,112 @@ afterEach(() => {
 
 describe('useFileSelectionHandlers', () => {
   describe('handleSelectCommittedFile', () => {
-    it('selects file and navigates on plain click', () => {
+    it('should select file and navigate on plain click', () => {
       const { result, selectCommittedFile } = setup();
+
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(new Set(['src/index.ts']));
       expect(result.current.multiSelect.activeSource).toBe('committed');
       expect(selectCommittedFile).toHaveBeenCalledWith('src/index.ts');
     });
 
-    it('toggles file on meta+click', () => {
+    it('should toggle file on meta+click', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+
       act(() => { result.current.handlers.handleSelectCommittedFile('src/utils.ts', META); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['src/index.ts', 'src/utils.ts']),
       );
     });
 
-    it('removes file on meta+click when already selected', () => {
+    it('should remove file on meta+click when already selected', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
       act(() => { result.current.handlers.handleSelectCommittedFile('src/utils.ts', META); });
+
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', META); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(new Set(['src/utils.ts']));
     });
 
-    it('range selects on shift+click', () => {
+    it('should range select on shift+click', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+
       act(() => { result.current.handlers.handleSelectCommittedFile('README.md', SHIFT); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['src/index.ts', 'src/utils.ts', 'README.md']),
       );
     });
 
-    it('does not navigate on shift+click', () => {
+    it('should not navigate on shift+click', () => {
       const { result, selectCommittedFile } = setup();
+
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', SHIFT); });
+
       expect(selectCommittedFile).not.toHaveBeenCalled();
     });
 
-    it('does not navigate on meta+click', () => {
+    it('should not navigate on meta+click', () => {
       const { result, selectCommittedFile } = setup();
+
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', META); });
+
       expect(selectCommittedFile).not.toHaveBeenCalled();
     });
 
-    it('toggles all directory children on meta+click directory', () => {
+    it('should toggle all directory children on meta+click directory', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectCommittedFile('README.md', NO_MODIFIERS); });
+
       act(() => { result.current.handlers.handleSelectCommittedFile('src', META); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['README.md', 'src/index.ts', 'src/utils.ts']),
       );
     });
 
-    it('removes all directory children on meta+click when all already selected', () => {
+    it('should remove all directory children on meta+click when all already selected', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectAllCommitted(); });
+
       act(() => { result.current.handlers.handleSelectCommittedFile('src', META); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(new Set(['README.md']));
     });
   });
 
   describe('handleSelectCommittedDirectory', () => {
-    it('selects all descendant files', () => {
+    it('should select all descendant files', () => {
       const { result } = setup();
+
       act(() => { result.current.handlers.handleSelectCommittedDirectory('src'); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['src/index.ts', 'src/utils.ts']),
       );
       expect(result.current.multiSelect.activeSource).toBe('committed');
     });
 
-    it('does nothing for empty directory', () => {
+    it('should do nothing for empty directory', () => {
       const { result } = setup(emptyDirectory);
+
       act(() => { result.current.handlers.handleSelectCommittedDirectory('empty'); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(new Set());
     });
   });
 
   describe('handleSelectAllCommitted', () => {
-    it('selects all committed files', () => {
+    it('should select all committed files', () => {
       const { result } = setup();
+
       act(() => { result.current.handlers.handleSelectAllCommitted(); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['src/index.ts', 'src/utils.ts', 'README.md']),
       );
@@ -153,36 +175,44 @@ describe('useFileSelectionHandlers', () => {
   });
 
   describe('handleSelectWorktreeFile', () => {
-    it('selects file and navigates with worktree source', () => {
+    it('should select file and navigate with worktree source', () => {
       const { result, selectWorktreeFile } = setup();
+
       act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(new Set(['config.ts']));
       expect(result.current.multiSelect.activeSource).toBe('worktree');
       expect(selectWorktreeFile).toHaveBeenCalledWith('config.ts');
     });
 
-    it('toggles file on meta+click', () => {
+    it('should toggle file on meta+click', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+
       act(() => { result.current.handlers.handleSelectWorktreeFile('lib/helpers.ts', META); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['config.ts', 'lib/helpers.ts']),
       );
     });
 
-    it('range selects on shift+click', () => {
+    it('should range select on shift+click', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+
       act(() => { result.current.handlers.handleSelectWorktreeFile('lib/helpers.ts', SHIFT); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['config.ts', 'lib/helpers.ts']),
       );
     });
 
-    it('toggles all directory children on meta+click directory', () => {
+    it('should toggle all directory children on meta+click directory', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+
       act(() => { result.current.handlers.handleSelectWorktreeFile('lib', META); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['config.ts', 'lib/helpers.ts']),
       );
@@ -190,18 +220,22 @@ describe('useFileSelectionHandlers', () => {
   });
 
   describe('handleSelectWorktreeDirectory', () => {
-    it('selects all descendant files with worktree source', () => {
+    it('should select all descendant files with worktree source', () => {
       const { result } = setup();
+
       act(() => { result.current.handlers.handleSelectWorktreeDirectory('lib'); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(new Set(['lib/helpers.ts']));
       expect(result.current.multiSelect.activeSource).toBe('worktree');
     });
   });
 
   describe('handleSelectAllWorktree', () => {
-    it('selects all worktree files', () => {
+    it('should select all worktree files', () => {
       const { result } = setup();
+
       act(() => { result.current.handlers.handleSelectAllWorktree(); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(
         new Set(['config.ts', 'lib/helpers.ts']),
       );
@@ -209,10 +243,12 @@ describe('useFileSelectionHandlers', () => {
   });
 
   describe('cross-source behavior', () => {
-    it('resets selection when switching from committed to worktree', () => {
+    it('should reset selection when switching from committed to worktree', () => {
       const { result } = setup();
       act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+
       act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+
       expect(result.current.multiSelect.selectedPaths).toEqual(new Set(['config.ts']));
       expect(result.current.multiSelect.activeSource).toBe('worktree');
     });

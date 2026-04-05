@@ -25,11 +25,11 @@ export const useFileSelectionHandlers = ({
   selectWorktreeFile,
 }: FileSelectionHandlersOptions) => {
   const committedFilePaths = useMemo(
-    () => collectFiles(files).map((f) => f.path),
+    () => collectFiles(files).map((file) => file.path),
     [files],
   );
   const worktreeFilePaths = useMemo(
-    () => collectFiles(worktreeFiles).map((f) => f.path),
+    () => collectFiles(worktreeFiles).map((file) => file.path),
     [worktreeFiles],
   );
   const handleSelectAllCommitted = useCallback(() => {

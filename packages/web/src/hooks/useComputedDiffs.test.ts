@@ -77,7 +77,7 @@ describe('useComputedDiffs', () => {
     vi.clearAllMocks();
     messageHandlers.clear();
     resetDiffWorkerForTesting();
-    vi.spyOn(globalThis, 'fetch').mockImplementation(vi.fn());
+    vi.spyOn(globalThis, 'fetch');
   });
 
   afterEach(() => {
@@ -85,7 +85,7 @@ describe('useComputedDiffs', () => {
     resetDiffWorkerForTesting();
   });
 
-  it('returns empty array when no paths', () => {
+  it('should return empty array when no paths', () => {
     const { result } = renderHook(
       () => useComputedDiffs([], null, 'old', 'new'),
       { wrapper: createWrapper() },
@@ -94,7 +94,7 @@ describe('useComputedDiffs', () => {
     expect(result.current).toEqual({ diffs: [], failedPaths: [] });
   });
 
-  it('fetches and computes diffs for committed paths', async () => {
+  it('should fetch and compute diffs for committed paths', async () => {
     const response = makeDiffResponse('src/index.ts');
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
@@ -114,7 +114,7 @@ describe('useComputedDiffs', () => {
     expect(result.current.diffs[0]?.changeType).toBe('modified');
   });
 
-  it('fetches and computes diffs for multiple paths', async () => {
+  it('should fetch and compute diffs for multiple paths', async () => {
     vi.mocked(fetch).mockImplementation((url) => {
       const path = (url as string).replace('/api/diff/HEAD~1/HEAD/', '');
       return Promise.resolve({
@@ -133,10 +133,10 @@ describe('useComputedDiffs', () => {
       expect(result.current.diffs).toHaveLength(3);
     });
 
-    expect(result.current.diffs.map((d) => d.path)).toEqual(['src/a.ts', 'src/b.ts', 'src/c.ts']);
+    expect(result.current.diffs.map((diff) => diff.path)).toEqual(['src/a.ts', 'src/b.ts', 'src/c.ts']);
   });
 
-  it('fetches worktree diffs when source is worktree', async () => {
+  it('should fetch worktree diffs when source is worktree', async () => {
     const response = makeDiffResponse('src/index.ts');
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
@@ -155,7 +155,7 @@ describe('useComputedDiffs', () => {
     expect(fetch).toHaveBeenCalledWith('/api/worktree/diff/src/index.ts');
   });
 
-  it('preserves path order in output', async () => {
+  it('should preserve path order in output', async () => {
     vi.mocked(fetch).mockImplementation((url) => {
       const path = (url as string).replace('/api/diff/a/b/', '');
       return Promise.resolve({
@@ -174,10 +174,10 @@ describe('useComputedDiffs', () => {
       expect(result.current.diffs).toHaveLength(3);
     });
 
-    expect(result.current.diffs.map((d) => d.path)).toEqual(['z.ts', 'a.ts', 'm.ts']);
+    expect(result.current.diffs.map((diff) => diff.path)).toEqual(['z.ts', 'a.ts', 'm.ts']);
   });
 
-  it('reports failed paths when fetch errors', async () => {
+  it('should report failed paths when fetch errors', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('network error'));
 
     const { result } = renderHook(

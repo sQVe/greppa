@@ -5,14 +5,14 @@ import { fetchWorktreeDiffContent } from './useWorktreeDiffContent';
 describe('useWorktreeDiffContent', () => {
   describe('fetchWorktreeDiffContent', () => {
     beforeEach(() => {
-      vi.spyOn(globalThis, 'fetch').mockImplementation(vi.fn());
+      vi.spyOn(globalThis, 'fetch');
     });
 
     afterEach(() => {
       vi.restoreAllMocks();
     });
 
-    it('fetches from correct URL', async () => {
+    it('should fetch from correct URL', async () => {
       const mockResponse = {
         ok: true,
         json: () =>
@@ -30,7 +30,7 @@ describe('useWorktreeDiffContent', () => {
       expect(fetch).toHaveBeenCalledWith('/api/worktree/diff/src/index.ts');
     });
 
-    it('encodes path segments', async () => {
+    it('should encode path segments', async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: () =>
@@ -47,7 +47,7 @@ describe('useWorktreeDiffContent', () => {
       expect(fetch).toHaveBeenCalledWith('/api/worktree/diff/src/my%20file.ts');
     });
 
-    it('returns parsed response', async () => {
+    it('should return parsed response', async () => {
       const expected = {
         path: 'src/index.ts',
         changeType: 'modified',
@@ -64,7 +64,7 @@ describe('useWorktreeDiffContent', () => {
       expect(result).toEqual(expected);
     });
 
-    it('throws on non-ok response', async () => {
+    it('should throw on non-ok response', async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: false,
         status: 500,

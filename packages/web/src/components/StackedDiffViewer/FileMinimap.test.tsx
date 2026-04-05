@@ -57,39 +57,43 @@ afterEach(() => {
 });
 
 describe('FileMinimap', () => {
-  it('renders a segment for each file', () => {
+  it('should render a segment for each file', () => {
     render(<FileMinimap diffs={[fileA, fileB]} activeFilePath={null} onSegmentClick={vi.fn()} />);
     const segments = screen.getAllByTestId('minimap-segment');
     expect(segments).toHaveLength(2);
   });
 
-  it('highlights the active file segment', () => {
+  it('should highlight the active file segment', () => {
     render(
       <FileMinimap diffs={[fileA, fileB]} activeFilePath="src/Api.ts" onSegmentClick={vi.fn()} />,
     );
     const segments = screen.getAllByTestId('minimap-segment');
+
     expect(segments.at(0)?.getAttribute('data-active')).toBe('true');
     expect(segments.at(1)?.getAttribute('data-active')).toBe('false');
   });
 
-  it('sizes segments proportionally to hunk count', () => {
+  it('should size segments proportionally to hunk count', () => {
     render(<FileMinimap diffs={[fileA, fileB]} activeFilePath={null} onSegmentClick={vi.fn()} />);
     const segments = screen.getAllByTestId('minimap-segment');
+
     expect(segments.at(0)?.style.flexGrow).toBe('2');
     expect(segments.at(1)?.style.flexGrow).toBe('1');
   });
 
-  it('calls onSegmentClick with file path when clicked', async () => {
+  it('should call onSegmentClick with file path when clicked', async () => {
     const onClick = vi.fn();
     render(<FileMinimap diffs={[fileA, fileB]} activeFilePath={null} onSegmentClick={onClick} />);
     const segments = screen.getAllByTestId('minimap-segment');
     const secondSegment = segments.at(1);
     expect(secondSegment).toBeDefined();
+
     await userEvent.click(secondSegment as HTMLElement);
+
     expect(onClick).toHaveBeenCalledWith('src/GitService.ts');
   });
 
-  it('renders nothing when given a single file', () => {
+  it('should render nothing when given a single file', () => {
     const { container } = render(
       <FileMinimap diffs={[fileA]} activeFilePath={null} onSegmentClick={vi.fn()} />,
     );

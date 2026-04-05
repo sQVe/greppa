@@ -65,17 +65,17 @@ export const useMultiSelect = () => {
       if (prev.source !== source) {
         return { paths: new Set(paths), source, anchorPath: prev.anchorPath };
       }
-      const allSelected = paths.every((p) => prev.paths.has(p));
+      const allSelected = paths.every((path) => prev.paths.has(path));
       if (allSelected) {
         const next = new Set(prev.paths);
-        for (const p of paths) {
-          next.delete(p);
+        for (const path of paths) {
+          next.delete(path);
         }
         return { paths: next, source, anchorPath: prev.anchorPath };
       }
       const next = new Set(prev.paths);
-      for (const p of paths) {
-        next.add(p);
+      for (const path of paths) {
+        next.add(path);
       }
       return { paths: next, source, anchorPath: prev.anchorPath };
     });

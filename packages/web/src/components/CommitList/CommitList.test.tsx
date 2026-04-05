@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 describe('CommitList', () => {
-  it('renders commit items with hash and subject', () => {
+  it('should render commit items with hash and subject', () => {
     render(<CommitList {...defaultProps} />);
 
     expect(screen.getByText('aaa')).toBeDefined();
@@ -34,7 +34,7 @@ describe('CommitList', () => {
     expect(screen.getByText('fix: second commit')).toBeDefined();
   });
 
-  it('calls onSelectCommit with sha and shiftKey=false on click', async () => {
+  it('should call onSelectCommit with sha and shiftKey=false on click', async () => {
     const user = userEvent.setup();
     const onSelectCommit = vi.fn();
     render(<CommitList {...defaultProps} onSelectCommit={onSelectCommit} />);
@@ -44,7 +44,7 @@ describe('CommitList', () => {
     expect(onSelectCommit).toHaveBeenCalledWith('aaa111', { shiftKey: false, metaKey: false });
   });
 
-  it('calls onSelectCommit with shiftKey=true on shift+click', async () => {
+  it('should call onSelectCommit with shiftKey=true on shift+click', async () => {
     const user = userEvent.setup();
     const onSelectCommit = vi.fn();
     render(<CommitList {...defaultProps} onSelectCommit={onSelectCommit} />);
@@ -56,15 +56,15 @@ describe('CommitList', () => {
     expect(onSelectCommit).toHaveBeenCalledWith('bbb222', { shiftKey: true, metaKey: false });
   });
 
-  it('highlights selected commits', () => {
+  it('should highlight selected commits', () => {
     render(<CommitList {...defaultProps} selectedShas={new Set(['aaa111'])} />);
-
     const items = screen.getAllByRole('button');
+
     expect(items[0]?.getAttribute('data-selected')).toBe('true');
     expect(items[1]?.getAttribute('data-selected')).toBe('false');
   });
 
-  it('renders empty state when no commits', () => {
+  it('should render empty state when no commits', () => {
     render(<CommitList {...defaultProps} commits={[]} />);
 
     expect(screen.queryByRole('button')).toBeNull();

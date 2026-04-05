@@ -129,63 +129,67 @@ afterEach(() => {
 
 describe('StackedDiffViewer', () => {
   describe('single file', () => {
-    it('renders within stacked container with file header', () => {
+    it('should render within stacked container with file header', () => {
       render(<StackedDiffViewer diffs={[fileA]} />);
       expect(screen.getByTestId('stacked-diff-viewer')).toBeDefined();
       expect(screen.getAllByTestId('file-header')).toHaveLength(1);
     });
 
-    it('renders empty state when given no files', () => {
+    it('should render empty state when given no files', () => {
       render(<StackedDiffViewer diffs={[]} />);
       expect(screen.getByText('Select a file to view diff')).toBeDefined();
     });
   });
 
   describe('multi-file rendering', () => {
-    it('renders stacked container with multiple files', () => {
+    it('should render stacked container with multiple files', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       expect(screen.getByTestId('stacked-diff-viewer')).toBeDefined();
     });
 
-    it('renders a sticky file header for each file', () => {
+    it('should render a sticky file header for each file', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       const headers = screen.getAllByTestId('file-header');
+
       expect(headers).toHaveLength(2);
     });
 
-    it('displays file path in each header', () => {
+    it('should display file path in each header', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       expect(screen.getByText('src/Api.ts')).toBeDefined();
       expect(screen.getByText('src/GitService.ts')).toBeDefined();
     });
 
-    it('displays change type badge in each header', () => {
+    it('should display change type badge in each header', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       expect(screen.getByText('Modified')).toBeDefined();
       expect(screen.getByText('Added')).toBeDefined();
     });
 
-    it('renders a separator between files but not after the last', () => {
+    it('should render a separator between files but not after the last', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB, fileC]} />);
       const separators = screen.getAllByTestId('file-separator');
+
       expect(separators).toHaveLength(2);
     });
 
-    it('renders a DiffViewer for each file', () => {
+    it('should render a DiffViewer for each file', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       const viewers = screen.getAllByTestId('diff-viewer');
+
       expect(viewers).toHaveLength(2);
     });
   });
 
   describe('review button', () => {
-    it('renders a review button in each file header', () => {
+    it('should render a review button in each file header', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
       const buttons = screen.getAllByRole('button', { name: /mark reviewed/i });
+
       expect(buttons).toHaveLength(2);
     });
 
-    it('shows reviewed state for files in reviewedPaths', () => {
+    it('should show reviewed state for files in reviewedPaths', () => {
       render(
         <StackedDiffViewer
           diffs={[fileA, fileB]}
@@ -195,12 +199,13 @@ describe('StackedDiffViewer', () => {
       );
       const buttons = screen.getAllByRole('button');
       const reviewButtons = buttons.filter((b) => b.textContent?.includes('eviewed'));
+
       expect(reviewButtons).toHaveLength(2);
       expect(reviewButtons.at(0)?.textContent).toBe('\u2713 Reviewed');
       expect(reviewButtons.at(1)?.textContent).toBe('Mark reviewed');
     });
 
-    it('calls onToggleReviewed with file path when clicked', async () => {
+    it('should call onToggleReviewed with file path when clicked', async () => {
       const onToggle = vi.fn();
       render(
         <StackedDiffViewer
@@ -211,27 +216,31 @@ describe('StackedDiffViewer', () => {
       );
       const firstButton = screen.getAllByRole('button', { name: /mark reviewed/i }).at(0);
       expect(firstButton).toBeDefined();
+
       await userEvent.click(firstButton as HTMLElement);
+
       expect(onToggle).toHaveBeenCalledWith('src/Api.ts');
     });
   });
 
   describe('scroll sync', () => {
-    it('calls onActiveFileChange when intersection observer fires', () => {
+    it('should call onActiveFileChange when intersection observer fires', () => {
       const onActiveFileChange = vi.fn();
       render(
         <StackedDiffViewer diffs={[fileA, fileB]} onActiveFileChange={onActiveFileChange} />,
       );
       const secondHeader = screen.getAllByTestId('file-header').at(1);
       expect(secondHeader).toBeDefined();
+
       intersectionCallback(
         [fakeEntry(secondHeader as HTMLElement)],
         new MockIntersectionObserver(() => {}) as unknown as IntersectionObserver,
       );
+
       expect(onActiveFileChange).toHaveBeenCalledWith('src/GitService.ts');
     });
 
-    it('exposes scrollToFile via ref', () => {
+    it('should expose scrollToFile via ref', () => {
       const ref = createRef<StackedDiffViewerHandle>();
       render(<StackedDiffViewer ref={ref} diffs={[fileA, fileB]} />);
       expect(ref.current?.scrollToFile).toBeDefined();

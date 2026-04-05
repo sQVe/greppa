@@ -12,7 +12,7 @@ export const collectFiles = (nodes: FileNode[]): FileNode[] =>
 export const collectDescendantFilePaths = (nodes: FileNode[], directoryPath: string): string[] => {
   for (const node of nodes) {
     if (node.path === directoryPath && node.type === 'directory') {
-      return collectFiles(node.children ?? []).map((f) => f.path);
+      return collectFiles(node.children ?? []).map((file) => file.path);
     }
     if (node.children != null) {
       const result = collectDescendantFilePaths(node.children, directoryPath);
@@ -24,7 +24,7 @@ export const collectDescendantFilePaths = (nodes: FileNode[], directoryPath: str
   return [];
 };
 
-// eslint-disable-next-line max-params
+// eslint-disable-next-line max-params -- hook coordinates file selection across committed and worktree sources
 export const useFileSelection = (
   files: FileNode[],
   worktreeFiles: FileNode[],
@@ -90,19 +90,25 @@ export const useFileSelection = (
   );
 
   useEffect(() => {
-    if (initialReviewedPaths.length === 0) return;
+    if (initialReviewedPaths.length === 0) {
+      return;
+    }
     const current = getReviewState();
     const existing = new Set(current.reviewedPaths);
-    const missing = initialReviewedPaths.filter((p) => !existing.has(p));
+    const missing = initialReviewedPaths.filter((path) => !existing.has(path));
     if (missing.length > 0) {
       setReviewState({ reviewedPaths: [...current.reviewedPaths, ...missing] });
     }
   }, [initialReviewedPaths, getReviewState, setReviewState]);
 
   useEffect(() => {
-    if (selectedFilePath == null) return;
+    if (selectedFilePath == null) {
+      return;
+    }
     const current = getReviewState();
-    if (new Set(current.reviewedPaths).has(selectedFilePath)) return;
+    if (new Set(current.reviewedPaths).has(selectedFilePath)) {
+      return;
+    }
     setReviewState({ reviewedPaths: [...current.reviewedPaths, selectedFilePath] });
   }, [selectedFilePath, getReviewState, setReviewState]);
 

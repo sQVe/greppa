@@ -57,7 +57,7 @@ afterAll(async () => {
 
 describe('Http', () => {
   describe('GET /api/health', () => {
-    it('returns 200 with { status: ok }', async () => {
+    it('should return 200 with { status: ok }', async () => {
       const response = await handler(new Request('http://localhost/api/health'));
 
       expect(response.status).toBe(200);
@@ -69,7 +69,7 @@ describe('Http', () => {
     const oldRef = parentSha ?? '';
     const newRef = headSha ?? '';
 
-    it('returns file list for valid refs', async () => {
+    it('should return file list for valid refs', async () => {
       const response = await handler(
         new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
       );
@@ -83,7 +83,7 @@ describe('Http', () => {
       expect(entries[0]).toHaveProperty('changeType');
     });
 
-    it('returns 500 for invalid newRef', async () => {
+    it('should return 500 for invalid newRef', async () => {
       const response = await handler(
         new Request('http://localhost/api/files?oldRef=HEAD&newRef=invalid-xxx'),
       );
@@ -96,7 +96,7 @@ describe('Http', () => {
     const oldRef = parentSha ?? '';
     const newRef = headSha ?? '';
 
-    it('returns diff content for valid refs and path', async () => {
+    it('should return diff content for valid refs and path', async () => {
       const filesResponse = await handler(
         new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
       );
@@ -122,7 +122,7 @@ describe('Http', () => {
       expect((body.newContent as string).length).toBeGreaterThan(0);
     });
 
-    it('returns 500 for invalid newRef', async () => {
+    it('should return 500 for invalid newRef', async () => {
       const response = await handler(
         new Request('http://localhost/api/diff/HEAD/invalid-xxx/some-file.ts'),
       );
@@ -135,7 +135,7 @@ describe('Http', () => {
     const oldRef = parentSha ?? '';
     const newRef = headSha ?? '';
 
-    it('returns commit list for valid refs', async () => {
+    it('should return commit list for valid refs', async () => {
       const response = await handler(
         new Request(`http://localhost/api/commits?oldRef=${oldRef}&newRef=${newRef}`),
       );
@@ -152,7 +152,7 @@ describe('Http', () => {
       expect(entries[0]).toHaveProperty('date');
     });
 
-    it('returns 500 for invalid ref', async () => {
+    it('should return 500 for invalid ref', async () => {
       const response = await handler(
         new Request('http://localhost/api/commits?oldRef=HEAD&newRef=invalid-xxx'),
       );
@@ -162,7 +162,7 @@ describe('Http', () => {
   });
 
   describe('GET /api/refs', () => {
-    it('returns refs from config', async () => {
+    it('should return refs from config', async () => {
       const response = await handler(new Request('http://localhost/api/refs'));
 
       expect(response.status).toBe(200);
@@ -171,7 +171,7 @@ describe('Http', () => {
   });
 
   describe('GET /api/worktree/files', () => {
-    it('returns an array of file entries', async () => {
+    it('should return an array of file entries', async () => {
       const response = await handler(new Request('http://localhost/api/worktree/files'));
 
       expect(response.status).toBe(200);
@@ -181,7 +181,7 @@ describe('Http', () => {
   });
 
   describe('GET /api/worktree/diff/*path', () => {
-    it('returns 500 for file not in working tree', async () => {
+    it('should return 500 for file not in working tree', async () => {
       const response = await handler(
         new Request('http://localhost/api/worktree/diff/nonexistent-file.xyz'),
       );
@@ -191,7 +191,7 @@ describe('Http', () => {
   });
 
   describe('unknown routes', () => {
-    it('returns 404 for unknown routes', async () => {
+    it('should return 404 for unknown routes', async () => {
       const response = await handler(new Request('http://localhost/api/unknown'));
 
       expect(response.status).toBe(404);
@@ -229,21 +229,21 @@ describe('static file serving', () => {
     await staticDispose();
   });
 
-  it('serves index.html at root', async () => {
+  it('should serve index.html at root', async () => {
     const response = await staticHandler(new Request('http://localhost/'));
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(indexContent);
   });
 
-  it('serves static assets', async () => {
+  it('should serve static assets', async () => {
     const response = await staticHandler(new Request('http://localhost/assets/app.js'));
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe('console.log("app")');
   });
 
-  it('serves index.html for SPA fallback routes', async () => {
+  it('should serve index.html for SPA fallback routes', async () => {
     const response = await staticHandler(
       new Request('http://localhost/file/some/path', {
         headers: { Accept: 'text/html' },
@@ -254,14 +254,14 @@ describe('static file serving', () => {
     expect(await response.text()).toBe(indexContent);
   });
 
-  it('still serves API routes', async () => {
+  it('should still serve API routes', async () => {
     const response = await staticHandler(new Request('http://localhost/api/health'));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: 'ok' });
   });
 
-  it('returns 404 for unknown API routes with SPA fallback enabled', async () => {
+  it('should return 404 for unknown API routes with SPA fallback enabled', async () => {
     const response = await staticHandler(new Request('http://localhost/api/unknown'));
 
     expect(response.status).toBe(404);

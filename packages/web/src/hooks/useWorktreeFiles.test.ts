@@ -5,14 +5,14 @@ import { fetchWorktreeFiles } from './useWorktreeFiles';
 describe('useWorktreeFiles', () => {
   describe('fetchWorktreeFiles', () => {
     beforeEach(() => {
-      vi.spyOn(globalThis, 'fetch').mockImplementation(vi.fn());
+      vi.spyOn(globalThis, 'fetch');
     });
 
     afterEach(() => {
       vi.restoreAllMocks();
     });
 
-    it('fetches from /api/worktree/files', async () => {
+    it('should fetch from /api/worktree/files', async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve([]),
@@ -23,7 +23,7 @@ describe('useWorktreeFiles', () => {
       expect(fetch).toHaveBeenCalledWith('/api/worktree/files');
     });
 
-    it('returns parsed response', async () => {
+    it('should return parsed response', async () => {
       const expected = [
         { path: 'src/index.ts', changeType: 'modified' },
         { path: 'README.md', changeType: 'added' },
@@ -38,7 +38,7 @@ describe('useWorktreeFiles', () => {
       expect(result).toEqual(expected);
     });
 
-    it('throws on non-ok response', async () => {
+    it('should throw on non-ok response', async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: false,
         status: 500,

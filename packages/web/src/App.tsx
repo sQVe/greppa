@@ -27,6 +27,25 @@ import type { FileSource } from './useFileSelection';
 
 import styles from './App.module.css';
 
+interface ComputedDiffInput {
+  selectedFilePath: string | null;
+  selectedSource: FileSource | null;
+  oldRef: string;
+  newRef: string;
+  fixtureDiff: DiffFile | null;
+}
+
+interface SelectedDiffsInput {
+  selectedFilePath: string | null;
+  selectedSource: FileSource | null;
+  oldRef: string;
+  newRef: string;
+  fixtureDiff: DiffFile | null;
+  multiSelect: ReturnType<typeof useMultiSelect>;
+  committedFilePaths: string[];
+  worktreeFilePaths: string[];
+}
+
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
 
 const useTreeState = (files: FileNode[], sessionId: string) => {
@@ -66,14 +85,6 @@ const useTreeState = (files: FileNode[], sessionId: string) => {
   return { expandedKeys, handleExpandedKeysChange, reviewedPaths, toggleReviewed };
 };
 
-interface ComputedDiffInput {
-  selectedFilePath: string | null;
-  selectedSource: FileSource | null;
-  oldRef: string;
-  newRef: string;
-  fixtureDiff: DiffFile | null;
-}
-
 const useComputedDiff = ({
   selectedFilePath,
   selectedSource,
@@ -110,17 +121,6 @@ const useComputedDiff = ({
     });
   }, [apiDiff, computedChanges, fixtureDiff]);
 };
-
-interface SelectedDiffsInput {
-  selectedFilePath: string | null;
-  selectedSource: FileSource | null;
-  oldRef: string;
-  newRef: string;
-  fixtureDiff: DiffFile | null;
-  multiSelect: ReturnType<typeof useMultiSelect>;
-  committedFilePaths: string[];
-  worktreeFilePaths: string[];
-}
 
 const useSelectedDiffs = ({
   selectedFilePath,

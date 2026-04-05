@@ -10,20 +10,6 @@ import { FileTree } from './FileTree';
 
 import styles from './FileTreePanel.module.css';
 
-const EMPTY_SET = new Set<string>();
-
-const sectionBodyVariants = {
-  expanded: { height: 'auto' },
-  collapsed: { height: 0 },
-};
-
-const chevronVariants = {
-  expanded: { rotate: 90 },
-  collapsed: { rotate: 0 },
-};
-
-const transition = { type: 'spring' as const, duration: 0.25, bounce: 0 };
-
 interface FileTreePanelProps {
   committedFiles: FileNode[];
   worktreeFiles: FileNode[];
@@ -41,6 +27,20 @@ interface FileTreePanelProps {
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
 }
+
+const EMPTY_SET = new Set<string>();
+
+const sectionBodyVariants = {
+  expanded: { height: 'auto' },
+  collapsed: { height: 0 },
+};
+
+const chevronVariants = {
+  expanded: { rotate: 90 },
+  collapsed: { rotate: 0 },
+};
+
+const transition = { type: 'spring' as const, duration: 0.25, bounce: 0 };
 
 const ICON_SIZE = 14;
 const ICON_STROKE = 2;

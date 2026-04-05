@@ -9,6 +9,11 @@ import { fetchDiffContent } from './useDiffContent';
 import { getOrCreateWorker } from './useDiffComputation';
 import { fetchWorktreeDiffContent } from './useWorktreeDiffContent';
 
+export interface ComputedDiffsResult {
+  diffs: DiffFile[];
+  failedPaths: string[];
+}
+
 const computeChangesViaWorker = (
   filePath: string,
   oldContent: string,
@@ -71,11 +76,6 @@ const fetchAndComputeDiff = async (
     changes,
   });
 };
-
-export interface ComputedDiffsResult {
-  diffs: DiffFile[];
-  failedPaths: string[];
-}
 
 export const useComputedDiffs = (
   paths: string[],

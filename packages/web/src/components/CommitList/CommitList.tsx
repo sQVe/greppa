@@ -2,6 +2,12 @@ import type { CommitEntry } from '@greppa/core';
 
 import styles from './CommitList.module.css';
 
+interface CommitListProps {
+  commits: CommitEntry[];
+  selectedShas: Set<string>;
+  onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
+}
+
 const formatRelativeTime = (iso: string): string => {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
 
@@ -27,12 +33,6 @@ const formatRelativeTime = (iso: string): string => {
   const months = Math.floor(days / 30);
   return `${months}mo ago`;
 };
-
-interface CommitListProps {
-  commits: CommitEntry[];
-  selectedShas: Set<string>;
-  onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
-}
 
 export const CommitList = ({ commits, selectedShas, onSelectCommit }: CommitListProps) => (
   <div className={styles.list}>

@@ -91,6 +91,7 @@ export const StackedDiffViewer = forwardRef<StackedDiffViewerHandle, StackedDiff
               <span className={styles.filePath}>{diff.path}</span>
               <button
                 type="button"
+                aria-pressed={reviewedPaths?.has(diff.path) ?? false}
                 className={`${styles.reviewButton} ${reviewedPaths?.has(diff.path) ? styles.reviewed : ''}`}
                 onClick={() => onToggleReviewed?.(diff.path)}
               >

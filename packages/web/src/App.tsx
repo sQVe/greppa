@@ -46,6 +46,7 @@ interface SelectedDiffsInput {
   worktreeFilePaths: string[];
 }
 
+const EMPTY_FILES: FileNode[] = [];
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
 
 const useTreeState = (files: FileNode[], sessionId: string) => {
@@ -181,7 +182,7 @@ export const App = () => {
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
     reviewedPaths: worktreeReviewedPaths,
     toggleReviewed: toggleWorktreeReviewed,
-  } = useTreeState(worktreeFiles ?? [], 'worktree');
+  } = useTreeState(worktreeFiles ?? EMPTY_FILES, 'worktree');
 
   const {
     selectedFilePath,
@@ -193,7 +194,7 @@ export const App = () => {
     selectedDiff: fixtureDiff,
     selectedThreads,
     selectedFileInfo,
-  } = useFileSelection(files, worktreeFiles ?? [], diffs, comments, fileInfoMap);
+  } = useFileSelection(files, worktreeFiles ?? EMPTY_FILES, diffs, comments, fileInfoMap);
 
   const {
     multiSelect,
@@ -209,7 +210,7 @@ export const App = () => {
     handleSelectWorktreeDirectory,
   } = useSelectionCoordinator({
     files,
-    worktreeFiles: worktreeFiles ?? [],
+    worktreeFiles: worktreeFiles ?? EMPTY_FILES,
     oldRef: mergeBaseRef ?? '',
     newRef: newRef ?? '',
     selectCommittedFile,
@@ -253,7 +254,7 @@ export const App = () => {
         >
           <FileTreePanel
             committedFiles={files}
-            worktreeFiles={worktreeFiles ?? []}
+            worktreeFiles={worktreeFiles ?? EMPTY_FILES}
             commits={commits}
             selectedPaths={multiSelect.selectedPaths}
             selectedSource={multiSelect.activeSource}

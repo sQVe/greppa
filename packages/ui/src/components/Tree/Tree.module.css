@@ -1,8 +1,7 @@
 .root {
   --gr-tree-indent: 20px;
 
-  height: 100%;
-  overflow: auto;
+  min-height: 0;
   padding: var(--gr-space-md) 0;
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-sm);
@@ -38,7 +37,15 @@
   pointer-events: none;
 }
 
-.item[data-selected] {
+.item:not(.selected):is([data-hovered], [data-focused]) {
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-interactive) 4%,
+    var(--gr-color-bg-default)
+  );
+}
+
+.item.selected {
   background: color-mix(
     in srgb,
     var(--gr-color-bg-interactive) 6%,
@@ -46,26 +53,10 @@
   );
 }
 
-.root:focus-within .item[data-selected] {
+.root:focus-within .item.selected {
   background: color-mix(
     in srgb,
     var(--gr-color-bg-interactive) 12%,
-    var(--gr-color-bg-default)
-  );
-}
-
-.item[data-focused]:not([data-selected]) {
-  background: color-mix(
-    in srgb,
-    var(--gr-color-bg-interactive) 8%,
-    var(--gr-color-bg-default)
-  );
-}
-
-.item[data-hovered]:not([data-selected]) {
-  background: color-mix(
-    in srgb,
-    var(--gr-color-bg-interactive) 8%,
     var(--gr-color-bg-default)
   );
 }

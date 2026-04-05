@@ -49,33 +49,8 @@ describe('Header', () => {
     expect(mockSet).toHaveBeenCalledWith({ theme: 'catppuccin-latte' });
   });
 
-  describe('file info', () => {
-    it('renders file path when filePath is provided', () => {
-      render(<Header filePath="src/auth/validateToken.ts" changeType="modified" />);
-      expect(screen.getByText('src/auth/validateToken.ts')).toBeDefined();
-    });
-
-    it('renders change type badge when changeType is provided', () => {
-      render(<Header filePath="src/auth/validateToken.ts" changeType="modified" />);
-      expect(screen.getByText('Modified')).toBeDefined();
-    });
-
-    it('renders old path for renamed files', () => {
-      render(
-        <Header filePath="src/new.ts" oldPath="src/old.ts" changeType="renamed" />,
-      );
-      expect(screen.getByText('src/new.ts')).toBeDefined();
-      expect(screen.getByText('← src/old.ts')).toBeDefined();
-    });
-
-    it('does not render file info when no props are provided', () => {
-      const { container } = render(<Header />);
-      expect(container.querySelector('[class*="fileInfo"]')).toBeNull();
-    });
-
-    it('does not render file info when changeType is provided without filePath', () => {
-      const { container } = render(<Header changeType="modified" />);
-      expect(container.querySelector('[class*="fileInfo"]')).toBeNull();
-    });
+  it('does not render file info', () => {
+    const { container } = render(<Header />);
+    expect(container.querySelector('[class*="fileInfo"]')).toBeNull();
   });
 });

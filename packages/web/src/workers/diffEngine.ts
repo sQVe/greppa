@@ -48,6 +48,7 @@ export const handleDiffRequest = (request: DiffRequest): DiffWorkerResponse => {
 
   return {
     type: 'diff-result',
+    requestId: request.requestId,
     filePath,
     changes,
     hitTimeout: result.hitTimeout,

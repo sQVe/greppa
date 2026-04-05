@@ -124,11 +124,11 @@ describe('DiffViewer', () => {
   });
 
   describe('hunk headers', () => {
-    it('renders the hunk range header on both sides', () => {
+    it('renders hunk range header once spanning full width', () => {
       render(<DiffViewer diff={modifiedDiff} />);
       const headers = getHunkHeaders();
       expect(headers).toHaveLength(1);
-      expect(headers[0]!.textContent).toBe('@@ -1,3 +1,4 @@@@ -1,3 +1,4 @@');
+      expect(headers[0]!.textContent).toBe('@@ -1,3 +1,4 @@');
     });
   });
 

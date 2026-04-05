@@ -14,7 +14,12 @@ const fileRoute = createRoute({
   path: '/file/$',
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, fileRoute]);
+const worktreeFileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/wt/$',
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, fileRoute, worktreeFileRoute]);
 
 export const router = createRouter({ routeTree });
 

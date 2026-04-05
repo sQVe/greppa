@@ -4,6 +4,9 @@
 .code-review-graph
 .code-review-graph/
 
+# Design.
+.mockups/
+
 # Dependencies
 node_modules/
 

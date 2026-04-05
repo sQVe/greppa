@@ -13,9 +13,9 @@ describe('buildFileTree', () => {
     const tree = buildFileTree(entries);
 
     expect(tree).toHaveLength(1);
-    expect(tree[0].name).toBe('src');
-    expect(tree[0].type).toBe('directory');
-    expect(tree[0].children).toHaveLength(2);
+    expect(tree[0]?.name).toBe('src');
+    expect(tree[0]?.type).toBe('directory');
+    expect(tree[0]?.children).toHaveLength(2);
   });
 
   it('assigns changeType to file nodes', () => {
@@ -23,8 +23,8 @@ describe('buildFileTree', () => {
 
     const tree = buildFileTree(entries);
 
-    expect(tree[0].changeType).toBe('added');
-    expect(tree[0].type).toBe('file');
+    expect(tree[0]?.changeType).toBe('added');
+    expect(tree[0]?.type).toBe('file');
   });
 
   it('handles renamed files with oldPath', () => {
@@ -34,7 +34,7 @@ describe('buildFileTree', () => {
 
     const tree = buildFileTree(entries);
 
-    const file = tree[0].children?.[0];
+    const file = tree[0]?.children?.[0];
     expect(file?.changeType).toBe('renamed');
     expect(file?.oldPath).toBe('old/location.ts');
   });
@@ -44,9 +44,9 @@ describe('buildFileTree', () => {
 
     const tree = buildFileTree(entries);
 
-    expect(tree[0].path).toBe('a/b');
-    expect(tree[0].displayName).toBe('a/b');
-    expect(tree[0].children?.[0].path).toBe('a/b/c.ts');
+    expect(tree[0]?.path).toBe('a/b');
+    expect(tree[0]?.displayName).toBe('a/b');
+    expect(tree[0]?.children?.[0]?.path).toBe('a/b/c.ts');
   });
 
   it('groups files under same directory', () => {
@@ -58,7 +58,7 @@ describe('buildFileTree', () => {
     const tree = buildFileTree(entries);
 
     expect(tree).toHaveLength(1);
-    expect(tree[0].children).toHaveLength(2);
+    expect(tree[0]?.children).toHaveLength(2);
   });
 
   it('sorts directories before files', () => {
@@ -68,10 +68,10 @@ describe('buildFileTree', () => {
     ];
 
     const tree = buildFileTree(entries);
-    const children = tree[0].children ?? [];
+    const children = tree[0]?.children ?? [];
 
-    expect(children[0].type).toBe('directory');
-    expect(children[1].type).toBe('file');
+    expect(children[0]?.type).toBe('directory');
+    expect(children[1]?.type).toBe('file');
   });
 });
 
@@ -88,7 +88,7 @@ describe('propagateChangeType', () => {
 
     const result = propagateChangeType(nodes);
 
-    expect(result[0].changeType).toBe('added');
+    expect(result[0]?.changeType).toBe('added');
   });
 
   it('picks highest-priority changeType among descendants', () => {
@@ -107,7 +107,7 @@ describe('propagateChangeType', () => {
 
     const result = propagateChangeType(nodes);
 
-    expect(result[0].changeType).toBe('deleted');
+    expect(result[0]?.changeType).toBe('deleted');
   });
 
   it('propagates through nested directories', () => {
@@ -131,8 +131,8 @@ describe('propagateChangeType', () => {
 
     const result = propagateChangeType(nodes);
 
-    expect(result[0].changeType).toBe('added');
-    expect(result[0].children?.[0].changeType).toBe('added');
+    expect(result[0]?.changeType).toBe('added');
+    expect(result[0]?.children?.[0]?.changeType).toBe('added');
   });
 
   it('does not set changeType on directories with no changed descendants', () => {
@@ -147,7 +147,8 @@ describe('propagateChangeType', () => {
 
     const result = propagateChangeType(nodes);
 
-    expect(result[0].changeType).toBeUndefined();
+    expect(result).toHaveLength(1);
+    expect(result[0]?.changeType).toBeUndefined();
   });
 
   it('does not overwrite file changeType', () => {
@@ -157,7 +158,7 @@ describe('propagateChangeType', () => {
 
     const result = propagateChangeType(nodes);
 
-    expect(result[0].changeType).toBe('modified');
+    expect(result[0]?.changeType).toBe('modified');
   });
 });
 
@@ -184,10 +185,10 @@ describe('compactTree', () => {
     const result = compactTree(nodes);
 
     expect(result).toHaveLength(1);
-    expect(result[0].path).toBe('src/events');
-    expect(result[0].displayName).toBe('src/events');
-    expect(result[0].children).toHaveLength(1);
-    expect(result[0].children?.[0].name).toBe('handler.ts');
+    expect(result[0]?.path).toBe('src/events');
+    expect(result[0]?.displayName).toBe('src/events');
+    expect(result[0]?.children).toHaveLength(1);
+    expect(result[0]?.children?.[0]?.name).toBe('handler.ts');
   });
 
   it('preserves multi-child directories', () => {
@@ -205,9 +206,9 @@ describe('compactTree', () => {
 
     const result = compactTree(nodes);
 
-    expect(result[0].path).toBe('src');
-    expect(result[0].displayName).toBeUndefined();
-    expect(result[0].children).toHaveLength(2);
+    expect(result[0]?.path).toBe('src');
+    expect(result[0]?.displayName).toBeUndefined();
+    expect(result[0]?.children).toHaveLength(2);
   });
 
   it('merges chains of three or more directories', () => {
@@ -238,10 +239,10 @@ describe('compactTree', () => {
 
     const result = compactTree(nodes);
 
-    expect(result[0].path).toBe('a/b/c');
-    expect(result[0].displayName).toBe('a/b/c');
-    expect(result[0].children).toHaveLength(1);
-    expect(result[0].children?.[0].name).toBe('file.ts');
+    expect(result[0]?.path).toBe('a/b/c');
+    expect(result[0]?.displayName).toBe('a/b/c');
+    expect(result[0]?.children).toHaveLength(1);
+    expect(result[0]?.children?.[0]?.name).toBe('file.ts');
   });
 
   it('does not merge directory with single file child', () => {
@@ -256,8 +257,8 @@ describe('compactTree', () => {
 
     const result = compactTree(nodes);
 
-    expect(result[0].path).toBe('src');
-    expect(result[0].displayName).toBeUndefined();
+    expect(result[0]?.path).toBe('src');
+    expect(result[0]?.displayName).toBeUndefined();
   });
 
   it('preserves changeType from deepest merged directory', () => {
@@ -283,6 +284,6 @@ describe('compactTree', () => {
 
     const result = compactTree(nodes);
 
-    expect(result[0].changeType).toBe('added');
+    expect(result[0]?.changeType).toBe('added');
   });
 });

@@ -31,9 +31,10 @@ const sampleChanges: DiffMapping[] = [
 vi.stubGlobal(
   'Worker',
   class {
-    postMessage = mockPostMessage.mockImplementation((request: { filePath: string }) => {
+    postMessage = mockPostMessage.mockImplementation((request: { requestId: string; filePath: string }) => {
       const response: DiffWorkerResponse = {
         type: 'diff-result',
+        requestId: request.requestId,
         filePath: request.filePath,
         changes: sampleChanges,
         hitTimeout: false,

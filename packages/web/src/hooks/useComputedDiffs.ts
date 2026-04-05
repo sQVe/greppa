@@ -17,9 +17,10 @@ const computeChangesViaWorker = (
 ): Promise<DiffMapping[]> =>
   new Promise((resolve, reject) => {
     const worker = getOrCreateWorker();
+    const requestId = crypto.randomUUID();
 
     const handleMessage = (event: MessageEvent<DiffWorkerResponse>) => {
-      if (event.data.filePath !== filePath) {
+      if (event.data.requestId !== requestId) {
         return;
       }
       worker.removeEventListener('message', handleMessage);
@@ -42,7 +43,7 @@ const computeChangesViaWorker = (
     worker.addEventListener('message', handleMessage);
     worker.addEventListener('error', handleError);
     // eslint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage does not accept targetOrigin
-    worker.postMessage({ type: 'diff', filePath, oldContent, newContent });
+    worker.postMessage({ type: 'diff', requestId, filePath, oldContent, newContent });
   });
 
 const fetchAndComputeDiff = async (

@@ -30,18 +30,20 @@ export const useDiffComputation = (
 
     const currentId = ++requestIdRef.current;
     const worker = getOrCreateWorker();
+    const requestId = `hook-${currentId}`;
     setChanges(null);
     setError(null);
 
     const request: DiffRequest = {
       type: 'diff',
+      requestId,
       filePath,
       oldContent,
       newContent,
     };
 
     const handleMessage = (event: MessageEvent<DiffWorkerResponse>) => {
-      if (currentId !== requestIdRef.current || event.data.filePath !== filePath) {
+      if (event.data.requestId !== requestId || currentId !== requestIdRef.current) {
         return;
       }
 

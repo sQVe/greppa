@@ -15,24 +15,22 @@ import { buildDiffFile } from './hooks/buildDiffFile';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
-import { useCommitList } from './hooks/useCommitList';
-import { useCommitSelection } from './hooks/useCommitSelection';
 import { useFileList } from './hooks/useFileList';
-import { useFileSelectionHandlers } from './hooks/useFileSelectionHandlers';
-import { useMultiSelect } from './hooks/useMultiSelect';
+import type { useMultiSelect } from './hooks/useMultiSelect';
 import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
+import { useSelectionCoordinator } from './hooks/useSelectionCoordinator';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
-import { collectFiles, useFileSelection } from './useFileSelection';
+import { useFileSelection } from './useFileSelection';
 import type { FileSource } from './useFileSelection';
 
 import styles from './App.module.css';
 
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
 
-const useTreeState = (files: FileNode[]) => {
-  const { state: reviewState, set: setReviewState } = useReviewState('default');
+const useTreeState = (files: FileNode[], sessionId: string) => {
+  const { state: reviewState, set: setReviewState } = useReviewState(sessionId);
   const allDirectoryIds = useMemo(() => collectDirectoryIds(files), [files]);
   const expandedKeys = useMemo(
     () => {
@@ -177,11 +175,11 @@ export const App = () => {
 
   const { files: worktreeFiles } = useWorktreeFiles();
 
-  const { expandedKeys, handleExpandedKeysChange, reviewedPaths, toggleReviewed } = useTreeState(files);
+  const { expandedKeys, handleExpandedKeysChange, reviewedPaths, toggleReviewed } = useTreeState(files, 'committed');
   const {
     expandedKeys: worktreeExpandedKeys,
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
-  } = useTreeState(worktreeFiles ?? []);
+  } = useTreeState(worktreeFiles ?? [], 'worktree');
 
   const {
     selectedFilePath,
@@ -195,75 +193,26 @@ export const App = () => {
     selectedFileInfo,
   } = useFileSelection(files, worktreeFiles ?? [], diffs, comments, fileInfoMap);
 
-  const multiSelect = useMultiSelect();
-
-  const { commits } = useCommitList(oldRef ?? '', newRef ?? '');
-  const commitSelection = useCommitSelection(commits);
-
-  const handleSelectCommit = useCallback(
-    (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => {
-      multiSelect.clear();
-      commitSelection.selectCommit(sha, modifiers);
-    },
-    [multiSelect, commitSelection],
-  );
-
   const {
+    multiSelect,
+    commits,
+    commitSelection,
+    commitDiffs,
     committedFilePaths,
     worktreeFilePaths,
+    handleSelectCommit,
     handleSelectCommittedFile,
     handleSelectWorktreeFile,
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
-  } = useFileSelectionHandlers({
+  } = useSelectionCoordinator({
     files,
     worktreeFiles: worktreeFiles ?? [],
-    multiSelect,
+    oldRef: oldRef ?? '',
+    newRef: newRef ?? '',
     selectCommittedFile,
     selectWorktreeFile,
   });
-
-  const wrappedSelectCommittedFile = useCallback(
-    (...args: Parameters<typeof handleSelectCommittedFile>) => {
-      commitSelection.clear();
-      handleSelectCommittedFile(...args);
-    },
-    [commitSelection, handleSelectCommittedFile],
-  );
-  const wrappedSelectWorktreeFile = useCallback(
-    (...args: Parameters<typeof handleSelectWorktreeFile>) => {
-      commitSelection.clear();
-      handleSelectWorktreeFile(...args);
-    },
-    [commitSelection, handleSelectWorktreeFile],
-  );
-  const wrappedSelectCommittedDirectory = useCallback(
-    (path: string) => {
-      commitSelection.clear();
-      handleSelectCommittedDirectory(path);
-    },
-    [commitSelection, handleSelectCommittedDirectory],
-  );
-  const wrappedSelectWorktreeDirectory = useCallback(
-    (path: string) => {
-      commitSelection.clear();
-      handleSelectWorktreeDirectory(path);
-    },
-    [commitSelection, handleSelectWorktreeDirectory],
-  );
-
-  const commitDiffRange = commitSelection.diffRange;
-  const commitFilePaths = useFileList(commitDiffRange?.oldRef ?? '', commitDiffRange?.newRef ?? '');
-  const commitFilePathsList = useMemo(
-    () => (commitFilePaths.files != null ? collectFiles(commitFilePaths.files).map((f) => f.path) : []),
-    [commitFilePaths.files],
-  );
-  const commitDiffs = useComputedDiffs(
-    commitSelection.isActive ? commitFilePathsList : [],
-    'committed',
-    commitDiffRange?.oldRef ?? '',
-    commitDiffRange?.newRef ?? '',
-  );
 
   const fileDiffs = useSelectedDiffs({
     selectedFilePath,
@@ -309,10 +258,10 @@ export const App = () => {
             selectedCommitShas={commitSelection.selectedShas}
             committedExpandedKeys={expandedKeys}
             worktreeExpandedKeys={worktreeExpandedKeys}
-            onSelectCommittedFile={wrappedSelectCommittedFile}
-            onSelectWorktreeFile={wrappedSelectWorktreeFile}
-            onSelectCommittedDirectory={wrappedSelectCommittedDirectory}
-            onSelectWorktreeDirectory={wrappedSelectWorktreeDirectory}
+            onSelectCommittedFile={handleSelectCommittedFile}
+            onSelectWorktreeFile={handleSelectWorktreeFile}
+            onSelectCommittedDirectory={handleSelectCommittedDirectory}
+            onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
             onSelectCommit={handleSelectCommit}
             onCommittedExpandedKeysChange={handleExpandedKeysChange}
             onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}

@@ -1,7 +1,7 @@
 import type { CommitEntry } from '@greppa/core';
 import { IconChevronRight, IconFileDiff, IconGitBranch, IconGitCommit } from '@tabler/icons-react';
 import { motion } from 'motion/react';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
@@ -9,6 +9,8 @@ import { CommitList } from '../CommitList/CommitList';
 import { FileTree } from './FileTree';
 
 import styles from './FileTreePanel.module.css';
+
+const EMPTY_SET = new Set<string>();
 
 const sectionBodyVariants = {
   expanded: { height: 'auto' },
@@ -33,8 +35,6 @@ interface FileTreePanelProps {
   worktreeExpandedKeys: Iterable<string>;
   onSelectCommittedFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectWorktreeFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
-  onSelectAllCommitted: () => void;
-  onSelectAllWorktree: () => void;
   onSelectCommittedDirectory: (path: string) => void;
   onSelectWorktreeDirectory: (path: string) => void;
   onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
@@ -56,8 +56,6 @@ export const FileTreePanel = ({
   worktreeExpandedKeys,
   onSelectCommittedFile,
   onSelectWorktreeFile,
-  onSelectAllCommitted,
-  onSelectAllWorktree,
   onSelectCommittedDirectory,
   onSelectWorktreeDirectory,
   onSelectCommit,
@@ -75,13 +73,11 @@ export const FileTreePanel = ({
   const worktreeBodyRef = useRef<HTMLDivElement>(null);
   const commitsBodyRef = useRef<HTMLDivElement>(null);
 
-  const committedCount = collectFiles(committedFiles).length;
-  const worktreeCount = collectFiles(worktreeFiles).length;
-
-  const sectionRefs = [committedBodyRef, worktreeBodyRef, commitsBodyRef];
+  const committedCount = useMemo(() => collectFiles(committedFiles).length, [committedFiles]);
+  const worktreeCount = useMemo(() => collectFiles(worktreeFiles).length, [worktreeFiles]);
 
   const lockScroll = () => {
-    for (const ref of sectionRefs) {
+    for (const ref of [committedBodyRef, worktreeBodyRef, commitsBodyRef]) {
       if (ref.current) {
         ref.current.style.overflowY = 'hidden';
       }
@@ -91,14 +87,6 @@ export const FileTreePanel = ({
   const toggleSection = (section: string) => {
     lockScroll();
     setExpandedSection(section);
-  };
-
-  const handleSectionClick = (section: string, onSelectAll?: () => void) => {
-    if (expandedSection === section && onSelectAll) {
-      onSelectAll();
-    } else {
-      toggleSection(section);
-    }
   };
 
   const handleExpandComplete = (section: string) => {
@@ -125,7 +113,7 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() => { handleSectionClick('committed', onSelectAllCommitted); }}
+            onClick={() => { toggleSection('committed'); }}
           >
             <motion.span
               className={styles.sectionChevron}
@@ -152,7 +140,7 @@ export const FileTreePanel = ({
           >
             <FileTree
               files={committedFiles}
-              selectedPaths={selectedSource === 'committed' ? selectedPaths : new Set()}
+              selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
               expandedKeys={committedExpandedKeys}
               onSelectFile={onSelectCommittedFile}
               onSelectDirectory={onSelectCommittedDirectory}
@@ -168,7 +156,7 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() => { handleSectionClick('worktree', onSelectAllWorktree); }}
+            onClick={() => { toggleSection('worktree'); }}
           >
             <motion.span
               className={styles.sectionChevron}
@@ -195,7 +183,7 @@ export const FileTreePanel = ({
           >
             <FileTree
               files={worktreeFiles}
-              selectedPaths={selectedSource === 'worktree' ? selectedPaths : new Set()}
+              selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
               expandedKeys={worktreeExpandedKeys}
               onSelectFile={onSelectWorktreeFile}
               onSelectDirectory={onSelectWorktreeDirectory}
@@ -211,7 +199,7 @@ export const FileTreePanel = ({
           <div
             className={styles.sectionHeader}
             role="button"
-            onClick={() => { handleSectionClick('commits'); }}
+            onClick={() => { toggleSection('commits'); }}
           >
             <motion.span
               className={styles.sectionChevron}

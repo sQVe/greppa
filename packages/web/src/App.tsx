@@ -211,8 +211,6 @@ export const App = () => {
   const {
     committedFilePaths,
     worktreeFilePaths,
-    handleSelectAllCommitted,
-    handleSelectAllWorktree,
     handleSelectCommittedFile,
     handleSelectWorktreeFile,
     handleSelectCommittedDirectory,
@@ -225,13 +223,33 @@ export const App = () => {
     selectWorktreeFile,
   });
 
-  const clearCommitsOnFileSelect = useCallback(
-    <T extends unknown[]>(handler: (...args: T) => void) =>
-      (...args: T) => {
-        commitSelection.clear();
-        handler(...args);
-      },
-    [commitSelection],
+  const wrappedSelectCommittedFile = useCallback(
+    (...args: Parameters<typeof handleSelectCommittedFile>) => {
+      commitSelection.clear();
+      handleSelectCommittedFile(...args);
+    },
+    [commitSelection, handleSelectCommittedFile],
+  );
+  const wrappedSelectWorktreeFile = useCallback(
+    (...args: Parameters<typeof handleSelectWorktreeFile>) => {
+      commitSelection.clear();
+      handleSelectWorktreeFile(...args);
+    },
+    [commitSelection, handleSelectWorktreeFile],
+  );
+  const wrappedSelectCommittedDirectory = useCallback(
+    (path: string) => {
+      commitSelection.clear();
+      handleSelectCommittedDirectory(path);
+    },
+    [commitSelection, handleSelectCommittedDirectory],
+  );
+  const wrappedSelectWorktreeDirectory = useCallback(
+    (path: string) => {
+      commitSelection.clear();
+      handleSelectWorktreeDirectory(path);
+    },
+    [commitSelection, handleSelectWorktreeDirectory],
   );
 
   const commitDiffRange = commitSelection.diffRange;
@@ -291,12 +309,10 @@ export const App = () => {
             selectedCommitShas={commitSelection.selectedShas}
             committedExpandedKeys={expandedKeys}
             worktreeExpandedKeys={worktreeExpandedKeys}
-            onSelectCommittedFile={clearCommitsOnFileSelect(handleSelectCommittedFile)}
-            onSelectWorktreeFile={clearCommitsOnFileSelect(handleSelectWorktreeFile)}
-            onSelectAllCommitted={clearCommitsOnFileSelect(handleSelectAllCommitted)}
-            onSelectAllWorktree={clearCommitsOnFileSelect(handleSelectAllWorktree)}
-            onSelectCommittedDirectory={clearCommitsOnFileSelect(handleSelectCommittedDirectory)}
-            onSelectWorktreeDirectory={clearCommitsOnFileSelect(handleSelectWorktreeDirectory)}
+            onSelectCommittedFile={wrappedSelectCommittedFile}
+            onSelectWorktreeFile={wrappedSelectWorktreeFile}
+            onSelectCommittedDirectory={wrappedSelectCommittedDirectory}
+            onSelectWorktreeDirectory={wrappedSelectWorktreeDirectory}
             onSelectCommit={handleSelectCommit}
             onCommittedExpandedKeysChange={handleExpandedKeysChange}
             onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}

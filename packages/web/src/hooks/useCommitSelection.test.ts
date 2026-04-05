@@ -66,26 +66,37 @@ describe('useCommitSelection', () => {
     expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb', 'ccc']));
   });
 
-  it('computes diffRange for single commit', () => {
+  it('computes diffRange for single commit using next commit as parent', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
     act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: false }); });
 
     expect(result.current.diffRange).toEqual({
-      oldRef: 'bbb~1',
+      oldRef: 'ccc',
       newRef: 'bbb',
     });
   });
 
-  it('computes diffRange for commit range', () => {
+  it('computes diffRange for commit range using next commit as parent', () => {
     const { result } = renderHook(() => useCommitSelection(commits));
 
     act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
     act(() => { result.current.selectCommit('ccc', { shiftKey: true, metaKey: false }); });
 
     expect(result.current.diffRange).toEqual({
-      oldRef: 'ccc~1',
+      oldRef: 'ddd',
       newRef: 'aaa',
+    });
+  });
+
+  it('falls back to sha~1 when selecting the last commit in the list', () => {
+    const { result } = renderHook(() => useCommitSelection(commits));
+
+    act(() => { result.current.selectCommit('ddd', { shiftKey: false, metaKey: false }); });
+
+    expect(result.current.diffRange).toEqual({
+      oldRef: 'ddd~1',
+      newRef: 'ddd',
     });
   });
 

@@ -75,8 +75,12 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
       return null;
     }
 
+    const lastIndex = commits.indexOf(lastCommit);
+    const parentCommit = commits[lastIndex + 1];
+    const oldRef = parentCommit != null ? parentCommit.sha : `${lastCommit.sha}~1`;
+
     return {
-      oldRef: `${lastCommit.sha}~1`,
+      oldRef,
       newRef: firstCommit.sha,
     };
   }, [commits, state.selectedShas]);

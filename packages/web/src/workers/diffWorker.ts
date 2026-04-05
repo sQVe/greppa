@@ -4,7 +4,6 @@ import { handleDiffRequest } from './diffEngine';
 globalThis.addEventListener('message', (event: MessageEvent<DiffWorkerRequest>) => {
   try {
     const response = handleDiffRequest(event.data);
-    response.requestId = event.data.requestId;
     // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage does not accept targetOrigin
     globalThis.postMessage(response);
   } catch (error) {

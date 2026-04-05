@@ -91,7 +91,7 @@ describe('useComputedDiffs', () => {
       { wrapper: createWrapper() },
     );
 
-    expect(result.current).toEqual([]);
+    expect(result.current).toEqual({ diffs: [], failedPaths: [] });
   });
 
   it('fetches and computes diffs for committed paths', async () => {
@@ -107,11 +107,11 @@ describe('useComputedDiffs', () => {
     );
 
     await waitFor(() => {
-      expect(result.current).toHaveLength(1);
+      expect(result.current.diffs).toHaveLength(1);
     });
 
-    expect(result.current[0].path).toBe('src/index.ts');
-    expect(result.current[0].changeType).toBe('modified');
+    expect(result.current.diffs[0]?.path).toBe('src/index.ts');
+    expect(result.current.diffs[0]?.changeType).toBe('modified');
   });
 
   it('fetches and computes diffs for multiple paths', async () => {
@@ -130,10 +130,10 @@ describe('useComputedDiffs', () => {
     );
 
     await waitFor(() => {
-      expect(result.current).toHaveLength(3);
+      expect(result.current.diffs).toHaveLength(3);
     });
 
-    expect(result.current.map((d: { path: string }) => d.path)).toEqual(['src/a.ts', 'src/b.ts', 'src/c.ts']);
+    expect(result.current.diffs.map((d) => d.path)).toEqual(['src/a.ts', 'src/b.ts', 'src/c.ts']);
   });
 
   it('fetches worktree diffs when source is worktree', async () => {
@@ -149,7 +149,7 @@ describe('useComputedDiffs', () => {
     );
 
     await waitFor(() => {
-      expect(result.current).toHaveLength(1);
+      expect(result.current.diffs).toHaveLength(1);
     });
 
     expect(fetch).toHaveBeenCalledWith('/api/worktree/diff/src/index.ts');
@@ -171,9 +171,24 @@ describe('useComputedDiffs', () => {
     );
 
     await waitFor(() => {
-      expect(result.current).toHaveLength(3);
+      expect(result.current.diffs).toHaveLength(3);
     });
 
-    expect(result.current.map((d: { path: string }) => d.path)).toEqual(['z.ts', 'a.ts', 'm.ts']);
+    expect(result.current.diffs.map((d) => d.path)).toEqual(['z.ts', 'a.ts', 'm.ts']);
+  });
+
+  it('reports failed paths when fetch errors', async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error('network error'));
+
+    const { result } = renderHook(
+      () => useComputedDiffs(['src/broken.ts'], 'committed', 'HEAD~1', 'HEAD'),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.failedPaths).toEqual(['src/broken.ts']);
+    });
+
+    expect(result.current.diffs).toEqual([]);
   });
 });

@@ -136,7 +136,7 @@ export const FileTreePanel = ({
             animate={expandedSection === 'committed' ? 'expanded' : 'collapsed'}
             initial={false}
             transition={transition}
-            onAnimationComplete={() =>{  handleExpandComplete('committed'); }}
+            onAnimationComplete={() => { handleExpandComplete('committed'); }}
           >
             <FileTree
               files={committedFiles}
@@ -179,7 +179,7 @@ export const FileTreePanel = ({
             animate={expandedSection === 'worktree' ? 'expanded' : 'collapsed'}
             initial={false}
             transition={transition}
-            onAnimationComplete={() =>{  handleExpandComplete('worktree'); }}
+            onAnimationComplete={() => { handleExpandComplete('worktree'); }}
           >
             <FileTree
               files={worktreeFiles}

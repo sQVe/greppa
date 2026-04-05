@@ -154,10 +154,10 @@ const useSelectedDiffs = ({
 
   return useMemo(() => {
     if (multiSelect.isMultiSelect) {
-      return multiDiffs;
+      return multiDiffs.diffs;
     }
     return selectedDiff != null ? [selectedDiff] : [];
-  }, [multiSelect.isMultiSelect, multiDiffs, selectedDiff]);
+  }, [multiSelect.isMultiSelect, multiDiffs.diffs, selectedDiff]);
 };
 
 export const App = () => {
@@ -225,7 +225,7 @@ export const App = () => {
     worktreeFilePaths,
   });
 
-  const selectedDiffs = commitSelection.isActive ? commitDiffs : fileDiffs;
+  const selectedDiffs = commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
 
   if (refsLoading || refsError) {
     return <div className={styles.app} />;

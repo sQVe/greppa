@@ -82,7 +82,7 @@ export const StackedDiffViewer = forwardRef<StackedDiffViewerHandle, StackedDiff
         {diffs.map((diff, index) => (
           <div key={diff.path}>
             <div
-              ref={(element) =>{  setHeaderRef(diff.path, element); }}
+              ref={(element) => { setHeaderRef(diff.path, element); }}
               className={styles.fileHeader}
               data-testid="file-header"
               data-file-path={diff.path}

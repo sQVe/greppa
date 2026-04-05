@@ -110,7 +110,6 @@ describe('FileTree', () => {
     expect(tree.getAttribute('aria-multiselectable')).toBe('true');
   });
 
-
   it('renders file icons as img elements', () => {
     const { container } = render(<FileTree {...defaultProps} />);
     const images = container.querySelectorAll('img');
@@ -166,7 +165,7 @@ describe('FileTree', () => {
     );
     await userEvent.click(screen.getByText('auth'));
     expect(onExpandedKeysChange).toHaveBeenCalled();
-    const keys = onExpandedKeysChange.mock.calls[0][0] as Set<string | number>;
+    const keys = onExpandedKeysChange.mock.calls[0]?.[0] as Set<string | number>;
     expect(keys.has('src/auth')).toBe(false);
     expect(keys.has('src/middleware')).toBe(true);
   });
@@ -207,7 +206,7 @@ describe('FileTree', () => {
       <FileTree {...defaultProps} expandedKeys={['src/middleware']} onExpandedKeysChange={onExpandedKeysChange} />,
     );
     await userEvent.click(screen.getByText('auth'));
-    const keys = onExpandedKeysChange.mock.calls[0][0] as Set<string | number>;
+    const keys = onExpandedKeysChange.mock.calls[0]?.[0] as Set<string | number>;
     expect(keys.has('src/auth')).toBe(true);
     expect(keys.has('src/middleware')).toBe(true);
   });

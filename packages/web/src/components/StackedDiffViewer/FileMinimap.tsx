@@ -22,7 +22,7 @@ export const FileMinimap = ({ diffs, activeFilePath, onSegmentClick }: FileMinim
           style={{ flex: Math.max(diff.hunks.length, 1) }}
           data-testid="minimap-segment"
           data-active={activeFilePath === diff.path}
-          onClick={() =>{  onSegmentClick(diff.path); }}
+          onClick={() => { onSegmentClick(diff.path); }}
         />
       ))}
     </div>

@@ -73,12 +73,17 @@ const fetchAndComputeDiff = async (
   });
 };
 
+export interface ComputedDiffsResult {
+  diffs: DiffFile[];
+  failedPaths: string[];
+}
+
 export const useComputedDiffs = (
   paths: string[],
   source: FileSource | null,
   oldRef: string,
   newRef: string,
-): DiffFile[] => {
+): ComputedDiffsResult => {
   const results = useQueries({
     queries: paths.map((path) => ({
       queryKey:
@@ -92,11 +97,22 @@ export const useComputedDiffs = (
     })),
   });
 
-  return useMemo(
-    () =>
-      results
-        .map((r) => r.data)
-        .filter((d): d is DiffFile => d != null),
-    [results],
-  );
+  return useMemo(() => {
+    const diffs: DiffFile[] = [];
+    const failedPaths: string[] = [];
+
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result == null) {
+        continue;
+      }
+      if (result.data != null) {
+        diffs.push(result.data);
+      } else if (result.isError) {
+        failedPaths.push(paths[i] ?? '');
+      }
+    }
+
+    return { diffs, failedPaths };
+  }, [results, paths]);
 };

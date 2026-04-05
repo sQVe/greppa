@@ -4,7 +4,7 @@ import type { FileNode } from '../fixtures/types';
 import type { useMultiSelect } from './useMultiSelect';
 import { collectDescendantFilePaths, collectFiles } from '../useFileSelection';
 
-interface SelectModifiers {
+export interface SelectModifiers {
   shiftKey: boolean;
   metaKey: boolean;
 }

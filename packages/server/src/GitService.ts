@@ -222,7 +222,7 @@ export const GitServiceLive = Layer.succeed(
         Effect.flatMap(() =>
           Effect.gen(function* () {
             const repoPath = yield* RepoPath;
-            return Effect.tryPromise({
+            return yield* Effect.tryPromise({
               try: () => readFile(resolve(repoPath, path), 'utf-8'),
               catch: (error) =>
                 new GitError({
@@ -231,7 +231,6 @@ export const GitServiceLive = Layer.succeed(
             });
           }),
         ),
-        Effect.flatten,
       ),
     listCommits: (oldRef, newRef) =>
       Effect.all([validateRef(oldRef), validateRef(newRef)]).pipe(

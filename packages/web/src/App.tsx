@@ -47,6 +47,7 @@ interface SelectedDiffsInput {
 }
 
 const EMPTY_FILES: FileNode[] = [];
+const EMPTY_PATHS = new Set<string>();
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
 
 const useTreeState = (files: FileNode[], sessionId: string) => {
@@ -230,6 +231,20 @@ export const App = () => {
 
   const selectedDiffs = commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
 
+  const treeSelectedPaths = useMemo(() => {
+    if (multiSelect.selectedPaths.size > 0) {
+      return multiSelect.selectedPaths;
+    }
+    if (selectedFilePath != null && selectedSource != null) {
+      return new Set([selectedFilePath]);
+    }
+    return EMPTY_PATHS;
+  }, [multiSelect.selectedPaths, selectedFilePath, selectedSource]);
+
+  const treeSelectedSource = multiSelect.selectedPaths.size > 0
+    ? multiSelect.activeSource
+    : selectedSource;
+
   if (refsLoading || refsError) {
     return <div className={styles.app} />;
   }
@@ -256,8 +271,8 @@ export const App = () => {
             committedFiles={files}
             worktreeFiles={worktreeFiles ?? EMPTY_FILES}
             commits={commits}
-            selectedPaths={multiSelect.selectedPaths}
-            selectedSource={multiSelect.activeSource}
+            selectedPaths={treeSelectedPaths}
+            selectedSource={treeSelectedSource}
             selectedCommitShas={commitSelection.selectedShas}
             committedExpandedKeys={expandedKeys}
             worktreeExpandedKeys={worktreeExpandedKeys}

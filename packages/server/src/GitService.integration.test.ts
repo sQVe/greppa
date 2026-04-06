@@ -33,7 +33,6 @@ const resolveRef = (ref: string): string | null => {
 
 const parentSha = resolveRef('HEAD~1');
 const headSha = resolveRef('HEAD');
-const headMinus3Sha = resolveRef('HEAD~3');
 const hasDefaultBranchRef =
   resolveRef('main') != null ||
   resolveRef('master') != null ||
@@ -278,9 +277,9 @@ describe('GitService', () => {
     });
   });
 
-  describe.runIf(headMinus3Sha != null && headSha != null)('listCommits', () => {
+  describe.runIf(parentSha != null && headSha != null)('listCommits', () => {
     it('should return commits between two refs', async () => {
-      const result = await runGitService((git) => git.listCommits('HEAD~3', 'HEAD')) as CommitEntry[];
+      const result = await runGitService((git) => git.listCommits('HEAD~1', 'HEAD')) as CommitEntry[];
 
       expect(result.length).toBeGreaterThan(0);
       for (const entry of result) {

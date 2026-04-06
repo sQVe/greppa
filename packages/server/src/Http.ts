@@ -61,17 +61,22 @@ const getFileList = (oldRef: string, newRef: string) =>
   });
 
 const FilesHandlers = HttpApiBuilder.group(Api, 'files', (handlers) =>
-  Effect.gen(function* () {
-    const refs = yield* RefsConfig;
-    return handlers.handle('getFiles', ({ query }) =>
-      getFileList(refs.mergeBaseRef, query.newRef),
-    );
-  }),
+  Effect.succeed(handlers.handle('getFiles', ({ query }) =>
+    getFileList(query.oldRef, query.newRef),
+  )),
 );
+
+const safeDecodeURIComponent = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new GitError({ message: `Invalid percent-encoded path: ${value}` });
+  }
+};
 
 const extractFilePath = (url: string, oldRef: string, newRef: string) => {
   const parsed = new URL(url, 'http://localhost');
-  const decoded = decodeURIComponent(parsed.pathname);
+  const decoded = safeDecodeURIComponent(parsed.pathname);
   const prefix = `/api/diff/${oldRef}/${newRef}/`;
   return decoded.slice(prefix.length);
 };
@@ -79,7 +84,6 @@ const extractFilePath = (url: string, oldRef: string, newRef: string) => {
 const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
   Effect.gen(function* () {
     const git = yield* GitService;
-    const refs = yield* RefsConfig;
 
     const handleGetDiff = (params: { oldRef: string; newRef: string }, requestUrl: string) => {
       const { oldRef, newRef } = params;
@@ -90,7 +94,7 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
       }
 
       return Effect.gen(function* () {
-        const entries = yield* getFileList(refs.mergeBaseRef, newRef);
+        const entries = yield* getFileList(oldRef, newRef);
         const matchesPath = (entry: FileEntry) => entry.path === filePath;
         const entry = entries.find(matchesPath);
         if (entry == null) {
@@ -98,10 +102,10 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
         }
         const changeType = entry.changeType;
 
-        const oldContent =
-          changeType === 'added' ? '' : yield* git.getFileContent(refs.mergeBaseRef, entry.oldPath ?? filePath);
-        const newContent =
-          changeType === 'deleted' ? '' : yield* git.getFileContent(newRef, filePath);
+        const [oldContent, newContent] = yield* Effect.all([
+          changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
+          changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
+        ]);
 
         return {
           path: filePath,
@@ -119,13 +123,85 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
   }),
 );
 
+const CommitsHandlers = HttpApiBuilder.group(Api, 'commits', (handlers) =>
+  Effect.gen(function* () {
+    const git = yield* GitService;
+    return handlers.handle('getCommits', ({ query }) =>
+      git.listCommits(query.oldRef, query.newRef),
+    );
+  }),
+);
+
 const RefsHandlers = HttpApiBuilder.group(Api, 'refs', (handlers) =>
   Effect.gen(function* () {
     const refs = yield* RefsConfig;
     return handlers.handle('getRefs', () =>
-      Effect.succeed({ oldRef: refs.oldRef, newRef: refs.newRef }),
+      Effect.succeed({ oldRef: refs.oldRef, newRef: refs.newRef, mergeBaseRef: refs.mergeBaseRef }),
     );
   }),
+);
+
+const worktreeFileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
+const WORKTREE_CACHE_TTL_MS = 3_000;
+
+const getWorktreeFileList = () =>
+  Effect.gen(function* () {
+    const cached = worktreeFileListCache.get('worktree');
+    if (cached != null && Date.now() - cached.timestamp < WORKTREE_CACHE_TTL_MS) {
+      return cached.entries;
+    }
+    const git = yield* GitService;
+    const entries = yield* git.listWorkingTreeFiles();
+    worktreeFileListCache.set('worktree', { entries, timestamp: Date.now() });
+    return entries;
+  });
+
+const WorktreeFilesHandlers = HttpApiBuilder.group(Api, 'worktreeFiles', (handlers) =>
+  Effect.succeed(handlers.handle('getWorktreeFiles', () => getWorktreeFileList())),
+);
+
+const extractWorktreeFilePath = (url: string) => {
+  const parsed = new URL(url, 'http://localhost');
+  const decoded = safeDecodeURIComponent(parsed.pathname);
+  const prefix = '/api/worktree/diff/';
+  return decoded.slice(prefix.length);
+};
+
+const handleGetWorktreeDiff = (filePath: string) =>
+  Effect.gen(function* () {
+    const git = yield* GitService;
+    const entries = yield* getWorktreeFileList();
+    const entry = entries.find((e) => e.path === filePath);
+    if (entry == null) {
+      return yield* Effect.fail(
+        new GitError({ message: `File not found in working tree: ${filePath}` }),
+      );
+    }
+
+    const [oldContent, newContent] = yield* Effect.all([
+      entry.changeType === 'added' ? Effect.succeed('') : git.getFileContent('HEAD', entry.oldPath ?? filePath),
+      entry.changeType === 'deleted' ? Effect.succeed('') : git.getWorkingTreeFileContent(filePath),
+    ]);
+
+    return {
+      path: filePath,
+      changeType: entry.changeType,
+      ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}),
+      oldContent,
+      newContent,
+    };
+  });
+
+const WorktreeDiffHandlers = HttpApiBuilder.group(Api, 'worktreeDiff', (handlers) =>
+  Effect.succeed(handlers.handle('getWorktreeDiff', ({ request }) => {
+    const filePath = extractWorktreeFilePath(request.url);
+
+    if (filePath === '') {
+      return Effect.fail(new GitError({ message: 'File path is required' }));
+    }
+
+    return handleGetWorktreeDiff(filePath);
+  })),
 );
 
 export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
@@ -133,6 +209,9 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(FilesHandlers),
   Layer.provide(DiffHandlers),
   Layer.provide(RefsHandlers),
+  Layer.provide(CommitsHandlers),
+  Layer.provide(WorktreeFilesHandlers),
+  Layer.provide(WorktreeDiffHandlers),
 );
 
 export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDistPath: string) => {

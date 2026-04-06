@@ -10,6 +10,7 @@ globalThis.addEventListener('message', (event: MessageEvent<DiffWorkerRequest>) 
     const message = error instanceof Error ? error.message : String(error);
     const errorResponse: DiffWorkerResponse = {
       type: 'diff-result',
+      requestId: event.data.requestId,
       filePath: event.data.filePath,
       changes: [],
       hitTimeout: false,

@@ -130,10 +130,7 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
                 data-index={virtualItem.index}
                 data-testid="hunk-header"
               >
-                <div className={styles.row}>
-                  <div className={styles.hunkHeader}>{item.header}</div>
-                  <div className={styles.hunkHeader}>{item.header}</div>
-                </div>
+                <div className={styles.hunkHeader}>{item.header}</div>
               </div>
             );
           }

@@ -5,6 +5,7 @@ import { handleDiffRequest } from './diffEngine';
 
 const makeRequest = (overrides: Partial<DiffRequest> = {}): DiffRequest => ({
   type: 'diff',
+  requestId: 'test-request',
   filePath: 'src/foo.ts',
   oldContent: 'const a = 1;\nconst b = 2;\n',
   newContent: 'const a = 1;\nconst b = 3;\n',
@@ -23,13 +24,13 @@ describe('handleDiffRequest', () => {
     const response = handleDiffRequest(makeRequest());
 
     expect(response.changes.length).toBe(1);
-    expect(response.changes[0].original.startLineNumber).toBe(2);
-    expect(response.changes[0].modified.startLineNumber).toBe(2);
+    expect(response.changes[0]?.original.startLineNumber).toBe(2);
+    expect(response.changes[0]?.modified.startLineNumber).toBe(2);
   });
 
   it('provides innerChanges for character-level diff', () => {
     const response = handleDiffRequest(makeRequest());
-    const innerChanges = response.changes[0].innerChanges;
+    const innerChanges = response.changes[0]?.innerChanges;
 
     expect(innerChanges).not.toBeNull();
     if (innerChanges == null) return;

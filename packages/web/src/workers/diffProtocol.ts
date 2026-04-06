@@ -23,6 +23,7 @@ export interface DiffMapping {
 
 export interface DiffRequest {
   type: 'diff';
+  requestId: string;
   filePath: string;
   oldContent: string;
   newContent: string;
@@ -30,6 +31,7 @@ export interface DiffRequest {
 
 export interface DiffWorkerResponse {
   type: 'diff-result';
+  requestId: string;
   filePath: string;
   changes: DiffMapping[];
   hitTimeout: boolean;

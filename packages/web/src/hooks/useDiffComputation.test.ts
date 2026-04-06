@@ -30,12 +30,14 @@ const sampleChanges: DiffMapping[] = [
 vi.stubGlobal(
   'Worker',
   class {
-    postMessage = mockPostMessage.mockImplementation(() => {
+    postMessage = mockPostMessage.mockImplementation((request: { requestId: string; filePath: string }) => {
       const response: DiffWorkerResponse = {
         type: 'diff-result',
-        filePath: 'src/foo.ts',
+        requestId: request.requestId,
+        filePath: request.filePath,
         changes: sampleChanges,
         hitTimeout: false,
+        error: null,
       };
       setTimeout(() => {
         messageHandler?.({ data: response } as MessageEvent);
@@ -109,12 +111,14 @@ describe('useDiffComputation', () => {
       useDiffComputation('src/foo.ts', 'old content', 'new content'),
     );
 
-    expect(mockPostMessage).toHaveBeenCalledWith({
-      type: 'diff',
-      filePath: 'src/foo.ts',
-      oldContent: 'old content',
-      newContent: 'new content',
-    });
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'diff',
+        filePath: 'src/foo.ts',
+        oldContent: 'old content',
+        newContent: 'new content',
+      }),
+    );
   });
 
   it('reuses the same worker across renders', () => {
@@ -134,6 +138,7 @@ describe('useDiffComputation', () => {
       { initialProps: { path: 'src/foo.ts' as string | null } },
     );
 
+    mockPostMessage.mockImplementation(() => {});
     rerender({ path: 'src/bar.ts' });
 
     await act(async () => {

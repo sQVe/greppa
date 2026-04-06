@@ -19,6 +19,11 @@ vi.mock('./components/DiffViewer/useSyntaxHighlighting', () => ({
 
 vi.mock('./hooks/useFileList', () => ({
   useFileList: () => ({ files: null, isError: true, isLoading: false }),
+  buildFileTree: (entries: unknown[]) => entries,
+}));
+
+vi.mock('./hooks/useWorktreeFiles', () => ({
+  useWorktreeFiles: () => ({ files: null, isLoading: false, isError: false }),
 }));
 
 vi.mock('./hooks/useRefs', () => ({

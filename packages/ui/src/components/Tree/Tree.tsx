@@ -1,3 +1,4 @@
+import { IconChevronRight } from '@tabler/icons-react';
 import { clsx } from 'clsx';
 import type { ComponentProps } from 'react';
 import {
@@ -23,15 +24,15 @@ const Root = ({ className, ...props }: ComponentProps<typeof RACTree>) => (
 const Item = ({ className, ...props }: ComponentProps<typeof TreeItem>) => (
   <TreeItem
     {...props}
-    className={composeRenderProps(className, (resolved) =>
-      clsx(styles.item, resolved),
+    className={composeRenderProps(className, (resolved, { isSelected }) =>
+      clsx(styles.item, isSelected && styles.selected, resolved),
     )}
   />
 );
 
 const Chevron = ({
   className,
-  children = '▸',
+  children = <IconChevronRight size={10} stroke={2.5} />,
   ...props
 }: Omit<ComponentProps<typeof Button>, 'slot'>) => (
   <Button

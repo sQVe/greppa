@@ -4,7 +4,7 @@ import type { DiffMapping, DiffRequest, DiffWorkerResponse } from '../workers/di
 
 let sharedWorker: Worker | null = null;
 
-const getOrCreateWorker = () => {
+export const getOrCreateWorker = () => {
   sharedWorker ??= new Worker(new URL('../workers/diffWorker.ts', import.meta.url), {
     type: 'module',
   });
@@ -30,18 +30,20 @@ export const useDiffComputation = (
 
     const currentId = ++requestIdRef.current;
     const worker = getOrCreateWorker();
+    const requestId = `hook-${currentId}`;
     setChanges(null);
     setError(null);
 
     const request: DiffRequest = {
       type: 'diff',
+      requestId,
       filePath,
       oldContent,
       newContent,
     };
 
     const handleMessage = (event: MessageEvent<DiffWorkerResponse>) => {
-      if (currentId !== requestIdRef.current || event.data.filePath !== filePath) {
+      if (event.data.requestId !== requestId || currentId !== requestIdRef.current) {
         return;
       }
 

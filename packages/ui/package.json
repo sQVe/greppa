@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@radix-ui/react-tabs": "1.1.13",
+    "@tabler/icons-react": "3.41.1",
     "clsx": "2.1.1",
     "react": "19.2.4",
     "react-aria-components": "1.16.0",

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -5,6 +6,9 @@ import { NodeServices } from '@effect/platform-node';
 import { GitService, GitServiceLive, makeHttpLayer, RepoPath } from '@greppa/server';
 import { Config, Effect, Layer, Option } from 'effect';
 import { Argument, Command, Flag } from 'effect/unstable/cli';
+
+const detectRepoRoot = () =>
+  execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf-8' }).trim();
 
 const port = Flag.integer('port').pipe(
   Flag.withDescription('Port to listen on'),
@@ -46,14 +50,20 @@ export const serve = Command.make(
   'serve',
   { port, oldRef: oldRefArg, newRef: newRefArg },
   Effect.fn(function* ({ port: listenPort, oldRef: oldRefOption, newRef: newRefOption }) {
+    const repoRoot = yield* Effect.try({
+      try: detectRepoRoot,
+      catch: () => new Error('Unable to detect repository root. Run this command inside a Git repository.'),
+    });
+    const repoPathLayer = Layer.succeed(RepoPath, repoRoot);
+
     const refsConfig = yield* resolveRefs(oldRefOption, newRefOption).pipe(
-      Effect.provide(
-        Layer.mergeAll(GitServiceLive, NodeServices.layer, Layer.succeed(RepoPath, process.cwd())),
-      ),
+      Effect.provide(Layer.mergeAll(GitServiceLive, NodeServices.layer, repoPathLayer)),
     );
     const packagedPath = resolve(import.meta.dirname, 'web');
     const workspacePath = resolve(import.meta.dirname, '..', '..', '..', 'web', 'dist');
     const webDistPath = existsSync(packagedPath) ? packagedPath : workspacePath;
-    yield* Layer.launch(makeHttpLayer(listenPort, refsConfig, webDistPath));
+    yield* Layer.launch(
+      makeHttpLayer(listenPort, refsConfig, webDistPath).pipe(Layer.provide(repoPathLayer)),
+    );
   }),
 );

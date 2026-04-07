@@ -13,12 +13,22 @@
 }
 
 .hunkHeader {
-  padding: var(--gr-space-sm) var(--gr-space-lg);
-  background: var(--gr-color-bg-surface);
+  display: flex;
+  align-items: center;
+  gap: var(--gr-space-md);
+  padding: var(--gr-space-md) var(--gr-space-lg);
   color: var(--gr-color-text-muted);
   font-size: var(--gr-text-xs);
-  text-align: left;
+  opacity: 0.4;
   user-select: none;
+}
+
+.hunkHeader::before,
+.hunkHeader::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gr-color-border-muted);
 }
 
 .row {

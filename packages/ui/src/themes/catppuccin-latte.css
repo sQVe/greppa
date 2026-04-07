@@ -43,7 +43,7 @@
     rgb(64 160 43) 8%,
     color-mix(in srgb, rgb(64 160 43) 10%, var(--gr-color-bg-default))
   );
-  --gr-color-diff-gutter-added-bg: rgb(64 160 43 / 12%);
+  --gr-color-diff-gutter-added-bg: rgb(64 160 43 / 6%);
   --gr-color-diff-added-border: rgb(64 160 43 / 40%);
 
   /* Diff — removed (red) */
@@ -53,7 +53,7 @@
     rgb(210 15 57) 8%,
     color-mix(in srgb, rgb(210 15 57) 10%, var(--gr-color-bg-default))
   );
-  --gr-color-diff-gutter-removed-bg: rgb(210 15 57 / 12%);
+  --gr-color-diff-gutter-removed-bg: rgb(210 15 57 / 6%);
   --gr-color-diff-removed-border: rgb(210 15 57 / 40%);
 
   /* Diff — modified (yellow) */

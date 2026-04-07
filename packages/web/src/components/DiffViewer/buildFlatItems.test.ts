@@ -102,4 +102,21 @@ describe('buildFlatItems', () => {
       expect(hunkHeaders[0].header).toBe('@@ -1,2 +1,2 @@');
     }
   });
+
+  it('propagates changeType to hunk-header and diff-row items', () => {
+    const items = buildFlatItems([fileA, fileB]);
+
+    const hunkHeaders = items.filter((item) => item.kind === 'hunk-header');
+    const diffRows = items.filter((item) => item.kind === 'diff-row');
+
+    if (hunkHeaders[0]?.kind === 'hunk-header' && hunkHeaders[1]?.kind === 'hunk-header') {
+      expect(hunkHeaders[0].changeType).toBe('modified');
+      expect(hunkHeaders[1].changeType).toBe('added');
+    }
+
+    if (diffRows[0]?.kind === 'diff-row' && diffRows[2]?.kind === 'diff-row') {
+      expect(diffRows[0].changeType).toBe('modified');
+      expect(diffRows[2].changeType).toBe('added');
+    }
+  });
 });

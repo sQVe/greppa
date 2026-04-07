@@ -33,6 +33,17 @@ export const VirtualRow = memo(({ item, tokenMap, reviewedPaths, onToggleReviewe
       );
     }
     case 'diff-row': {
+      const fullWidth = item.changeType === 'added' || item.changeType === 'deleted';
+
+      if (fullWidth) {
+        const data = item.row.right ?? item.row.left;
+        return (
+          <div className={diffStyles.rowFull} data-testid="diff-row">
+            <RowSideCell data={data} side={item.changeType === 'added' ? 'right' : 'left'} tokenMap={tokenMap} />
+          </div>
+        );
+      }
+
       return (
         <div className={diffStyles.row} data-testid="diff-row">
           <RowSideCell data={item.row.left} side="left" tokenMap={tokenMap} />

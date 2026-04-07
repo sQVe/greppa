@@ -10,6 +10,8 @@ import { FileTree } from './FileTree';
 
 import styles from './FileTreePanel.module.css';
 
+export type FileTreeSection = 'committed' | 'worktree' | 'commits';
+
 interface FileTreePanelProps {
   committedFiles: FileNode[];
   worktreeFiles: FileNode[];
@@ -26,6 +28,9 @@ interface FileTreePanelProps {
   onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
+  onCollapseCommittedDirectory?: (path: string) => void;
+  onCollapseWorktreeDirectory?: (path: string) => void;
+  onSectionChange?: (section: FileTreeSection) => void;
 }
 
 const EMPTY_SET = new Set<string>();
@@ -61,8 +66,11 @@ export const FileTreePanel = ({
   onSelectCommit,
   onCommittedExpandedKeysChange,
   onWorktreeExpandedKeysChange,
+  onCollapseCommittedDirectory,
+  onCollapseWorktreeDirectory,
+  onSectionChange,
 }: FileTreePanelProps) => {
-  const [expandedSection, setExpandedSection] = useState<string>('committed');
+  const [expandedSection, setExpandedSection] = useState<FileTreeSection>('committed');
 
   const committedBodyRef = useRef<HTMLDivElement>(null);
   const worktreeBodyRef = useRef<HTMLDivElement>(null);
@@ -79,15 +87,16 @@ export const FileTreePanel = ({
     }
   };
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: FileTreeSection) => {
     if (section === expandedSection) {
       return;
     }
     lockScroll();
     setExpandedSection(section);
+    onSectionChange?.(section);
   };
 
-  const handleExpandComplete = (section: string) => {
+  const handleExpandComplete = (section: FileTreeSection) => {
     if (section !== expandedSection) {
       return;
     }
@@ -143,6 +152,7 @@ export const FileTreePanel = ({
             onSelectFile={onSelectCommittedFile}
             onSelectDirectory={onSelectCommittedDirectory}
             onExpandedKeysChange={onCommittedExpandedKeysChange}
+            onCollapseDirectory={onCollapseCommittedDirectory}
           />
         </motion.div>
       </div>
@@ -185,6 +195,7 @@ export const FileTreePanel = ({
             onSelectFile={onSelectWorktreeFile}
             onSelectDirectory={onSelectWorktreeDirectory}
             onExpandedKeysChange={onWorktreeExpandedKeysChange}
+            onCollapseDirectory={onCollapseWorktreeDirectory}
           />
         </motion.div>
       </div>

@@ -19,7 +19,7 @@ const getOrCreateWorker = () => {
   return sharedWorker;
 };
 
-const buildHighlightRequest = (diff: DiffFile, theme: string): HighlightRequest => {
+const buildHighlightRequest = (diff: DiffFile, theme: string, requestId: number): HighlightRequest => {
   const lines: HighlightRequest['lines'] = [];
 
   for (const hunk of diff.hunks) {
@@ -30,6 +30,7 @@ const buildHighlightRequest = (diff: DiffFile, theme: string): HighlightRequest 
 
   return {
     type: 'highlight',
+    requestId,
     filePath: diff.path,
     language: diff.language,
     theme,
@@ -47,6 +48,7 @@ export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
   useEffect(() => {
     if (prevThemeRef.current !== theme) {
       clearTokenStyles();
+      setTokenMap(null);
       prevThemeRef.current = theme;
     }
 
@@ -57,10 +59,10 @@ export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
 
     const currentId = ++requestIdRef.current;
     const worker = getOrCreateWorker();
-    const request = buildHighlightRequest(diff, theme);
+    const request = buildHighlightRequest(diff, theme, currentId);
 
     const handleMessage = (event: MessageEvent<HighlightResponse>) => {
-      if (currentId !== requestIdRef.current || event.data.filePath !== diff.path) {
+      if (event.data.requestId !== currentId || event.data.filePath !== diff.path) {
         return;
       }
 
@@ -100,22 +102,23 @@ export const useMultiSyntaxHighlighting = (diffs: DiffFile[], theme: string) => 
   useEffect(() => {
     if (prevThemeRef.current !== theme) {
       clearTokenStyles();
+      setTokenMaps(new Map());
       prevThemeRef.current = theme;
     }
 
     const currentId = ++requestIdRef.current;
 
     if (diffs.length === 0) {
-      setTokenMaps(new Map());
       return;
     }
 
     const worker = getOrCreateWorker();
     const accumulated = new Map<string, Map<string, HighlightToken[]>>();
     let flushScheduled = false;
+    let rafId = 0;
 
     const handleMessage = (event: MessageEvent<HighlightResponse>) => {
-      if (currentId !== requestIdRef.current) {
+      if (event.data.requestId !== currentId) {
         return;
       }
 
@@ -127,10 +130,16 @@ export const useMultiSyntaxHighlighting = (diffs: DiffFile[], theme: string) => 
 
       if (!flushScheduled) {
         flushScheduled = true;
-        requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
           flushScheduled = false;
           if (currentId === requestIdRef.current) {
-            setTokenMaps(new Map(accumulated));
+            setTokenMaps((prev) => {
+              const merged = new Map(prev);
+              for (const [filePath, tokenMap] of accumulated) {
+                merged.set(filePath, tokenMap);
+              }
+              return merged;
+            });
           }
         });
       }
@@ -146,10 +155,11 @@ export const useMultiSyntaxHighlighting = (diffs: DiffFile[], theme: string) => 
 
     for (const diff of diffs) {
       // eslint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage does not accept targetOrigin
-      worker.postMessage(buildHighlightRequest(diff, theme));
+      worker.postMessage(buildHighlightRequest(diff, theme, currentId));
     }
 
     return () => {
+      cancelAnimationFrame(rafId);
       worker.removeEventListener('message', handleMessage);
       worker.removeEventListener('error', handleError);
     };

@@ -10,6 +10,7 @@ export interface HighlightToken {
 
 export interface HighlightRequest {
   type: 'highlight';
+  requestId: number;
   filePath: string;
   language: string;
   theme: string;
@@ -20,6 +21,7 @@ export interface HighlightRequest {
 
 export interface HighlightResponse {
   type: 'highlight-result';
+  requestId: number;
   filePath: string;
   tokens: Record<string, HighlightToken[]>;
 }

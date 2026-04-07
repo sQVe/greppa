@@ -82,12 +82,26 @@ export const StackedDiffViewer = memo(forwardRef<StackedDiffViewerHandle, Stacke
         return item != null ? estimateItemSize(item) : ROW_HEIGHT;
       },
       overscan: 10,
+      scrollPaddingStart: HEADER_HEIGHT,
     });
 
     const virtualizerRef = useRef(virtualizer);
     virtualizerRef.current = virtualizer;
 
-    const tokenMaps = useMultiSyntaxHighlighting(diffs, theme);
+    const virtualItems = virtualizer.getVirtualItems();
+
+    const visibleDiffs = useMemo(() => {
+      const visiblePaths = new Set<string>();
+      for (const item of virtualItems) {
+        const path = filePathByIndex[item.index];
+        if (path != null) {
+          visiblePaths.add(path);
+        }
+      }
+      return diffs.filter((diff) => visiblePaths.has(diff.path));
+    }, [virtualItems, diffs, filePathByIndex]);
+
+    const tokenMaps = useMultiSyntaxHighlighting(visibleDiffs, theme);
 
     useImperativeHandle(ref, () => ({
       scrollToFile: (path: string) => {
@@ -105,10 +119,11 @@ export const StackedDiffViewer = memo(forwardRef<StackedDiffViewerHandle, Stacke
     const updateActiveFile = useCallback(() => {
       const items = virtualizerRef.current.getVirtualItems();
       const firstHeaderIdx = fileHeaderIndices[0];
+      const scrollTop = containerRef.current?.scrollTop ?? 0;
       if (items.length === 0 || firstHeaderIdx == null) {
         return;
       }
-      const firstVisibleIndex = items[0]?.index ?? 0;
+      const firstVisibleIndex = items.find((item) => item.end > scrollTop)?.index ?? 0;
       let headerIdx = firstHeaderIdx;
       for (const idx of fileHeaderIndices) {
         if (idx <= firstVisibleIndex) {
@@ -117,7 +132,7 @@ export const StackedDiffViewer = memo(forwardRef<StackedDiffViewerHandle, Stacke
           break;
         }
       }
-      setActiveFileIndex(headerIdx);
+      setActiveFileIndex((prev) => prev === headerIdx ? prev : headerIdx);
     }, [fileHeaderIndices]);
 
     useEffect(() => {
@@ -134,8 +149,6 @@ export const StackedDiffViewer = memo(forwardRef<StackedDiffViewerHandle, Stacke
         onActiveFileChange(activeDiff.path);
       }
     }, [activeDiff, onActiveFileChange]);
-
-    const virtualItems = virtualizer.getVirtualItems();
 
     if (diffs.length === 0) {
       return <EmptyState>Select a file to view diff</EmptyState>;

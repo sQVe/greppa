@@ -1,8 +1,9 @@
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
 import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffViewer';
+import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { collectDirectoryIds } from './components/FileTree/FileTree';
 import { FileTreePanel } from './components/FileTree/FileTreePanel';
 import { Header } from './components/Header/Header';
@@ -163,6 +164,7 @@ const useSelectedDiffs = ({
 // eslint-disable-next-line complexity -- pre-existing; extracting sub-hooks tracked separately
 export const App = () => {
   const { newRef, mergeBaseRef, isLoading: refsLoading, isError: refsError } = useRefs();
+  const stackedDiffRef = useRef<StackedDiffViewerHandle>(null);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: 'gr-panels',
@@ -292,6 +294,7 @@ export const App = () => {
         <Separator className={styles.separator} />
         <Panel id="diff-viewer" minSize={300}>
           <StackedDiffViewer
+            ref={stackedDiffRef}
             diffs={selectedDiffs}
             reviewedPaths={activeReviewedPaths}
             onToggleReviewed={activeToggleReviewed}

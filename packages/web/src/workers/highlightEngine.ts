@@ -108,7 +108,7 @@ const handleFullFileRequest = async (
   }
 
   if (uncachedLines.length === 0) {
-    return { type: 'highlight-result', filePath, tokens };
+    return { type: 'highlight-result', requestId: request.requestId, filePath, tokens };
   }
 
   const resolvedLanguage = await resolveLanguage(highlighter, language);
@@ -134,7 +134,7 @@ const handleFullFileRequest = async (
     }
   }
 
-  return { type: 'highlight-result', filePath, tokens };
+  return { type: 'highlight-result', requestId: request.requestId, filePath, tokens };
 };
 
 const handleLineByLineRequest = async (
@@ -183,7 +183,7 @@ const handleLineByLineRequest = async (
     }
   }
 
-  return { type: 'highlight-result', filePath, tokens };
+  return { type: 'highlight-result', requestId: request.requestId, filePath, tokens };
 };
 
 export const handleHighlightRequest = async (

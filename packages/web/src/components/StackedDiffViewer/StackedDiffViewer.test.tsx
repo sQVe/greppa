@@ -131,7 +131,7 @@ describe('StackedDiffViewer', () => {
 
     it('displays file path in each header', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
-      expect(screen.getAllByText('src/Api.ts')).toBeDefined();
+      expect(screen.getAllByText('src/Api.ts')).toHaveLength(2);
       expect(screen.getByText('src/GitService.ts')).toBeDefined();
     });
 

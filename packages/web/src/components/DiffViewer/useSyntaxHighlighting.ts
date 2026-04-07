@@ -83,6 +83,68 @@ export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
   return tokenMap;
 };
 
+export const useMultiSyntaxHighlighting = (diffs: DiffFile[], theme: string) => {
+  const [tokenMaps, setTokenMaps] = useState<Map<string, Map<string, HighlightToken[]>>>(
+    new Map(),
+  );
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    const currentId = ++requestIdRef.current;
+
+    if (diffs.length === 0) {
+      setTokenMaps(new Map());
+      return;
+    }
+
+    const worker = getOrCreateWorker();
+    const accumulated = new Map<string, Map<string, HighlightToken[]>>();
+    let flushScheduled = false;
+
+    const handleMessage = (event: MessageEvent<HighlightResponse>) => {
+      if (currentId !== requestIdRef.current) {
+        return;
+      }
+
+      const map = new Map<string, HighlightToken[]>();
+      for (const [key, tokens] of Object.entries(event.data.tokens)) {
+        map.set(key, tokens);
+      }
+      accumulated.set(event.data.filePath, map);
+
+      if (!flushScheduled) {
+        flushScheduled = true;
+        requestAnimationFrame(() => {
+          flushScheduled = false;
+          if (currentId === requestIdRef.current) {
+            setTokenMaps(new Map(accumulated));
+          }
+        });
+      }
+    };
+
+    const handleError = (event: ErrorEvent) => {
+      // eslint-disable-next-line no-console -- surface worker script-load failures during development
+      console.error('Highlight worker error:', event.message);
+    };
+
+    worker.addEventListener('message', handleMessage);
+    worker.addEventListener('error', handleError);
+
+    for (const diff of diffs) {
+      // eslint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage does not accept targetOrigin
+      worker.postMessage(buildHighlightRequest(diff, theme));
+    }
+
+    return () => {
+      worker.removeEventListener('message', handleMessage);
+      worker.removeEventListener('error', handleError);
+    };
+  }, [diffs, theme]);
+
+  return tokenMaps;
+};
+
 export const resetWorkerForTesting = () => {
   sharedWorker?.terminate();
   sharedWorker = null;

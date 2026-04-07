@@ -1,10 +1,8 @@
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
-import { FileMinimap } from './components/StackedDiffViewer/FileMinimap';
 import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffViewer';
-import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { collectDirectoryIds } from './components/FileTree/FileTree';
 import { FileTreePanel } from './components/FileTree/FileTreePanel';
 import { Header } from './components/Header/Header';
@@ -162,9 +160,8 @@ const useSelectedDiffs = ({
   }, [multiSelect.isMultiSelect, multiDiffs.diffs, selectedDiff]);
 };
 
+// eslint-disable-next-line complexity -- pre-existing; extracting sub-hooks tracked separately
 export const App = () => {
-  const stackedDiffRef = useRef<StackedDiffViewerHandle>(null);
-  const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const { newRef, mergeBaseRef, isLoading: refsLoading, isError: refsError } = useRefs();
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
@@ -231,6 +228,10 @@ export const App = () => {
 
   const selectedDiffs = commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
 
+  const activeReviewedPaths = multiSelect.activeSource === 'worktree' ? worktreeReviewedPaths : reviewedPaths;
+
+  const activeToggleReviewed = multiSelect.activeSource === 'worktree' ? toggleWorktreeReviewed : toggleReviewed;
+
   const treeSelectedPaths = useMemo(() => {
     if (multiSelect.selectedPaths.size > 0) {
       return multiSelect.selectedPaths;
@@ -287,20 +288,11 @@ export const App = () => {
         </Panel>
         <Separator className={styles.separator} />
         <Panel id="diff-viewer" minSize={300}>
-          <div className={styles.diffPane}>
-            <FileMinimap
-              diffs={selectedDiffs}
-              activeFilePath={activeFilePath}
-              onSegmentClick={(path) => stackedDiffRef.current?.scrollToFile(path)}
-            />
-            <StackedDiffViewer
-              ref={stackedDiffRef}
-              diffs={selectedDiffs}
-              reviewedPaths={multiSelect.activeSource === 'worktree' ? worktreeReviewedPaths : reviewedPaths}
-              onToggleReviewed={multiSelect.activeSource === 'worktree' ? toggleWorktreeReviewed : toggleReviewed}
-              onActiveFileChange={setActiveFilePath}
-            />
-          </div>
+          <StackedDiffViewer
+            diffs={selectedDiffs}
+            reviewedPaths={activeReviewedPaths}
+            onToggleReviewed={activeToggleReviewed}
+          />
         </Panel>
         <Separator className={styles.separator} />
         <Panel

@@ -34,23 +34,28 @@ describe('tokenStylesheet', () => {
       getTokenColorClass('#cba6f7');
       const styleElement = document.querySelector('style[data-token-styles]');
       expect(styleElement).not.toBeNull();
-      expect(styleElement!.textContent).toContain('.tk-cba6f7');
-      expect(styleElement!.textContent).toContain('color: #cba6f7');
+
+      const text = styleElement?.textContent ?? '';
+      expect(text).toContain('.tk-cba6f7');
+      expect(text).toContain('color: #cba6f7');
     });
 
     it('accumulates rules for multiple colors', () => {
       getTokenColorClass('#ff0000');
       getTokenColorClass('#00ff00');
       const styleElement = document.querySelector('style[data-token-styles]');
-      expect(styleElement!.textContent).toContain('.tk-ff0000');
-      expect(styleElement!.textContent).toContain('.tk-00ff00');
+
+      const text = styleElement?.textContent ?? '';
+      expect(text).toContain('.tk-ff0000');
+      expect(text).toContain('.tk-00ff00');
     });
 
     it('does not duplicate rules for the same color', () => {
       getTokenColorClass('#ff0000');
       getTokenColorClass('#ff0000');
       const styleElement = document.querySelector('style[data-token-styles]');
-      const matches = styleElement!.textContent.match(/tk-ff0000/g);
+
+      const matches = (styleElement?.textContent ?? '').match(/tk-ff0000/g);
       expect(matches).toHaveLength(1);
     });
   });
@@ -69,8 +74,10 @@ describe('tokenStylesheet', () => {
       getTokenColorClass('#00ff00');
       const styleElement = document.querySelector('style[data-token-styles]');
       expect(styleElement).not.toBeNull();
-      expect(styleElement!.textContent).toContain('.tk-00ff00');
-      expect(styleElement!.textContent).not.toContain('.tk-ff0000');
+
+      const text = styleElement?.textContent ?? '';
+      expect(text).toContain('.tk-00ff00');
+      expect(text).not.toContain('.tk-ff0000');
     });
   });
 });

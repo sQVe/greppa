@@ -1,6 +1,7 @@
 import type { CharRange, LineType } from '../../fixtures/types';
 import type { HighlightToken } from '../../workers/highlightProtocol';
 import { splitTokensWithHighlights } from './splitTokensWithHighlights';
+import { getTokenColorClass } from './tokenStylesheet';
 
 import styles from './DiffViewer.module.css';
 
@@ -27,16 +28,21 @@ export const TokenSpans = ({ content, tokens, charRanges, lineType }: TokenSpans
     const segments = splitTokensWithHighlights(tokens, charRanges, content);
     const hlClass = highlightClass(lineType);
 
-    return segments.map((segment, i) => (
-      <span
+    return segments.map((segment, i) => {
+      const colorClass = getTokenColorClass(segment.color);
+      let className = colorClass;
+
+      if (segment.highlighted) {
+        className = colorClass != null ? `${hlClass} ${colorClass}` : hlClass;
+      }
+
+      return (
         // eslint-disable-next-line react/no-array-index-key
-        key={i}
-        className={segment.highlighted ? hlClass : undefined}
-        style={segment.color != null ? { color: segment.color } : undefined}
-      >
-        {segment.content}
-      </span>
-    ));
+        <span key={i} className={className}>
+          {segment.content}
+        </span>
+      );
+    });
   }
 
   if (tokens == null) {
@@ -45,7 +51,7 @@ export const TokenSpans = ({ content, tokens, charRanges, lineType }: TokenSpans
 
   return tokens.map((token, i) => (
     // eslint-disable-next-line react/no-array-index-key
-    <span key={i} style={{ color: token.color }}>
+    <span key={i} className={getTokenColorClass(token.color)}>
       {token.content}
     </span>
   ));

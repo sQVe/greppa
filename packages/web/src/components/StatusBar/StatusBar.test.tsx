@@ -9,38 +9,117 @@ afterEach(() => {
 });
 
 describe('StatusBar', () => {
-  it('renders the reviewed file count', () => {
-    render(<StatusBar reviewedCount={2} totalCount={5} />);
-    expect(screen.getByText('2/5 files reviewed')).toBeDefined();
-  });
-
   it('renders as a footer element', () => {
-    const { container } = render(<StatusBar reviewedCount={0} totalCount={0} />);
+    const { container } = render(
+      <StatusBar mode="file-review" reviewedCount={0} totalCount={0} />,
+    );
     expect(container.querySelector('footer')).not.toBeNull();
   });
 
-  describe('file metadata', () => {
-    it('renders language when provided', () => {
-      render(<StatusBar reviewedCount={0} totalCount={0} language="TypeScript" />);
-      expect(screen.getByText('TypeScript')).toBeDefined();
+  describe('file-review mode', () => {
+    it('renders file count', () => {
+      render(<StatusBar mode="file-review" reviewedCount={7} totalCount={12} />);
+      expect(screen.getByText('12 files')).toBeDefined();
     });
 
-    it('renders encoding when provided', () => {
-      render(<StatusBar reviewedCount={0} totalCount={0} encoding="UTF-8" />);
-      expect(screen.getByText('UTF-8')).toBeDefined();
+    it('renders reviewed count with percentage', () => {
+      render(<StatusBar mode="file-review" reviewedCount={7} totalCount={12} />);
+      expect(screen.getByText('7 / 12')).toBeDefined();
+      expect(screen.getByText('58%')).toBeDefined();
     });
 
-    it('renders both language and encoding together', () => {
-      render(
-        <StatusBar reviewedCount={0} totalCount={0} language="TypeScript" encoding="UTF-8" />,
+    it('renders progress bar', () => {
+      const { container } = render(
+        <StatusBar mode="file-review" reviewedCount={7} totalCount={12} />,
       );
-      expect(screen.getByText('TypeScript')).toBeDefined();
-      expect(screen.getByText('UTF-8')).toBeDefined();
+      const fill = container.querySelector('[data-testid="progress-fill"]');
+      expect(fill).not.toBeNull();
     });
 
-    it('does not render metadata section when neither is provided', () => {
-      const { container } = render(<StatusBar reviewedCount={0} totalCount={0} />);
-      expect(container.querySelector('[class*="metadata"]')).toBeNull();
+    it('renders comment count when greater than zero', () => {
+      render(
+        <StatusBar mode="file-review" reviewedCount={7} totalCount={12} commentCount={3} />,
+      );
+      expect(screen.getByText('3 comments')).toBeDefined();
+    });
+
+    it('renders zero comments in muted state', () => {
+      render(
+        <StatusBar mode="file-review" reviewedCount={7} totalCount={12} commentCount={0} />,
+      );
+      expect(screen.getByText('0 comments')).toBeDefined();
+    });
+
+    it('renders Space and Tab keyboard hints', () => {
+      render(<StatusBar mode="file-review" reviewedCount={7} totalCount={12} />);
+      expect(screen.getByText('Space')).toBeDefined();
+      expect(screen.getByText('Tab')).toBeDefined();
+    });
+  });
+
+  describe('commit-review mode', () => {
+    it('renders commit SHA', () => {
+      render(
+        <StatusBar mode="commit-review" commitSha="a3f8e21" reviewedCount={0} totalCount={4} />,
+      );
+      expect(screen.getByText('a3f8e21')).toBeDefined();
+    });
+
+    it('renders reviewed count', () => {
+      render(
+        <StatusBar mode="commit-review" commitSha="a3f8e21" reviewedCount={0} totalCount={4} />,
+      );
+      expect(screen.getByText('0 / 4')).toBeDefined();
+    });
+  });
+
+  describe('working-tree mode', () => {
+    it('renders working tree label', () => {
+      render(<StatusBar mode="working-tree" modifiedCount={4} />);
+      expect(screen.getByText('working tree')).toBeDefined();
+    });
+
+    it('renders modified count', () => {
+      render(<StatusBar mode="working-tree" modifiedCount={4} />);
+      expect(screen.getByText('4 modified')).toBeDefined();
+    });
+  });
+
+  describe('review-complete mode', () => {
+    it('renders all-reviewed count', () => {
+      render(<StatusBar mode="review-complete" reviewedCount={12} totalCount={12} />);
+      expect(screen.getByText('12 / 12')).toBeDefined();
+    });
+
+    it('renders full progress bar', () => {
+      const { container } = render(
+        <StatusBar mode="review-complete" reviewedCount={12} totalCount={12} />,
+      );
+      const fill = container.querySelector('[data-testid="progress-fill"]');
+      expect(fill).not.toBeNull();
+    });
+
+    it('renders Enter keyboard hint', () => {
+      render(<StatusBar mode="review-complete" reviewedCount={12} totalCount={12} />);
+      expect(screen.getByText('Enter')).toBeDefined();
+    });
+  });
+
+  describe('composer-open mode', () => {
+    it('renders reviewed count and comment count', () => {
+      render(
+        <StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />,
+      );
+      expect(screen.getByText('7 / 12')).toBeDefined();
+      expect(screen.getByText('3 comments')).toBeDefined();
+    });
+
+    it('renders Cmd+Enter and Esc keyboard hints', () => {
+      render(
+        <StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />,
+      );
+      expect(screen.getByText('Cmd+Enter')).toBeDefined();
+      expect(screen.getByText('Esc')).toBeDefined();
     });
   });
 });

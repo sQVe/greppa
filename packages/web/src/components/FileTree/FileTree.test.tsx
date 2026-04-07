@@ -189,7 +189,7 @@ describe('FileTree', () => {
     expect(keys.has('src/middleware')).toBe(true);
   });
 
-  it('should call onSelectFile with metaKey when cmd-clicking a directory', async () => {
+  it('should call onSelectFile with metaKey when cmd-clicking an expanded directory', async () => {
     const user = userEvent.setup();
     const onSelectFile = vi.fn();
     render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);
@@ -199,6 +199,28 @@ describe('FileTree', () => {
     await user.keyboard('{/Meta}');
 
     expect(onSelectFile).toHaveBeenCalledWith('src/auth', { shiftKey: false, metaKey: true });
+  });
+
+  it('should expand a collapsed directory when cmd-clicking instead of selecting', async () => {
+    const user = userEvent.setup();
+    const onSelectFile = vi.fn();
+    const onExpandedKeysChange = vi.fn();
+    render(
+      <FileTree
+        {...defaultProps}
+        expandedKeys={['src/middleware']}
+        onSelectFile={onSelectFile}
+        onExpandedKeysChange={onExpandedKeysChange}
+      />,
+    );
+
+    await user.keyboard('{Meta>}');
+    await user.click(screen.getByText('auth'));
+    await user.keyboard('{/Meta}');
+
+    expect(onSelectFile).not.toHaveBeenCalled();
+    const keys = onExpandedKeysChange.mock.calls[0]?.[0] as Set<string | number>;
+    expect(keys.has('src/auth')).toBe(true);
   });
 
   it('should not call onSelectDirectory when cmd-clicking a file', async () => {

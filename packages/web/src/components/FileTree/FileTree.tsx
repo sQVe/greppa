@@ -52,7 +52,13 @@ export const FileTree = ({
           const metaKey = event.metaKey || event.ctrlKey;
           if (isDirectory) {
             if (metaKey) {
-              onSelectFile(node.path, { shiftKey: false, metaKey: true });
+              const keys = new Set<string | number>(expandedKeysRef.current);
+              if (keys.has(node.path)) {
+                onSelectFile(node.path, { shiftKey: false, metaKey: true });
+              } else {
+                keys.add(node.path);
+                onExpandedKeysChange(keys);
+              }
             } else if (event.shiftKey) {
               onSelectDirectory?.(node.path);
             } else {

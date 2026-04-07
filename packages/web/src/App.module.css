@@ -23,12 +23,6 @@
   font-size: var(--gr-text-sm);
 }
 
-.diffPane {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-}
-
 .separator {
   width: 1px;
   background: var(--gr-color-bg-subtle);

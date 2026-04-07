@@ -15,6 +15,7 @@ import { App } from './App';
 
 vi.mock('./components/DiffViewer/useSyntaxHighlighting', () => ({
   useSyntaxHighlighting: () => null,
+  useMultiSyntaxHighlighting: () => new Map(),
 }));
 
 vi.mock('./hooks/useFileList', () => ({

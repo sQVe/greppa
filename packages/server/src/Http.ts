@@ -12,36 +12,52 @@ import { Api } from './Api';
 import { GitError, GitService, GitServiceLive, RefsConfig } from './GitService';
 import type { RefsConfigValue } from './GitService';
 
-const fileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
-const CACHE_TTL_MS = 30_000;
-const MAX_CACHE_ENTRIES = 50;
+interface CacheEntry<T> {
+  value: T;
+  timestamp: number;
+}
 
-const evictStaleEntries = () => {
-  const now = Date.now();
-  for (const [key, value] of fileListCache) {
-    if (now - value.timestamp >= CACHE_TTL_MS) {
-      fileListCache.delete(key);
+interface DiffContent {
+  oldContent: string;
+  newContent: string;
+}
+
+const createCache = <T>(ttlMs: number, maxEntries: number) => {
+  const store = new Map<string, CacheEntry<T>>();
+
+  const evictStale = () => {
+    const now = Date.now();
+    for (const [key, entry] of store) {
+      if (now - entry.timestamp >= ttlMs) {
+        store.delete(key);
+      }
     }
-  }
+  };
+
+  return {
+    get: (key: string): T | null => {
+      const cached = store.get(key);
+      if (cached != null && Date.now() - cached.timestamp < ttlMs) {
+        return cached.value;
+      }
+      return null;
+    },
+    set: (key: string, value: T) => {
+      if (store.size >= maxEntries) {
+        evictStale();
+      }
+      if (store.size >= maxEntries) {
+        store.clear();
+      }
+      store.set(key, { value, timestamp: Date.now() });
+    },
+  };
 };
 
-const getCachedFileList = (key: string) => {
-  const cached = fileListCache.get(key);
-  if (cached != null && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.entries;
-  }
-  return null;
-};
+const fileListCache = createCache<FileEntry[]>(30_000, 50);
 
-const setCachedFileList = (key: string, entries: FileEntry[]) => {
-  if (fileListCache.size >= MAX_CACHE_ENTRIES) {
-    evictStaleEntries();
-  }
-  if (fileListCache.size >= MAX_CACHE_ENTRIES) {
-    fileListCache.clear();
-  }
-  fileListCache.set(key, { entries, timestamp: Date.now() });
-};
+const diffContentCache = createCache<DiffContent>(30_000, 100);
+const worktreeDiffContentCache = createCache<DiffContent>(3_000, 100);
 
 const HealthHandlers = HttpApiBuilder.group(Api, 'health', (handlers) =>
   Effect.succeed(handlers.handle('getHealth', () => Effect.succeed({ status: 'ok' as const }))),
@@ -50,13 +66,13 @@ const HealthHandlers = HttpApiBuilder.group(Api, 'health', (handlers) =>
 const getFileList = (oldRef: string, newRef: string) =>
   Effect.gen(function* () {
     const cacheKey = `${oldRef}:${newRef}`;
-    const cached = getCachedFileList(cacheKey);
+    const cached = fileListCache.get(cacheKey);
     if (cached != null) {
       return cached;
     }
     const git = yield* GitService;
     const entries = yield* git.listFiles(oldRef, newRef);
-    setCachedFileList(cacheKey, entries);
+    fileListCache.set(cacheKey, entries);
     return entries;
   });
 
@@ -101,11 +117,18 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
           return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
         }
         const changeType = entry.changeType;
+        const contentKey = `${oldRef}:${newRef}:${filePath}`;
+        const cachedContent = diffContentCache.get(contentKey);
+
+        if (cachedContent != null) {
+          return { path: filePath, changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
+        }
 
         const [oldContent, newContent] = yield* Effect.all([
           changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
           changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
         ]);
+        diffContentCache.set(contentKey, { oldContent, newContent });
 
         return {
           path: filePath,
@@ -141,18 +164,17 @@ const RefsHandlers = HttpApiBuilder.group(Api, 'refs', (handlers) =>
   }),
 );
 
-const worktreeFileListCache = new Map<string, { entries: FileEntry[]; timestamp: number }>();
-const WORKTREE_CACHE_TTL_MS = 3_000;
+const worktreeFileListCache = createCache<FileEntry[]>(3_000, 1);
 
 const getWorktreeFileList = () =>
   Effect.gen(function* () {
     const cached = worktreeFileListCache.get('worktree');
-    if (cached != null && Date.now() - cached.timestamp < WORKTREE_CACHE_TTL_MS) {
-      return cached.entries;
+    if (cached != null) {
+      return cached;
     }
     const git = yield* GitService;
     const entries = yield* git.listWorkingTreeFiles();
-    worktreeFileListCache.set('worktree', { entries, timestamp: Date.now() });
+    worktreeFileListCache.set('worktree', entries);
     return entries;
   });
 
@@ -178,10 +200,18 @@ const handleGetWorktreeDiff = (filePath: string) =>
       );
     }
 
+    const contentKey = `worktree:${filePath}`;
+    const cachedContent = worktreeDiffContentCache.get(contentKey);
+
+    if (cachedContent != null) {
+      return { path: filePath, changeType: entry.changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
+    }
+
     const [oldContent, newContent] = yield* Effect.all([
       entry.changeType === 'added' ? Effect.succeed('') : git.getFileContent('HEAD', entry.oldPath ?? filePath),
       entry.changeType === 'deleted' ? Effect.succeed('') : git.getWorkingTreeFileContent(filePath),
     ]);
+    worktreeDiffContentCache.set(contentKey, { oldContent, newContent });
 
     return {
       path: filePath,

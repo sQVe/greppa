@@ -18,9 +18,10 @@ let workerConstructCount = 0;
 vi.stubGlobal(
   'Worker',
   class {
-    postMessage = mockPostMessage.mockImplementation(() => {
+    postMessage = mockPostMessage.mockImplementation((request: { requestId: number }) => {
       const response: HighlightResponse = {
         type: 'highlight-result',
+        requestId: request.requestId,
         filePath: 'src/foo.ts',
         tokens: {
           'context:1:1': [{ content: 'const a = 1;', color: '#f00' }],

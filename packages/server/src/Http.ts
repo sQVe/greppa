@@ -120,15 +120,15 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
         const contentKey = `${oldRef}:${newRef}:${filePath}`;
         const cachedContent = diffContentCache.get(contentKey);
 
-        const { oldContent, newContent } = cachedContent ?? (yield* Effect.gen(function* () {
-          const [old, fresh] = yield* Effect.all([
-            changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
-            changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
-          ]);
-          const result = { oldContent: old, newContent: fresh };
-          diffContentCache.set(contentKey, result);
-          return result;
-        }));
+        if (cachedContent != null) {
+          return { path: filePath, changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
+        }
+
+        const [oldContent, newContent] = yield* Effect.all([
+          changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
+          changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
+        ]);
+        diffContentCache.set(contentKey, { oldContent, newContent });
 
         return {
           path: filePath,
@@ -203,15 +203,15 @@ const handleGetWorktreeDiff = (filePath: string) =>
     const contentKey = `worktree:${filePath}`;
     const cachedContent = worktreeDiffContentCache.get(contentKey);
 
-    const { oldContent, newContent } = cachedContent ?? (yield* Effect.gen(function* () {
-      const [old, fresh] = yield* Effect.all([
-        entry.changeType === 'added' ? Effect.succeed('') : git.getFileContent('HEAD', entry.oldPath ?? filePath),
-        entry.changeType === 'deleted' ? Effect.succeed('') : git.getWorkingTreeFileContent(filePath),
-      ]);
-      const result = { oldContent: old, newContent: fresh };
-      worktreeDiffContentCache.set(contentKey, result);
-      return result;
-    }));
+    if (cachedContent != null) {
+      return { path: filePath, changeType: entry.changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
+    }
+
+    const [oldContent, newContent] = yield* Effect.all([
+      entry.changeType === 'added' ? Effect.succeed('') : git.getFileContent('HEAD', entry.oldPath ?? filePath),
+      entry.changeType === 'deleted' ? Effect.succeed('') : git.getWorkingTreeFileContent(filePath),
+    ]);
+    worktreeDiffContentCache.set(contentKey, { oldContent, newContent });
 
     return {
       path: filePath,

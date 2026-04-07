@@ -7,6 +7,7 @@ import type {
   HighlightToken,
 } from '../../workers/highlightProtocol';
 import { diffLineKey } from './buildRows';
+import { clearTokenStyles } from './tokenStylesheet';
 
 let sharedWorker: Worker | null = null;
 
@@ -41,8 +42,14 @@ const buildHighlightRequest = (diff: DiffFile, theme: string): HighlightRequest 
 export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
   const [tokenMap, setTokenMap] = useState<Map<string, HighlightToken[]> | null>(null);
   const requestIdRef = useRef(0);
+  const prevThemeRef = useRef(theme);
 
   useEffect(() => {
+    if (prevThemeRef.current !== theme) {
+      clearTokenStyles();
+      prevThemeRef.current = theme;
+    }
+
     if (diff == null) {
       setTokenMap(null);
       return;
@@ -88,8 +95,14 @@ export const useMultiSyntaxHighlighting = (diffs: DiffFile[], theme: string) => 
     new Map(),
   );
   const requestIdRef = useRef(0);
+  const prevThemeRef = useRef(theme);
 
   useEffect(() => {
+    if (prevThemeRef.current !== theme) {
+      clearTokenStyles();
+      prevThemeRef.current = theme;
+    }
+
     const currentId = ++requestIdRef.current;
 
     if (diffs.length === 0) {

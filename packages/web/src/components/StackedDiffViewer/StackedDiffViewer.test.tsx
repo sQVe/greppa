@@ -137,8 +137,8 @@ describe('StackedDiffViewer', () => {
 
     it('displays change type badge in each header', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
-      expect(screen.getAllByText('Modified').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Added').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Modified')).toHaveLength(2);
+      expect(screen.getAllByText('Added')).toHaveLength(1);
     });
 
     it('renders a separator between files but not after the last', () => {
@@ -157,11 +157,17 @@ describe('StackedDiffViewer', () => {
   });
 
   describe('review button', () => {
+    const getVirtualListButtons = () => {
+      const stickyHeader = screen.getByTestId('sticky-file-header');
+      return screen.getAllByRole('button', { name: /mark reviewed/i })
+        .filter((button) => !stickyHeader.contains(button));
+    };
+
     it('renders review buttons in file headers', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
-      const buttons = screen.getAllByRole('button', { name: /mark reviewed/i });
+      const buttons = getVirtualListButtons();
 
-      expect(buttons.length).toBeGreaterThanOrEqual(2);
+      expect(buttons).toHaveLength(2);
     });
 
     it('shows reviewed state for files in reviewedPaths', () => {
@@ -172,14 +178,16 @@ describe('StackedDiffViewer', () => {
           onToggleReviewed={vi.fn()}
         />,
       );
-      const buttons = screen.getAllByRole('button');
-      const reviewButtons = buttons.filter((b) => b.textContent !== null && b.textContent.includes('eviewed'));
+      const stickyHeader = screen.getByTestId('sticky-file-header');
+      const reviewButtons = screen.getAllByRole('button')
+        .filter((b) => !stickyHeader.contains(b))
+        .filter((b) => b.textContent !== null && b.textContent.includes('eviewed'));
 
       const reviewedButtons = reviewButtons.filter((b) => b.textContent === '\u2713 Reviewed');
       const unreviewedButtons = reviewButtons.filter((b) => b.textContent === 'Mark reviewed');
 
-      expect(reviewedButtons.length).toBeGreaterThanOrEqual(1);
-      expect(unreviewedButtons.length).toBeGreaterThanOrEqual(1);
+      expect(reviewedButtons).toHaveLength(1);
+      expect(unreviewedButtons).toHaveLength(1);
     });
 
     it('calls onToggleReviewed with file path when clicked', async () => {

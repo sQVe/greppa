@@ -226,7 +226,10 @@ export const App = () => {
     worktreeFilePaths,
   });
 
-  const selectedDiffs = commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
+  const selectedDiffs = useMemo(
+    () => (commitSelection.isActive ? commitDiffs.diffs : fileDiffs),
+    [commitSelection.isActive, commitDiffs.diffs, fileDiffs],
+  );
 
   const activeReviewedPaths = multiSelect.activeSource === 'worktree' ? worktreeReviewedPaths : reviewedPaths;
 

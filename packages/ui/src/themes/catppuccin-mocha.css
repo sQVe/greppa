@@ -36,23 +36,23 @@
   --gr-color-text-warning: #f9e2af;
 
   /* Diff — added (green) */
-  --gr-color-diff-added-bg: rgb(166 227 161 / 15%);
+  --gr-color-diff-added-bg: rgb(166 227 161 / 8%);
   --gr-color-diff-added-char-bg: color-mix(
     in srgb,
-    rgb(166 227 161) 12%,
-    color-mix(in srgb, rgb(166 227 161) 15%, var(--gr-color-bg-default))
+    rgb(166 227 161) 8%,
+    color-mix(in srgb, rgb(166 227 161) 10%, var(--gr-color-bg-default))
   );
-  --gr-color-diff-gutter-added-bg: rgb(166 227 161 / 20%);
+  --gr-color-diff-gutter-added-bg: rgb(166 227 161 / 12%);
   --gr-color-diff-added-border: rgb(166 227 161 / 40%);
 
   /* Diff — removed (red) */
-  --gr-color-diff-removed-bg: rgb(243 139 168 / 15%);
+  --gr-color-diff-removed-bg: rgb(243 139 168 / 8%);
   --gr-color-diff-removed-char-bg: color-mix(
     in srgb,
-    rgb(243 139 168) 12%,
-    color-mix(in srgb, rgb(243 139 168) 15%, var(--gr-color-bg-default))
+    rgb(243 139 168) 8%,
+    color-mix(in srgb, rgb(243 139 168) 10%, var(--gr-color-bg-default))
   );
-  --gr-color-diff-gutter-removed-bg: rgb(243 139 168 / 20%);
+  --gr-color-diff-gutter-removed-bg: rgb(243 139 168 / 12%);
   --gr-color-diff-removed-border: rgb(243 139 168 / 40%);
 
   /* Diff — modified (yellow) */

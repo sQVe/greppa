@@ -5,7 +5,6 @@ import type { FlatVirtualItem } from '../DiffViewer/buildFlatItems';
 import { RowSideCell } from '../DiffViewer/RowSideCell';
 import { FileHeader } from './FileHeader';
 
-import styles from './StackedDiffViewer.module.css';
 import diffStyles from '../DiffViewer/DiffViewer.module.css';
 
 interface VirtualRowProps {
@@ -40,9 +39,6 @@ export const VirtualRow = memo(({ item, tokenMap, reviewedPaths, onToggleReviewe
           <RowSideCell data={item.row.right} side="right" tokenMap={tokenMap} />
         </div>
       );
-    }
-    case 'file-separator': {
-      return <div className={styles.separator} data-testid="file-separator" />;
     }
   }
 });

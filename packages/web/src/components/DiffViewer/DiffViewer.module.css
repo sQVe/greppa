@@ -64,7 +64,11 @@
 }
 
 .lineEmpty {
-  background: var(--gr-color-bg-surface);
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-surface) 25%,
+    var(--gr-color-bg-default)
+  );
 }
 
 .charRemoved {

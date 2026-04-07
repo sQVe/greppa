@@ -17,20 +17,12 @@ interface DiffRowItem {
   row: DiffRow;
 }
 
-interface FileSeparatorItem {
-  kind: 'file-separator';
-}
-
-export type FlatVirtualItem = FileHeaderItem | HunkHeaderItem | DiffRowItem | FileSeparatorItem;
+export type FlatVirtualItem = FileHeaderItem | HunkHeaderItem | DiffRowItem;
 
 export const buildFlatItems = (diffs: DiffFile[]): FlatVirtualItem[] => {
   const items: FlatVirtualItem[] = [];
 
-  for (const [i, diff] of diffs.entries()) {
-    if (i > 0) {
-      items.push({ kind: 'file-separator' });
-    }
-
+  for (const diff of diffs) {
     items.push({ kind: 'file-header', diff });
 
     for (const hunk of diff.hunks) {

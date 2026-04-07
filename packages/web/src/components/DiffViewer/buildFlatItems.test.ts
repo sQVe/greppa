@@ -62,13 +62,12 @@ describe('buildFlatItems', () => {
     expect(kinds).toEqual(['file-header', 'hunk-header', 'diff-row', 'diff-row']);
   });
 
-  it('inserts file-separator between files but not after the last', () => {
+  it('places file-header items directly adjacent between files', () => {
     const items = buildFlatItems([fileA, fileB]);
     const kinds = items.map((item) => item.kind);
 
     expect(kinds).toEqual([
       'file-header', 'hunk-header', 'diff-row', 'diff-row',
-      'file-separator',
       'file-header', 'hunk-header', 'diff-row',
     ]);
   });

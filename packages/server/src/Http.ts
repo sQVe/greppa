@@ -17,6 +17,11 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
+interface DiffContent {
+  oldContent: string;
+  newContent: string;
+}
+
 const createCache = <T>(ttlMs: number, maxEntries: number) => {
   const store = new Map<string, CacheEntry<T>>();
 
@@ -50,11 +55,6 @@ const createCache = <T>(ttlMs: number, maxEntries: number) => {
 };
 
 const fileListCache = createCache<FileEntry[]>(30_000, 50);
-
-interface DiffContent {
-  oldContent: string;
-  newContent: string;
-}
 
 const diffContentCache = createCache<DiffContent>(30_000, 100);
 const worktreeDiffContentCache = createCache<DiffContent>(3_000, 100);

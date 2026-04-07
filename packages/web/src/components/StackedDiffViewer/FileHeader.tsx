@@ -6,18 +6,18 @@ import type { ChangeType, DiffFile } from '../../fixtures/types';
 
 import styles from './StackedDiffViewer.module.css';
 
+interface FileHeaderProps {
+  diff: DiffFile;
+  reviewedPaths?: Set<string>;
+  onToggleReviewed?: (path: string) => void;
+}
+
 const CHANGE_LABELS: Record<ChangeType, string> = {
   added: 'Added',
   deleted: 'Deleted',
   modified: 'Modified',
   renamed: 'Renamed',
 };
-
-interface FileHeaderProps {
-  diff: DiffFile;
-  reviewedPaths?: Set<string>;
-  onToggleReviewed?: (path: string) => void;
-}
 
 export const FileHeader = memo(({ diff, reviewedPaths, onToggleReviewed }: FileHeaderProps) => (
   <div

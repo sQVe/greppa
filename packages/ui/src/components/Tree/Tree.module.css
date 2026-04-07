@@ -3,7 +3,7 @@
 
   min-height: 0;
   padding: var(--gr-space-md) 0;
-  font-family: var(--gr-font-ui);
+  font-family: var(--gr-font-mono);
   font-size: var(--gr-text-sm);
   outline: none;
 }
@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   gap: var(--gr-space-sm);
-  min-height: 22px;
+  min-height: 24px;
   padding: 0 var(--gr-space-md);
   cursor: pointer;
   outline: none;
@@ -96,4 +96,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--gr-color-text-secondary);
 }

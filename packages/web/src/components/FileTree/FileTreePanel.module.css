@@ -26,9 +26,10 @@
 .sectionHeader {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--gr-space-md);
   width: 100%;
-  padding: 5px var(--gr-space-lg);
+  height: 32px;
+  padding: 0 var(--gr-space-lg);
   border: none;
   font: inherit;
   color: inherit;
@@ -61,16 +62,15 @@
   flex: 1;
   font-family: var(--gr-font-ui);
   font-size: var(--gr-text-xs);
-  font-weight: 600;
-  color: var(--gr-color-text-secondary);
-  letter-spacing: 0.04em;
+  font-weight: var(--gr-font-weight-semibold);
+  color: var(--gr-color-text-muted);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .sectionCount {
-  font-family: var(--gr-font-ui);
+  font-family: var(--gr-font-mono);
   font-size: var(--gr-text-xs);
-  font-weight: 500;
   color: var(--gr-color-text-muted);
 }
 

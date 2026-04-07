@@ -1,9 +1,11 @@
 .badge {
   flex-shrink: 0;
-  padding: 0 var(--gr-space-sm);
-  border-radius: var(--gr-radius-sm);
-  font-size: var(--gr-text-xs);
-  font-weight: var(--gr-font-weight-semibold);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.625rem;
+  font-weight: var(--gr-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   line-height: 1.4;
 }
 

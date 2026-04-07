@@ -196,16 +196,16 @@ export const GitServiceLive = Layer.succeed(
         Effect.mapError((error) => new ResolveRefError({ message: error.message, cause: error })),
       ),
     detectDefaultBranch: () => {
-      const checkRefExists = (ref: string, name: string) =>
-        runGit(['rev-parse', '--verify', ref]).pipe(Effect.map(() => name));
+      const checkRefExists = (ref: string) =>
+        runGit(['rev-parse', '--verify', ref]).pipe(Effect.map(() => ref));
 
       return runGit(['symbolic-ref', 'refs/remotes/origin/HEAD']).pipe(
-        Effect.map((output) => output.trim().replace('refs/remotes/origin/', '')),
+        Effect.map((output) => `origin/${output.trim().replace('refs/remotes/origin/', '')}`),
         Effect.catch(() =>
-          checkRefExists('main', 'main').pipe(
-            Effect.catch(() => checkRefExists('refs/remotes/origin/main', 'main')),
-            Effect.catch(() => checkRefExists('master', 'master')),
-            Effect.catch(() => checkRefExists('refs/remotes/origin/master', 'master')),
+          checkRefExists('origin/main').pipe(
+            Effect.catch(() => checkRefExists('origin/master')),
+            Effect.catch(() => checkRefExists('main')),
+            Effect.catch(() => checkRefExists('master')),
           ),
         ),
         Effect.mapError((error) =>

@@ -8,18 +8,22 @@ import type { ChildProcessSpawner } from 'effect/unstable/process/ChildProcessSp
 
 export class GitError extends Data.TaggedError('GitError')<{
   message: string;
+  cause?: unknown;
 }> {}
 
 export class ResolveRefError extends Data.TaggedError('ResolveRefError')<{
   message: string;
+  cause?: unknown;
 }> {}
 
 export class DetectDefaultBranchError extends Data.TaggedError('DetectDefaultBranchError')<{
   message: string;
+  cause?: unknown;
 }> {}
 
 export class MergeBaseError extends Data.TaggedError('MergeBaseError')<{
   message: string;
+  cause?: unknown;
 }> {}
 
 export interface RefsConfigValue {
@@ -129,7 +133,9 @@ const runGit = (
   }).pipe(
     Effect.scoped,
     Effect.mapError((error) =>
-      error instanceof GitError ? error : new GitError({ message: error instanceof Error ? error.message : JSON.stringify(error) }),
+      error instanceof GitError
+        ? error
+        : new GitError({ message: error instanceof Error ? error.message : JSON.stringify(error), cause: error }),
     ),
   );
 
@@ -187,7 +193,7 @@ export const GitServiceLive = Layer.succeed(
       validateRef(ref).pipe(
         Effect.flatMap(() => runGit(['rev-parse', '--verify', ref])),
         Effect.map(() => ref),
-        Effect.mapError((error) => new ResolveRefError({ message: error.message })),
+        Effect.mapError((error) => new ResolveRefError({ message: error.message, cause: error })),
       ),
     detectDefaultBranch: () => {
       const checkRefExists = (ref: string, name: string) =>
@@ -205,7 +211,7 @@ export const GitServiceLive = Layer.succeed(
         Effect.mapError((error) =>
           error instanceof DetectDefaultBranchError
             ? error
-            : new DetectDefaultBranchError({ message: error.message }),
+            : new DetectDefaultBranchError({ message: error.message, cause: error }),
         ),
       );
     },
@@ -213,7 +219,7 @@ export const GitServiceLive = Layer.succeed(
       Effect.all([validateRef(ref1), validateRef(ref2)]).pipe(
         Effect.flatMap(() => runGit(['merge-base', ref1, ref2])),
         Effect.map((output) => output.trim()),
-        Effect.mapError((error) => new MergeBaseError({ message: error.message })),
+        Effect.mapError((error) => new MergeBaseError({ message: error.message, cause: error })),
       ),
     listWorkingTreeFiles: () =>
       runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
@@ -227,6 +233,7 @@ export const GitServiceLive = Layer.succeed(
               catch: (error) =>
                 new GitError({
                   message: error instanceof Error ? error.message : `Failed to read file: ${path}`,
+                  cause: error,
                 }),
             });
           }),

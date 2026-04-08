@@ -13,7 +13,10 @@ interface FileTreeProps {
   onSelectFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectDirectory?: (path: string) => void;
   onExpandedKeysChange: (keys: Set<string | number>) => void;
+  onCollapseDirectory?: (path: string) => void;
 }
+
+const COLLAPSED_DIR: string = styles.collapsedDir ?? '';
 
 const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
   added: 'A',
@@ -34,6 +37,7 @@ export const FileTree = ({
   onSelectFile,
   onSelectDirectory,
   onExpandedKeysChange,
+  onCollapseDirectory,
 }: FileTreeProps) => {
   const expandedKeysRef = useRef(expandedKeys);
   expandedKeysRef.current = expandedKeys;
@@ -48,6 +52,7 @@ export const FileTree = ({
         key={node.path}
         id={node.path}
         textValue={label}
+        className={(renderProps) => isDirectory && !renderProps.isExpanded ? COLLAPSED_DIR : ''}
         onPointerDown={(event) => {
           const metaKey = event.metaKey || event.ctrlKey;
           if (isDirectory) {
@@ -65,6 +70,7 @@ export const FileTree = ({
               const keys = new Set<string | number>(expandedKeysRef.current);
               if (keys.has(node.path)) {
                 keys.delete(node.path);
+                onCollapseDirectory?.(node.path);
               } else {
                 keys.add(node.path);
               }
@@ -80,9 +86,7 @@ export const FileTree = ({
             <>
               {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
               <FileIcon name={node.name} isDirectory={isDirectory} isExpanded={isExpanded} />
-              <Tree.Label className={changeType != null ? styles[changeType] : undefined}>
-                {label}
-              </Tree.Label>
+              <Tree.Label>{label}</Tree.Label>
               {changeType != null && !isDirectory ? (
                 <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
               ) : null}
@@ -103,7 +107,7 @@ export const FileTree = ({
       selectedKeys={selectedPaths}
       expandedKeys={expandedKeys}
       onExpandedChange={onExpandedKeysChange}
-      onSelectionChange={() => {}}
+      onSelectionChange={() => { /* managed via onPointerDown */ }}
     >
       <Tree.Collection items={files}>{renderItem}</Tree.Collection>
     </Tree.Root>

@@ -5,8 +5,6 @@ import { NodeServices } from '@effect/platform-node';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { CommitEntry, FileEntry } from '@greppa/core';
-
 import {
   GitService,
   GitServiceLive,
@@ -47,19 +45,16 @@ const TestLayer = Layer.mergeAll(
 
 type Git = InstanceType<typeof GitService>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Effect generics require any for test helper that accepts arbitrary service methods
-const runGitService = (fn: (git: Git) => Effect.Effect<any, any, any>) =>
-  Effect.gen(function* () {
-    const git = yield* GitService;
-    return yield* fn(git);
-  }).pipe(Effect.provide(TestLayer), (e) => Effect.runPromise(e as Effect.Effect<unknown>));
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Effect generics require any for test helper that accepts arbitrary service methods
-const runGitServiceFlip = (fn: (git: Git) => Effect.Effect<any, any, any>) =>
-  Effect.gen(function* () {
-    const git = yield* GitService;
-    return yield* fn(git);
-  }).pipe(Effect.provide(TestLayer), Effect.flip, (e) => Effect.runPromise(e as Effect.Effect<unknown>));
+const runGitService = <A, E, R>(fn: (git: Git) => Effect.Effect<A, E, R>): Promise<A> =>
+  Effect.runPromise(
+    Effect.provide(
+      Effect.gen(function* () {
+        const git = yield* GitService;
+        return yield* fn(git);
+      }),
+      TestLayer,
+    ) as Effect.Effect<A, E>,
+  );
 
 describe('GitService', () => {
   describe('parseNameStatus', () => {
@@ -170,7 +165,7 @@ describe('GitService', () => {
     const newRef = headSha ?? '';
 
     it('should list changed files between two refs', async () => {
-      const result = await runGitService((git) => git.listFiles(oldRef, newRef)) as FileEntry[];
+      const result = await runGitService((git) => git.listFiles(oldRef, newRef));
 
       expect(result.length).toBeGreaterThan(0);
       for (const entry of result) {
@@ -196,7 +191,7 @@ describe('GitService', () => {
     it('should return content for valid ref and path', async () => {
       const result = await runGitService((git) =>
         git.getFileContent('HEAD', 'package.json'),
-      ) as string;
+      );
 
       expect(result).toContain('"name"');
       expect(result.length).toBeGreaterThan(0);
@@ -223,26 +218,26 @@ describe('GitService', () => {
     });
 
     it('should fail with ResolveRefError for nonexistent ref', async () => {
-      const result = await runGitServiceFlip((git) =>
-        git.resolveRef('nonexistent-ref-xyz'),
-      );
-
-      expect(result).toBeInstanceOf(ResolveRefError);
-    });
-
-    it('should reject refs starting with a dash', async () => {
-      const error = await runGitServiceFlip((git) =>
-        git.resolveRef('--output=/tmp/pwned'),
+      const error = await runGitService((git) =>
+        git.resolveRef('nonexistent-ref-xyz').pipe(Effect.flip),
       );
 
       expect(error).toBeInstanceOf(ResolveRefError);
-      expect((error as ResolveRefError).message).toContain('Invalid ref');
+    });
+
+    it('should reject refs starting with a dash', async () => {
+      const error = await runGitService((git) =>
+        git.resolveRef('--output=/tmp/pwned').pipe(Effect.flip),
+      );
+
+      expect(error).toBeInstanceOf(ResolveRefError);
+      expect(error.message).toContain('Invalid ref');
     });
   });
 
   describe.runIf(hasDefaultBranchRef)('detectDefaultBranch', () => {
     it('should return the default branch name', async () => {
-      const result = await runGitService((git) => git.detectDefaultBranch()) as string;
+      const result = await runGitService((git) => git.detectDefaultBranch());
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
@@ -257,17 +252,17 @@ describe('GitService', () => {
     });
 
     it('should fail with MergeBaseError for invalid refs', async () => {
-      const result = await runGitServiceFlip((git) =>
-        git.mergeBase('nonexistent-ref-aaa', 'nonexistent-ref-bbb'),
+      const error = await runGitService((git) =>
+        git.mergeBase('nonexistent-ref-aaa', 'nonexistent-ref-bbb').pipe(Effect.flip),
       );
 
-      expect(result).toBeInstanceOf(MergeBaseError);
+      expect(error).toBeInstanceOf(MergeBaseError);
     });
   });
 
   describe('listWorkingTreeFiles', () => {
     it('should return an array of FileEntry', async () => {
-      const result = await runGitService((git) => git.listWorkingTreeFiles()) as FileEntry[];
+      const result = await runGitService((git) => git.listWorkingTreeFiles());
 
       expect(Array.isArray(result)).toBe(true);
       for (const entry of result) {
@@ -279,7 +274,7 @@ describe('GitService', () => {
 
   describe.runIf(parentSha != null && headSha != null)('listCommits', () => {
     it('should return commits between two refs', async () => {
-      const result = await runGitService((git) => git.listCommits('HEAD~1', 'HEAD')) as CommitEntry[];
+      const result = await runGitService((git) => git.listCommits('HEAD~1', 'HEAD'));
 
       expect(result.length).toBeGreaterThan(0);
       for (const entry of result) {

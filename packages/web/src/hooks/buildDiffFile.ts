@@ -165,6 +165,48 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
     newContent,
   };
 
+  if (changeType === 'added') {
+    if (newContent === '') {
+      return { ...base, hunks: [] };
+    }
+    const lines = newContent.split('\n');
+    const hunkLines: DiffLine[] = lines.map((content, i) => ({
+      lineType: 'added',
+      oldLineNumber: null,
+      newLineNumber: i + 1,
+      content,
+    }));
+    return { ...base, hunks: [{
+      header: `@@ -0,0 +1,${lines.length} @@`,
+      oldStart: 0,
+      oldCount: 0,
+      newStart: 1,
+      newCount: lines.length,
+      lines: hunkLines,
+    }] };
+  }
+
+  if (changeType === 'deleted') {
+    if (oldContent === '') {
+      return { ...base, hunks: [] };
+    }
+    const lines = oldContent.split('\n');
+    const hunkLines: DiffLine[] = lines.map((content, i) => ({
+      lineType: 'removed',
+      oldLineNumber: i + 1,
+      newLineNumber: null,
+      content,
+    }));
+    return { ...base, hunks: [{
+      header: `@@ -1,${lines.length} +0,0 @@`,
+      oldStart: 1,
+      oldCount: lines.length,
+      newStart: 0,
+      newCount: 0,
+      lines: hunkLines,
+    }] };
+  }
+
   if (changes == null || changes.length === 0) {
     return { ...base, hunks: [] };
   }

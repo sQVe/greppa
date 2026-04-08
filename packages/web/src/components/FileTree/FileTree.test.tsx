@@ -129,14 +129,14 @@ describe('FileTree', () => {
     expect(images.length).toBe(4);
   });
 
-  it('should apply change type color class to filenames', () => {
+  it('should not apply change type color class to filenames', () => {
     render(<FileTree {...defaultProps} />);
 
     const modified = screen.getByText('validateToken.ts');
     const added = screen.getByText('rateLimiter.ts');
 
-    expect(modified.className).toContain('modified');
-    expect(added.className).toContain('added');
+    expect(modified.className).not.toContain('modified');
+    expect(added.className).not.toContain('added');
   });
 
   it('should render displayName when present on compacted directories', () => {
@@ -287,7 +287,7 @@ describe('FileTree', () => {
     const dirLabel = screen.getByText('src');
     const badges = screen.getAllByText('M');
 
-    expect(dirLabel.className).toContain('modified');
+    expect(dirLabel.className).not.toContain('modified');
     expect(badges).toHaveLength(1);
   });
 });

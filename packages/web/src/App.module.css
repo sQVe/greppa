@@ -9,6 +9,12 @@
   font-size: var(--gr-text-md);
 }
 
+.main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .body {
   flex: 1;
   min-height: 0;

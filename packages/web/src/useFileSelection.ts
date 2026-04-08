@@ -126,6 +126,11 @@ export const useFileSelection = (
     [navigate],
   );
 
+  const deselectFile = useCallback(
+    () => { void navigate({ to: '/' }); },
+    [navigate],
+  );
+
   const selectedDiff = selectedFilePath != null ? (diffs.get(selectedFilePath) ?? null) : null;
 
   const selectedThreads =
@@ -141,6 +146,8 @@ export const useFileSelection = (
     selectedSource,
     selectCommittedFile,
     selectWorktreeFile,
+    deselectFile,
+    reviewedPaths,
     reviewedCount: reviewedPaths.size,
     totalCount: validPaths.size,
     selectedDiff,

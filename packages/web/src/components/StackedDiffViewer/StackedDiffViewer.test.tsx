@@ -79,24 +79,6 @@ const fileB: DiffFile = {
   ],
 };
 
-const fileC: DiffFile = {
-  path: 'src/Http.ts',
-  changeType: 'deleted',
-  language: 'typescript',
-  hunks: [
-    {
-      header: '@@ -1,1 +0,0 @@',
-      oldStart: 1,
-      oldCount: 1,
-      newStart: 0,
-      newCount: 0,
-      lines: [
-        { lineType: 'removed', oldLineNumber: 1, newLineNumber: null, content: 'deleted' },
-      ],
-    },
-  ],
-};
-
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -131,8 +113,10 @@ describe('StackedDiffViewer', () => {
 
     it('displays file path in each header', () => {
       render(<StackedDiffViewer diffs={[fileA, fileB]} />);
-      expect(screen.getAllByText('src/Api.ts')).toHaveLength(2);
-      expect(screen.getByText('src/GitService.ts')).toBeDefined();
+      const headers = screen.getAllByTestId('file-header');
+      const paths = headers.map((el) => el.getAttribute('data-file-path'));
+      expect(paths.filter((p) => p === 'src/Api.ts')).toHaveLength(2);
+      expect(paths).toContain('src/GitService.ts');
     });
 
     it('displays change type badge in each header', () => {
@@ -141,11 +125,15 @@ describe('StackedDiffViewer', () => {
       expect(screen.getAllByText('Added')).toHaveLength(1);
     });
 
-    it('renders a separator between files but not after the last', () => {
-      render(<StackedDiffViewer diffs={[fileA, fileB, fileC]} />);
-      const separators = screen.getAllByTestId('file-separator');
+    it('displays diff size with additions and deletions', () => {
+      render(<StackedDiffViewer diffs={[fileA]} />);
+      expect(screen.getAllByText('+1')).toHaveLength(2);
+      expect(screen.getAllByText('\u22121')).toHaveLength(2);
+    });
 
-      expect(separators).toHaveLength(2);
+    it('displays language label with proper formatting', () => {
+      render(<StackedDiffViewer diffs={[fileA]} />);
+      expect(screen.getAllByText('TypeScript')).toHaveLength(2);
     });
 
     it('renders diff rows for each file', () => {
@@ -181,7 +169,7 @@ describe('StackedDiffViewer', () => {
       const stickyHeader = screen.getByTestId('sticky-file-header');
       const reviewButtons = screen.getAllByRole('button')
         .filter((b) => !stickyHeader.contains(b))
-        .filter((b) => b.textContent !== null && b.textContent.includes('eviewed'));
+        .filter((b) => b.textContent?.includes('eviewed'));
 
       const reviewedButtons = reviewButtons.filter((b) => b.textContent === '\u2713 Reviewed');
       const unreviewedButtons = reviewButtons.filter((b) => b.textContent === 'Mark reviewed');

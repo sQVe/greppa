@@ -13,17 +13,32 @@
 }
 
 .hunkHeader {
-  padding: var(--gr-space-sm) var(--gr-space-lg);
-  background: var(--gr-color-bg-surface);
+  display: flex;
+  align-items: center;
+  gap: var(--gr-space-md);
+  padding: var(--gr-space-md) var(--gr-space-lg);
   color: var(--gr-color-text-muted);
   font-size: var(--gr-text-xs);
-  text-align: left;
+  opacity: 0.4;
   user-select: none;
+}
+
+.hunkHeader::before,
+.hunkHeader::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gr-color-border-muted);
 }
 
 .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.rowFull {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .rowSide {
@@ -64,7 +79,11 @@
 }
 
 .lineEmpty {
-  background: var(--gr-color-bg-surface);
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-surface) 25%,
+    var(--gr-color-bg-default)
+  );
 }
 
 .charRemoved {

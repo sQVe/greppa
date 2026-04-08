@@ -62,13 +62,12 @@ describe('buildFlatItems', () => {
     expect(kinds).toEqual(['file-header', 'hunk-header', 'diff-row', 'diff-row']);
   });
 
-  it('inserts file-separator between files but not after the last', () => {
+  it('places file-header items directly adjacent between files', () => {
     const items = buildFlatItems([fileA, fileB]);
     const kinds = items.map((item) => item.kind);
 
     expect(kinds).toEqual([
       'file-header', 'hunk-header', 'diff-row', 'diff-row',
-      'file-separator',
       'file-header', 'hunk-header', 'diff-row',
     ]);
   });
@@ -101,6 +100,25 @@ describe('buildFlatItems', () => {
     expect(hunkHeaders).toHaveLength(1);
     if (hunkHeaders[0]?.kind === 'hunk-header') {
       expect(hunkHeaders[0].header).toBe('@@ -1,2 +1,2 @@');
+    }
+  });
+
+  it('propagates changeType to hunk-header and diff-row items', () => {
+    const items = buildFlatItems([fileA, fileB]);
+
+    const hunkHeaders = items.filter((item) => item.kind === 'hunk-header');
+    const diffRows = items.filter((item) => item.kind === 'diff-row');
+
+    expect(hunkHeaders).toHaveLength(2);
+    if (hunkHeaders[0]?.kind === 'hunk-header' && hunkHeaders[1]?.kind === 'hunk-header') {
+      expect(hunkHeaders[0].changeType).toBe('modified');
+      expect(hunkHeaders[1].changeType).toBe('added');
+    }
+
+    expect(diffRows.length).toBeGreaterThanOrEqual(3);
+    if (diffRows[0]?.kind === 'diff-row' && diffRows[2]?.kind === 'diff-row') {
+      expect(diffRows[0].changeType).toBe('modified');
+      expect(diffRows[2].changeType).toBe('added');
     }
   });
 });

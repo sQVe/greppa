@@ -25,8 +25,7 @@ export interface StackedDiffViewerHandle {
 }
 
 const ROW_HEIGHT = 36;
-const HEADER_HEIGHT = 40;
-const SEPARATOR_HEIGHT = 24;
+const HEADER_HEIGHT = 32;
 
 const estimateItemSize = (item: FlatVirtualItem) => {
   switch (item.kind) {
@@ -38,9 +37,6 @@ const estimateItemSize = (item: FlatVirtualItem) => {
     }
     case 'diff-row': {
       return ROW_HEIGHT;
-    }
-    case 'file-separator': {
-      return SEPARATOR_HEIGHT;
     }
   }
 };

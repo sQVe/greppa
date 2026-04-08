@@ -1,15 +1,3 @@
-.added {
-  color: var(--gr-color-text-success);
-}
-
-.deleted {
-  color: var(--gr-color-text-danger);
-}
-
-.modified {
-  color: var(--gr-color-text-warning);
-}
-
-.renamed {
-  color: var(--gr-color-text-muted);
+.collapsedDir {
+  opacity: 0.5;
 }

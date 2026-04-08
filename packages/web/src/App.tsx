@@ -1,13 +1,15 @@
-import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
-import { useCallback, useMemo, useRef } from 'react';
+import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { ActivityRail } from './components/ActivityRail/ActivityRail';
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
 import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffViewer';
 import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { collectDirectoryIds } from './components/FileTree/FileTree';
 import { FileTreePanel } from './components/FileTree/FileTreePanel';
-import { Header } from './components/Header/Header';
+import type { FileTreeSection } from './components/FileTree/FileTreePanel';
 import { StatusBar } from './components/StatusBar/StatusBar';
+import type { StatusBarProps } from './components/StatusBar/StatusBar';
 import type { DiffFile, FileNode } from './fixtures/types';
 import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
 import { buildDiffFile } from './hooks/buildDiffFile';
@@ -21,7 +23,7 @@ import { useReviewState } from './hooks/useReviewState';
 import { useSelectionCoordinator } from './hooks/useSelectionCoordinator';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
-import { useFileSelection } from './useFileSelection';
+import { collectFiles, useFileSelection } from './useFileSelection';
 import type { FileSource } from './useFileSelection';
 
 import styles from './App.module.css';
@@ -165,6 +167,21 @@ const useSelectedDiffs = ({
 export const App = () => {
   const { newRef, mergeBaseRef, isLoading: refsLoading, isError: refsError } = useRefs();
   const stackedDiffRef = useRef<StackedDiffViewerHandle>(null);
+  const fileTreePanelRef = usePanelRef();
+  const [isFileTreeExpanded, setIsFileTreeExpanded] = useState(true);
+  const [activeSection, setActiveSection] = useState<FileTreeSection>('committed');
+
+  const handleToggleFileTree = useCallback(() => {
+    const panel = fileTreePanelRef.current;
+    if (panel == null) {
+      return;
+    }
+    if (panel.isCollapsed()) {
+      panel.expand();
+    } else {
+      panel.collapse();
+    }
+  }, [fileTreePanelRef]);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: 'gr-panels',
@@ -189,8 +206,7 @@ export const App = () => {
     selectedSource,
     selectCommittedFile,
     selectWorktreeFile,
-    reviewedCount,
-    totalCount,
+    reviewedPaths: allReviewedPaths,
     selectedDiff: fixtureDiff,
     selectedThreads,
     selectedFileInfo,
@@ -233,6 +249,13 @@ export const App = () => {
     [commitSelection.isActive, commitDiffs.diffs, fileDiffs],
   );
 
+  const committedFileCount = committedFilePaths.length;
+  const committedReviewedCount = useMemo(
+    () => committedFilePaths.filter((p) => allReviewedPaths.has(p)).length,
+    [committedFilePaths, allReviewedPaths],
+  );
+  const worktreeFileCount = useMemo(() => collectFiles(worktreeFiles ?? EMPTY_FILES).length, [worktreeFiles]);
+
   const activeReviewedPaths = multiSelect.activeSource === 'worktree' ? worktreeReviewedPaths : reviewedPaths;
 
   const activeToggleReviewed = multiSelect.activeSource === 'worktree' ? toggleWorktreeReviewed : toggleReviewed;
@@ -251,73 +274,97 @@ export const App = () => {
     ? multiSelect.activeSource
     : selectedSource;
 
+  const statusBarProps: StatusBarProps = useMemo(() => {
+    if (activeSection === 'commits') {
+      return {
+        mode: 'commit-review',
+        commitSha: [...commitSelection.selectedShas][0],
+        reviewedCount: 0,
+        totalCount: commitDiffs.diffs.length,
+      };
+    }
+    if (activeSection === 'worktree') {
+      return { mode: 'working-tree', modifiedCount: worktreeFileCount };
+    }
+    return {
+      mode: 'file-review',
+      reviewedCount: committedReviewedCount,
+      totalCount: committedFileCount,
+    };
+  }, [activeSection, commitSelection.selectedShas, commitDiffs.diffs.length, worktreeFileCount, committedReviewedCount, committedFileCount]);
+
   if (refsLoading || refsError) {
     return <div className={styles.app} />;
   }
 
   return (
     <div className={styles.app}>
-      <Header />
-      <Group
-        id="gr-panels"
-        orientation="horizontal"
-        defaultLayout={defaultLayout}
-        onLayoutChanged={onLayoutChanged}
-        className={styles.body}
-      >
-        <Panel
-          id="file-tree"
-          defaultSize={240}
-          minSize={160}
-          maxSize="35%"
-          collapsible
-          groupResizeBehavior="preserve-pixel-size"
+      <div className={styles.main}>
+        <ActivityRail isFileTreeExpanded={isFileTreeExpanded} onToggleFileTree={handleToggleFileTree} />
+        <Group
+          id="gr-panels"
+          orientation="horizontal"
+          defaultLayout={defaultLayout}
+          onLayoutChanged={onLayoutChanged}
+          className={styles.body}
         >
-          <FileTreePanel
-            committedFiles={files}
-            worktreeFiles={worktreeFiles ?? EMPTY_FILES}
-            commits={commits}
-            selectedPaths={treeSelectedPaths}
-            selectedSource={treeSelectedSource}
-            selectedCommitShas={commitSelection.selectedShas}
-            committedExpandedKeys={expandedKeys}
-            worktreeExpandedKeys={worktreeExpandedKeys}
-            onSelectCommittedFile={handleSelectCommittedFile}
-            onSelectWorktreeFile={handleSelectWorktreeFile}
-            onSelectCommittedDirectory={handleSelectCommittedDirectory}
-            onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
-            onSelectCommit={handleSelectCommit}
-            onCommittedExpandedKeysChange={handleExpandedKeysChange}
-            onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
-          />
-        </Panel>
-        <Separator className={styles.separator} />
-        <Panel id="diff-viewer" minSize={300}>
-          <StackedDiffViewer
-            ref={stackedDiffRef}
-            diffs={selectedDiffs}
-            reviewedPaths={activeReviewedPaths}
-            onToggleReviewed={activeToggleReviewed}
-          />
-        </Panel>
-        <Separator className={styles.separator} />
-        <Panel
-          id="detail-panel"
-          defaultSize={320}
-          minSize={200}
-          maxSize="35%"
-          collapsible
-          groupResizeBehavior="preserve-pixel-size"
-        >
-          <DetailPanel threads={selectedThreads} fileInfo={selectedFileInfo} />
-        </Panel>
-      </Group>
-      <StatusBar
-        reviewedCount={reviewedCount}
-        totalCount={totalCount}
-        language={selectedFileInfo?.language}
-        encoding={selectedFileInfo?.encoding}
-      />
+          <Panel
+            id="file-tree"
+            defaultSize={240}
+            minSize={160}
+            maxSize="35%"
+            collapsible
+            groupResizeBehavior="preserve-pixel-size"
+            panelRef={fileTreePanelRef}
+            onResize={() => {
+              const panel = fileTreePanelRef.current;
+              if (panel != null) {
+                setIsFileTreeExpanded(!panel.isCollapsed());
+              }
+            }}
+          >
+            <FileTreePanel
+              committedFiles={files}
+              worktreeFiles={worktreeFiles ?? EMPTY_FILES}
+              commits={commits}
+              selectedPaths={treeSelectedPaths}
+              selectedSource={treeSelectedSource}
+              selectedCommitShas={commitSelection.selectedShas}
+              committedExpandedKeys={expandedKeys}
+              worktreeExpandedKeys={worktreeExpandedKeys}
+              onSelectCommittedFile={handleSelectCommittedFile}
+              onSelectWorktreeFile={handleSelectWorktreeFile}
+              onSelectCommittedDirectory={handleSelectCommittedDirectory}
+              onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
+              onSelectCommit={handleSelectCommit}
+              onCommittedExpandedKeysChange={handleExpandedKeysChange}
+              onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
+              onSectionChange={setActiveSection}
+            />
+          </Panel>
+          <Separator className={styles.separator} />
+          <Panel id="diff-viewer" minSize={300}>
+            <StackedDiffViewer
+              ref={stackedDiffRef}
+              diffs={selectedDiffs}
+              reviewedPaths={activeReviewedPaths}
+              onToggleReviewed={activeToggleReviewed}
+            />
+          </Panel>
+          <Separator className={styles.separator} />
+          <Panel
+            id="detail-panel"
+            defaultSize={320}
+            minSize={200}
+            maxSize="35%"
+            collapsible
+            groupResizeBehavior="preserve-pixel-size"
+          >
+            <DetailPanel threads={selectedThreads} fileInfo={selectedFileInfo} />
+          </Panel>
+        </Group>
+      </div>
+      <StatusBar {...statusBarProps} />
     </div>
   );
 };

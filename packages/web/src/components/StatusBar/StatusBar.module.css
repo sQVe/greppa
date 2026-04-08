@@ -1,21 +1,79 @@
 .statusBar {
+  height: 24px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--gr-space-sm) var(--gr-space-xl);
+  padding: 0 var(--gr-space-lg);
+  flex-shrink: 0;
   background: var(--gr-color-bg-subtle);
-}
-
-.progress {
-  font-family: var(--gr-font-ui);
+  font-family: var(--gr-font-mono);
   font-size: var(--gr-text-xs);
-  color: var(--gr-color-text-muted);
 }
 
-.metadata {
+.segment {
   display: flex;
-  gap: var(--gr-space-lg);
-  font-family: var(--gr-font-ui);
-  font-size: var(--gr-text-xs);
+  align-items: center;
+  gap: var(--gr-space-sm);
+  padding: 0 var(--gr-space-lg);
+  height: 100%;
   color: var(--gr-color-text-muted);
+  white-space: nowrap;
+}
+
+.segment:first-child {
+  padding-left: 0;
+}
+
+.reviewed {
+  color: var(--gr-color-text-success);
+}
+
+.commentCount {
+  color: var(--gr-color-text-warning);
+}
+
+.commentZero {
+  color: var(--gr-color-text-muted);
+}
+
+.interactive {
+  color: var(--gr-color-text-interactive);
+}
+
+.warning {
+  color: var(--gr-color-text-warning);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.percent {
+  color: var(--gr-color-text-muted);
+  font-size: var(--gr-text-xxs);
+}
+
+.progressBar {
+  width: 48px;
+  height: 3px;
+  background: var(--gr-color-border-muted);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--gr-color-text-success);
+  border-radius: var(--gr-radius-sm);
+}
+
+.kbd {
+  font-family: var(--gr-font-mono);
+  font-size: var(--gr-text-xs);
+  color: var(--gr-color-text-secondary);
+  background: var(--gr-color-bg-surface);
+  border-radius: var(--gr-radius-sm);
+  padding: 1px var(--gr-space-sm);
+  line-height: 14px;
+  box-shadow: 0 1px 0 var(--gr-color-bg-surface-active);
 }

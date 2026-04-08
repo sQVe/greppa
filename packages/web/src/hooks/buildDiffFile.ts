@@ -166,6 +166,9 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
   };
 
   if (changeType === 'added') {
+    if (newContent === '') {
+      return { ...base, hunks: [] };
+    }
     const lines = newContent.split('\n');
     const hunkLines: DiffLine[] = lines.map((content, i) => ({
       lineType: 'added',
@@ -184,6 +187,9 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
   }
 
   if (changeType === 'deleted') {
+    if (oldContent === '') {
+      return { ...base, hunks: [] };
+    }
     const lines = oldContent.split('\n');
     const hunkLines: DiffLine[] = lines.map((content, i) => ({
       lineType: 'removed',

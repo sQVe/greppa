@@ -1,7 +1,7 @@
 import type { CommitEntry } from '@greppa/core';
 import { IconChevronRight, IconFileDiff, IconGitBranch, IconGitCommit } from '@tabler/icons-react';
 import { motion } from 'motion/react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
@@ -75,6 +75,10 @@ export const FileTreePanel = ({
     if (collectFiles(worktreeFiles).length > 0) return 'worktree';
     return 'commits';
   });
+
+  useEffect(() => {
+    onSectionChange?.(expandedSection);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const committedBodyRef = useRef<HTMLDivElement>(null);
   const worktreeBodyRef = useRef<HTMLDivElement>(null);

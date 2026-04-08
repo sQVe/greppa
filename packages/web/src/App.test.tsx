@@ -7,21 +7,27 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
+import { zodValidator, fallback } from '@tanstack/zod-adapter';
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 import { App } from './App';
+import { parseSearch, stringifySearch } from './router';
 
 vi.mock('./components/DiffViewer/useSyntaxHighlighting', () => ({
   useSyntaxHighlighting: () => null,
   useMultiSyntaxHighlighting: () => new Map(),
 }));
 
-vi.mock('./hooks/useFileList', () => ({
-  useFileList: () => ({ files: null, isError: true, isLoading: false }),
-  buildFileTree: (entries: unknown[]) => entries,
-}));
+vi.mock('./hooks/useFileList', async () => {
+  const { files } = await import('./fixtures');
+  return {
+    useFileList: () => ({ files, isError: false, isLoading: false }),
+    buildFileTree: (entries: unknown[]) => entries,
+  };
+});
 
 vi.mock('./hooks/useWorktreeFiles', () => ({
   useWorktreeFiles: () => ({ files: null, isLoading: false, isError: false }),
@@ -50,22 +56,54 @@ vi.mock('./hooks/usePreferences', () => ({
 
 beforeEach(() => {
   localStorage.clear();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+    Promise.resolve(new Response('{}', { status: 200 })),
+  );
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
-const renderApp = (initialLocation = '/') => {
+const changesSearch = z.object({
+  s: fallback(z.string(), '').default(''),
+  file: fallback(z.array(z.string()), []).default([]),
+});
+
+const worktreeSearch = z.object({
+  s: fallback(z.string(), '').default(''),
+  wt: fallback(z.array(z.string()), []).default([]),
+});
+
+const commitsSearch = z.object({
+  s: fallback(z.string(), '').default(''),
+  commits: fallback(z.array(z.string()), []).default([]),
+});
+
+const renderApp = (initialLocation = '/changes') => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const rootRoute = createRootRoute({ component: App });
-  const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/' });
-  const fileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/file/$' });
-  const routeTree = rootRoute.addChildren([indexRoute, fileRoute]);
+  const changesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/changes',
+    validateSearch: zodValidator(changesSearch),
+  });
+  const worktreeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/worktree',
+    validateSearch: zodValidator(worktreeSearch),
+  });
+  const commitsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/commits',
+    validateSearch: zodValidator(commitsSearch),
+  });
+  const routeTree = rootRoute.addChildren([changesRoute, worktreeRoute, commitsRoute]);
   const history = createMemoryHistory({ initialEntries: [initialLocation] });
-  const router = createRouter({ routeTree, history });
+  const router = createRouter({ routeTree, history, parseSearch, stringifySearch });
 
   return render(
     <QueryClientProvider client={queryClient}>

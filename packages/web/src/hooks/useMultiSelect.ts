@@ -1,99 +1,191 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
+import { nanoid } from 'nanoid';
+import { useCallback, useMemo, useRef } from 'react';
 
 import type { FileSource } from '../useFileSelection';
+import type { StatePayload } from '../stateCache';
+import { cacheState, findExistingId, postState } from '../stateCache';
+import { toStringArray } from '../toStringArray';
 
-interface MultiSelectState {
-  paths: Set<string>;
-  source: FileSource | null;
-  anchorPath: string | null;
+interface MultiSelectOptions {
+  committedFilePaths: string[];
+  worktreeFilePaths: string[];
 }
 
-const EMPTY: MultiSelectState = { paths: new Set(), source: null, anchorPath: null };
+interface NavigateOptions {
+  replace?: boolean;
+  hash?: string;
+}
 
-export const useMultiSelect = () => {
-  const [state, setState] = useState<MultiSelectState>(EMPTY);
+const SELECT_ALL = '*';
 
-  const select = useCallback((path: string, source: FileSource) => {
-    setState({ paths: new Set([path]), source, anchorPath: path });
-  }, []);
+const resolveParams = (params: string[], allPaths: string[]): Set<string> => {
+  if (params.length === 1 && params[0] === SELECT_ALL) {
+    return new Set(allPaths);
+  }
+  return new Set(params);
+};
 
-  const toggle = useCallback((path: string, source: FileSource) => {
-    setState((prev) => {
-      if (prev.source !== source) {
-        return { paths: new Set([path]), source, anchorPath: path };
+const buildState = (paths: string[], source: FileSource): StatePayload =>
+  source === 'committed'
+    ? { file: paths, wt: [], commits: [] }
+    : { file: [], wt: paths, commits: [] };
+
+const selectFileParams = (s: { location: { search: Record<string, unknown> } }) =>
+  toStringArray(s.location.search.file);
+
+const selectWtParams = (s: { location: { search: Record<string, unknown> } }) =>
+  toStringArray(s.location.search.wt);
+
+export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiSelectOptions) => {
+  const fileParams = useRouterState({ select: selectFileParams });
+  const wtParams = useRouterState({ select: selectWtParams });
+
+  const navigate = useNavigate();
+  const anchorRef = useRef<{ path: string; source: FileSource } | null>(null);
+
+  const selectedPaths = useMemo(() => {
+    if (fileParams.length > 0) {
+      return resolveParams(fileParams, committedFilePaths);
+    }
+    if (wtParams.length > 0) {
+      return resolveParams(wtParams, worktreeFilePaths);
+    }
+    return new Set<string>();
+  }, [fileParams, wtParams, committedFilePaths, worktreeFilePaths]);
+
+  const activeSource: FileSource | null = useMemo(() => {
+    if (fileParams.length > 0) {
+      return 'committed';
+    }
+    if (wtParams.length > 0) {
+      return 'worktree';
+    }
+    return null;
+  }, [fileParams, wtParams]);
+
+  const isMultiSelect = useMemo(() => selectedPaths.size > 1, [selectedPaths]);
+
+  const navigateWithState = useCallback(
+    (state: StatePayload, source: FileSource, options?: NavigateOptions) => {
+      const existing = findExistingId(state);
+      const id = existing ?? nanoid(4);
+      if (existing == null) {
+        cacheState(id, state);
+        postState(id, state);
       }
-      const next = new Set(prev.paths);
+      const to = source === 'committed' ? '/changes' as const : '/worktree' as const;
+      const routeSearch = source === 'committed'
+        ? { s: id, file: state.file }
+        : { s: id, wt: state.wt };
+      void navigate({ to, search: routeSearch, replace: options?.replace, hash: options?.hash });
+    },
+    [navigate],
+  );
+
+  const pathname = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
+  const clear = useCallback(() => {
+    anchorRef.current = null;
+    const to = pathname === '/worktree' ? '/worktree' as const : '/changes' as const;
+    void navigate({ to, search: { s: '' }, replace: true });
+  }, [navigate, pathname]);
+
+  const select = useCallback(
+    (path: string, source: FileSource, hash?: string) => {
+      anchorRef.current = { path, source };
+      navigateWithState(buildState([path], source), source, { hash });
+    },
+    [navigateWithState],
+  );
+
+  const toggle = useCallback(
+    (path: string, source: FileSource, hash?: string) => {
+      anchorRef.current = { path, source };
+      if (activeSource !== source) {
+        navigateWithState(buildState([path], source), source, { replace: true, hash });
+        return;
+      }
+      const next = new Set(selectedPaths);
       if (next.has(path)) {
         next.delete(path);
       } else {
         next.add(path);
       }
-      return { paths: next, source, anchorPath: path };
-    });
-  }, []);
-
-  const selectRange = useCallback(
-    (path: string, orderedPaths: string[], source: FileSource) => {
-      setState((prev) => {
-        const anchor = prev.source === source ? prev.anchorPath : null;
-        if (anchor == null) {
-          return { paths: new Set([path]), source, anchorPath: path };
-        }
-
-        const anchorIndex = orderedPaths.indexOf(anchor);
-        const targetIndex = orderedPaths.indexOf(path);
-        if (anchorIndex === -1 || targetIndex === -1) {
-          return { paths: new Set([path]), source, anchorPath: path };
-        }
-
-        const start = Math.min(anchorIndex, targetIndex);
-        const end = Math.max(anchorIndex, targetIndex);
-        const rangePaths = new Set(orderedPaths.slice(start, end + 1));
-
-        return { paths: rangePaths, source, anchorPath: anchor };
-      });
+      if (next.size === 0) {
+        clear();
+        return;
+      }
+      navigateWithState(buildState([...next], source), source, { replace: true, hash });
     },
-    [],
+    [navigateWithState, activeSource, selectedPaths, clear],
   );
 
-  const selectAll = useCallback((paths: string[], source: FileSource) => {
-    setState((prev) => ({
-      paths: new Set(paths),
-      source,
-      anchorPath: prev.source === source ? prev.anchorPath : null,
-    }));
-  }, []);
-
-  const toggleAll = useCallback((paths: string[], source: FileSource) => {
-    setState((prev) => {
-      if (prev.source !== source) {
-        return { paths: new Set(paths), source, anchorPath: null };
+  const selectRange = useCallback(
+    (path: string, orderedPaths: string[], source: FileSource, hash?: string) => {
+      const anchor = anchorRef.current?.source === source ? anchorRef.current.path : null;
+      if (anchor == null) {
+        anchorRef.current = { path, source };
+        navigateWithState(buildState([path], source), source, { replace: true, hash });
+        return;
       }
-      const allSelected = paths.every((path) => prev.paths.has(path));
+
+      const anchorIndex = orderedPaths.indexOf(anchor);
+      const targetIndex = orderedPaths.indexOf(path);
+      if (anchorIndex === -1 || targetIndex === -1) {
+        anchorRef.current = { path, source };
+        navigateWithState(buildState([path], source), source, { replace: true, hash });
+        return;
+      }
+
+      const start = Math.min(anchorIndex, targetIndex);
+      const end = Math.max(anchorIndex, targetIndex);
+      const rangePaths = orderedPaths.slice(start, end + 1);
+      navigateWithState(buildState(rangePaths, source), source, { replace: true, hash });
+    },
+    [navigateWithState],
+  );
+
+  const selectAll = useCallback(
+    (paths: string[], source: FileSource) => {
+      const allPaths = source === 'committed' ? committedFilePaths : worktreeFilePaths;
+      const isAll = paths.length === allPaths.length && paths.every((p) => allPaths.includes(p));
+      const value = isAll ? [SELECT_ALL] : paths;
+      navigateWithState(buildState(value, source), source, { replace: true });
+    },
+    [navigateWithState, committedFilePaths, worktreeFilePaths],
+  );
+
+  const toggleAll = useCallback(
+    (paths: string[], source: FileSource, hash?: string) => {
+      if (activeSource !== source) {
+        navigateWithState(buildState(paths, source), source, { replace: true, hash });
+        return;
+      }
+      const allSelected = paths.every((p) => selectedPaths.has(p));
       if (allSelected) {
-        const next = new Set(prev.paths);
-        for (const path of paths) {
-          next.delete(path);
+        const next = new Set(selectedPaths);
+        for (const p of paths) {
+          next.delete(p);
         }
-        return { paths: next, source, anchorPath: prev.anchorPath };
+        if (next.size === 0) {
+          clear();
+          return;
+        }
+        navigateWithState(buildState([...next], source), source, { replace: true, hash });
+        return;
       }
-      const next = new Set(prev.paths);
-      for (const path of paths) {
-        next.add(path);
+      const next = new Set(selectedPaths);
+      for (const p of paths) {
+        next.add(p);
       }
-      return { paths: next, source, anchorPath: prev.anchorPath };
-    });
-  }, []);
-
-  const clear = useCallback(() => {
-    setState(EMPTY);
-  }, []);
-
-  const isMultiSelect = useMemo(() => state.paths.size > 1, [state.paths]);
+      navigateWithState(buildState([...next], source), source, { replace: true, hash });
+    },
+    [navigateWithState, activeSource, selectedPaths, clear],
+  );
 
   return {
-    selectedPaths: state.paths,
-    activeSource: state.source,
+    selectedPaths,
+    activeSource,
     isMultiSelect,
     select,
     toggle,

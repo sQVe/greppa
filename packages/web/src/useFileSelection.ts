@@ -1,10 +1,17 @@
-import { useMatch, useNavigate } from '@tanstack/react-router';
+import { useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
 import { useReviewState } from './hooks/useReviewState';
+import { toStringArray } from './toStringArray';
 
 export type FileSource = 'committed' | 'worktree';
+
+const selectFileParams = (s: { location: { search: Record<string, unknown> } }) =>
+  toStringArray(s.location.search.file);
+
+const selectWtParams = (s: { location: { search: Record<string, unknown> } }) =>
+  toStringArray(s.location.search.wt);
 
 export const collectFiles = (nodes: FileNode[]): FileNode[] =>
   nodes.flatMap((node) => (node.type === 'file' ? [node] : collectFiles(node.children ?? [])));
@@ -43,11 +50,10 @@ export const useFileSelection = (
     [allWorktreeFiles],
   );
 
-  const fileMatch = useMatch({ from: '/file/$', shouldThrow: false });
-  const wtMatch = useMatch({ from: '/wt/$', shouldThrow: false });
-  const urlFile = fileMatch?.params._splat ?? null;
-  const urlWtFile = wtMatch?.params._splat ?? null;
-  const navigate = useNavigate();
+  const fileParams = useRouterState({ select: selectFileParams });
+  const wtParams = useRouterState({ select: selectWtParams });
+  const urlFile = fileParams.length === 1 ? (fileParams[0] ?? null) : null;
+  const urlWtFile = wtParams.length === 1 ? (wtParams[0] ?? null) : null;
 
   const selectedSource: FileSource | null = useMemo(() => {
     if (urlFile != null && committedPaths.has(urlFile)) {
@@ -112,25 +118,6 @@ export const useFileSelection = (
     setReviewState({ reviewedPaths: [...current.reviewedPaths, selectedFilePath] });
   }, [selectedFilePath, getReviewState, setReviewState]);
 
-  const selectCommittedFile = useCallback(
-    (path: string) => {
-      void navigate({ to: '/file/$', params: { _splat: path } });
-    },
-    [navigate],
-  );
-
-  const selectWorktreeFile = useCallback(
-    (path: string) => {
-      void navigate({ to: '/wt/$', params: { _splat: path } });
-    },
-    [navigate],
-  );
-
-  const deselectFile = useCallback(
-    () => { void navigate({ to: '/' }); },
-    [navigate],
-  );
-
   const selectedDiff = selectedFilePath != null ? (diffs.get(selectedFilePath) ?? null) : null;
 
   const selectedThreads =
@@ -141,17 +128,26 @@ export const useFileSelection = (
   const selectedFileInfo =
     selectedFilePath != null ? (fileInfoMap.get(selectedFilePath) ?? null) : null;
 
+  const markReviewed = useCallback(
+    (path: string) => {
+      const current = getReviewState();
+      if (new Set(current.reviewedPaths).has(path)) {
+        return;
+      }
+      setReviewState({ reviewedPaths: [...current.reviewedPaths, path] });
+    },
+    [getReviewState, setReviewState],
+  );
+
   return {
     selectedFilePath,
     selectedSource,
-    selectCommittedFile,
-    selectWorktreeFile,
-    deselectFile,
     reviewedPaths,
     reviewedCount: reviewedPaths.size,
     totalCount: validPaths.size,
     selectedDiff,
     selectedThreads,
     selectedFileInfo,
+    markReviewed,
   };
 };

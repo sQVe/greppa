@@ -49,9 +49,11 @@ export const CommitList = ({ commits, selectedShas, onSelectCommit }: CommitList
           });
         }}
       >
-        <span className={styles.hash}>{commit.abbrevSha}</span>
         <span className={styles.subject}>{commit.subject}</span>
-        <span className={styles.time}>{formatRelativeTime(commit.date)}</span>
+        <span className={styles.meta}>
+          <span className={styles.hash}>{commit.abbrevSha}</span>
+          <span className={styles.time}>{formatRelativeTime(commit.date)}</span>
+        </span>
       </button>
     ))}
   </div>

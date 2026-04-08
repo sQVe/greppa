@@ -223,6 +223,81 @@ describe('StackedDiffViewer', () => {
       ref.current?.scrollToFile('src/GitService.ts');
       expect(mockScrollToIndex).toHaveBeenCalledWith(expectedIndex, { align: 'start' });
     });
+
+    it('scrolls to the diff row matching the given line number', () => {
+      const ref = createRef<StackedDiffViewerHandle>();
+      render(<StackedDiffViewer ref={ref} diffs={[fileA, fileB]} />);
+      mockScrollToIndex.mockClear();
+
+      const flatItems = buildFlatItems([fileA, fileB]);
+      const fileAHeaderIdx = flatItems.findIndex(
+        (item) => item.kind === 'file-header' && item.diff.path === 'src/Api.ts',
+      );
+      let expectedIndex = -1;
+      for (let i = fileAHeaderIdx + 1; i < flatItems.length; i++) {
+        const current = flatItems[i];
+        if (current == null || current.kind === 'file-header') {
+          break;
+        }
+        if (
+          current.kind === 'diff-row' &&
+          (current.row.right?.lineNumber === 3 || current.row.left?.lineNumber === 3)
+        ) {
+          expectedIndex = i;
+          break;
+        }
+      }
+
+      ref.current?.scrollToLine('src/Api.ts', 3);
+      expect(mockScrollToIndex).toHaveBeenCalledWith(expectedIndex, { align: 'start' });
+    });
+
+    it('scopes scrollToLine to the specified file path', () => {
+      const fileC: DiffFile = {
+        path: 'src/Other.ts',
+        changeType: 'modified',
+        language: 'typescript',
+        hunks: [
+          {
+            header: '@@ -1,2 +1,2 @@',
+            oldStart: 1,
+            oldCount: 2,
+            newStart: 1,
+            newCount: 2,
+            lines: [
+              { lineType: 'context', oldLineNumber: 1, newLineNumber: 1, content: 'line 1' },
+              { lineType: 'context', oldLineNumber: 2, newLineNumber: 2, content: 'line 2' },
+            ],
+          },
+        ],
+      };
+
+      const ref = createRef<StackedDiffViewerHandle>();
+      render(<StackedDiffViewer ref={ref} diffs={[fileA, fileC]} />);
+      mockScrollToIndex.mockClear();
+
+      const flatItems = buildFlatItems([fileA, fileC]);
+      const fileCHeaderIdx = flatItems.findIndex(
+        (item) => item.kind === 'file-header' && item.diff.path === 'src/Other.ts',
+      );
+      let expectedIndex = -1;
+      for (let i = fileCHeaderIdx + 1; i < flatItems.length; i++) {
+        const current = flatItems[i];
+        if (current == null || current.kind === 'file-header') {
+          break;
+        }
+        if (
+          current.kind === 'diff-row' &&
+          (current.row.right?.lineNumber === 1 || current.row.left?.lineNumber === 1)
+        ) {
+          expectedIndex = i;
+          break;
+        }
+      }
+
+      ref.current?.scrollToLine('src/Other.ts', 1);
+      expect(mockScrollToIndex).toHaveBeenCalledWith(expectedIndex, { align: 'start' });
+    });
   });
 
   describe('sticky header overlay', () => {

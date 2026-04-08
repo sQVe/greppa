@@ -13,16 +13,12 @@ interface FileSelectionHandlersOptions {
   files: FileNode[];
   worktreeFiles: FileNode[];
   multiSelect: ReturnType<typeof useMultiSelect>;
-  selectCommittedFile: (path: string) => void;
-  selectWorktreeFile: (path: string) => void;
 }
 
 export const useFileSelectionHandlers = ({
   files,
   worktreeFiles,
   multiSelect,
-  selectCommittedFile,
-  selectWorktreeFile,
 }: FileSelectionHandlersOptions) => {
   const committedFilePaths = useMemo(
     () => collectFiles(files).map((file) => file.path),
@@ -48,27 +44,26 @@ export const useFileSelectionHandlers = ({
   const handleSelectCommittedFile = useCallback(
     (path: string, modifiers: SelectModifiers) => {
       if (modifiers.shiftKey) {
-        multiSelect.selectRange(path, committedFilePaths, 'committed');
+        multiSelect.selectRange(path, committedFilePaths, 'committed', path);
         return;
       }
 
       if (modifiers.metaKey) {
         const isFile = allCommittedFilePaths.has(path);
         if (isFile) {
-          multiSelect.toggle(path, 'committed');
+          multiSelect.toggle(path, 'committed', path);
         } else {
           const children = collectDescendantFilePaths(files, path);
           if (children.length > 0) {
-            multiSelect.toggleAll(children, 'committed');
+            multiSelect.toggleAll(children, 'committed', children[0] ?? path);
           }
         }
         return;
       }
 
-      multiSelect.select(path, 'committed');
-      selectCommittedFile(path);
+      multiSelect.select(path, 'committed', path);
     },
-    [allCommittedFilePaths, committedFilePaths, files, multiSelect, selectCommittedFile],
+    [allCommittedFilePaths, committedFilePaths, files, multiSelect],
   );
 
   const handleSelectCommittedDirectory = useCallback(
@@ -89,27 +84,26 @@ export const useFileSelectionHandlers = ({
   const handleSelectWorktreeFile = useCallback(
     (path: string, modifiers: SelectModifiers) => {
       if (modifiers.shiftKey) {
-        multiSelect.selectRange(path, worktreeFilePaths, 'worktree');
+        multiSelect.selectRange(path, worktreeFilePaths, 'worktree', path);
         return;
       }
 
       if (modifiers.metaKey) {
         const isFile = allWorktreeFilePaths.has(path);
         if (isFile) {
-          multiSelect.toggle(path, 'worktree');
+          multiSelect.toggle(path, 'worktree', path);
         } else {
           const children = collectDescendantFilePaths(worktreeFiles, path);
           if (children.length > 0) {
-            multiSelect.toggleAll(children, 'worktree');
+            multiSelect.toggleAll(children, 'worktree', children[0] ?? path);
           }
         }
         return;
       }
 
-      multiSelect.select(path, 'worktree');
-      selectWorktreeFile(path);
+      multiSelect.select(path, 'worktree', path);
     },
-    [allWorktreeFilePaths, worktreeFilePaths, worktreeFiles, multiSelect, selectWorktreeFile],
+    [allWorktreeFilePaths, worktreeFilePaths, worktreeFiles, multiSelect],
   );
 
   const handleSelectWorktreeDirectory = useCallback(

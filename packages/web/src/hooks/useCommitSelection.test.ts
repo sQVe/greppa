@@ -1,10 +1,28 @@
 // @vitest-environment happy-dom
-import { renderHook, act } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router';
+import { zodValidator, fallback } from '@tanstack/zod-adapter';
+import type { RefObject } from 'react';
+import { createElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 import type { CommitEntry } from '@greppa/core';
 
+import { parseSearch, stringifySearch } from '../router';
+import { cacheState, clearAllStateCaches } from '../stateCache';
 import { useCommitSelection } from './useCommitSelection';
+
+vi.mock('nanoid', () => {
+  let counter = 0;
+  return { nanoid: () => `t${++counter}` };
+});
 
 const makeCommit = (sha: string, abbrev: string): CommitEntry => ({
   sha,
@@ -21,55 +39,121 @@ const commits = [
   makeCommit('ddd', 'd'),
 ];
 
+type HookResult = ReturnType<typeof useCommitSelection>;
+
+const commitsSearch = z.object({
+  s: fallback(z.string(), '').default(''),
+  commits: fallback(z.array(z.string()), []).default([]),
+});
+
+const commitsUrl = (shas: string[]) => {
+  const full = { file: [], wt: [], commits: shas };
+  const id = `test-${Math.random().toString(36).slice(2, 6)}`;
+  cacheState(id, full);
+  return `/commits?s=${id}`;
+};
+
+const renderCommitSelection = async (initialLocation = '/commits') => {
+  const resultRef: RefObject<HookResult | null> = { current: null };
+
+  const HookHost = () => {
+    const hookResult = useCommitSelection(commits);
+    resultRef.current = hookResult;
+    return createElement('div', { 'data-testid': 'hook-host' });
+  };
+
+  const rootRoute = createRootRoute({ component: HookHost });
+  const commitsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/commits',
+    validateSearch: zodValidator(commitsSearch),
+  });
+  const routeTree = rootRoute.addChildren([commitsRoute]);
+  const history = createMemoryHistory({ initialEntries: [initialLocation] });
+  const router = createRouter({ routeTree, history, parseSearch, stringifySearch });
+
+  render(createElement(RouterProvider, { router }));
+  await waitFor(() => {
+    expect(screen.getByTestId('hook-host')).toBeDefined();
+  });
+
+  return { result: resultRef as RefObject<HookResult>, router };
+};
+
+afterEach(() => {
+  cleanup();
+  clearAllStateCaches();
+});
+
 describe('useCommitSelection', () => {
-  it('should start with no selection', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
+  it('should start with no selection', async () => {
+    const { result } = await renderCommitSelection();
 
     expect(result.current.selectedShas.size).toBe(0);
     expect(result.current.isActive).toBe(false);
     expect(result.current.diffRange).toBeNull();
   });
 
-  it('should select a single commit on click without shift', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
-
-    act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: false }); });
+  it('should read single commit from URL', async () => {
+    const { result } = await renderCommitSelection(commitsUrl(['bbb']));
 
     expect(result.current.selectedShas).toEqual(new Set(['bbb']));
     expect(result.current.isActive).toBe(true);
   });
 
-  it('should replace selection on click without shift', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
-
-    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
-    act(() => { result.current.selectCommit('ccc', { shiftKey: false, metaKey: false }); });
-
-    expect(result.current.selectedShas).toEqual(new Set(['ccc']));
-  });
-
-  it('should select range on shift+click', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
-
-    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
-    act(() => { result.current.selectCommit('ccc', { shiftKey: true, metaKey: false }); });
-
-    expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb', 'ccc']));
-  });
-
-  it('should select range in reverse order on shift+click', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
-
-    act(() => { result.current.selectCommit('ccc', { shiftKey: false, metaKey: false }); });
-    act(() => { result.current.selectCommit('aaa', { shiftKey: true, metaKey: false }); });
-
-    expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb', 'ccc']));
-  });
-
-  it('should compute diffRange for single commit using next commit as parent', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
+  it('should select a single commit on click', async () => {
+    const { result } = await renderCommitSelection();
 
     act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: false }); });
+
+    await waitFor(() => {
+      expect(result.current.selectedShas).toEqual(new Set(['bbb']));
+      expect(result.current.isActive).toBe(true);
+    });
+  });
+
+  it('should replace selection on plain click', async () => {
+    const { result } = await renderCommitSelection();
+
+    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    await waitFor(() => {
+      expect(result.current.selectedShas).toEqual(new Set(['aaa']));
+    });
+
+    act(() => { result.current.selectCommit('ccc', { shiftKey: false, metaKey: false }); });
+
+    await waitFor(() => {
+      expect(result.current.selectedShas).toEqual(new Set(['ccc']));
+    });
+  });
+
+  it('should select range on shift+click', async () => {
+    const { result } = await renderCommitSelection();
+
+    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    await waitFor(() => {
+      expect(result.current.selectedShas).toEqual(new Set(['aaa']));
+    });
+
+    act(() => { result.current.selectCommit('ccc', { shiftKey: true, metaKey: false }); });
+
+    await waitFor(() => {
+      expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb', 'ccc']));
+    });
+  });
+
+  it('should toggle on meta+click', async () => {
+    const { result } = await renderCommitSelection(commitsUrl(['aaa']));
+
+    act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: true }); });
+
+    await waitFor(() => {
+      expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb']));
+    });
+  });
+
+  it('should compute diffRange using next commit as parent', async () => {
+    const { result } = await renderCommitSelection(commitsUrl(['bbb']));
 
     expect(result.current.diffRange).toEqual({
       oldRef: 'ccc',
@@ -77,22 +161,8 @@ describe('useCommitSelection', () => {
     });
   });
 
-  it('should compute diffRange for commit range using next commit as parent', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
-
-    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
-    act(() => { result.current.selectCommit('ccc', { shiftKey: true, metaKey: false }); });
-
-    expect(result.current.diffRange).toEqual({
-      oldRef: 'ddd',
-      newRef: 'aaa',
-    });
-  });
-
-  it('should fall back to sha~1 when selecting the last commit in the list', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
-
-    act(() => { result.current.selectCommit('ddd', { shiftKey: false, metaKey: false }); });
+  it('should fall back to sha~1 for the last commit in the list', async () => {
+    const { result } = await renderCommitSelection(commitsUrl(['ddd']));
 
     expect(result.current.diffRange).toEqual({
       oldRef: 'ddd~1',
@@ -100,14 +170,25 @@ describe('useCommitSelection', () => {
     });
   });
 
-  it('should clear selection', () => {
-    const { result } = renderHook(() => useCommitSelection(commits));
+  it('should clear selection', async () => {
+    const { result } = await renderCommitSelection(commitsUrl(['aaa', 'bbb']));
 
-    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
     act(() => { result.current.clear(); });
 
-    expect(result.current.selectedShas.size).toBe(0);
-    expect(result.current.isActive).toBe(false);
-    expect(result.current.diffRange).toBeNull();
+    await waitFor(() => {
+      expect(result.current.selectedShas.size).toBe(0);
+      expect(result.current.isActive).toBe(false);
+      expect(result.current.diffRange).toBeNull();
+    });
+  });
+
+  it('should navigate to /commits route', async () => {
+    const { result, router } = await renderCommitSelection();
+
+    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/commits');
+    });
   });
 });

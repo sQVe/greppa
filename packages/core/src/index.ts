@@ -33,6 +33,24 @@ export const RefsResponse = Schema.Struct({
 });
 export type RefsResponse = typeof RefsResponse.Type;
 
+export const StateData = Schema.Struct({
+  file: Schema.Array(Schema.String),
+  wt: Schema.Array(Schema.String),
+  commits: Schema.Array(Schema.String),
+});
+export type StateData = typeof StateData.Type;
+
+export const StateSaveRequest = Schema.Struct({
+  ...StateData.fields,
+  id: Schema.String,
+});
+export type StateSaveRequest = typeof StateSaveRequest.Type;
+
+export const StateSaveResponse = Schema.Struct({
+  id: Schema.String,
+});
+export type StateSaveResponse = typeof StateSaveResponse.Type;
+
 export const CommitEntry = Schema.Struct({
   sha: Schema.String,
   abbrevSha: Schema.String,

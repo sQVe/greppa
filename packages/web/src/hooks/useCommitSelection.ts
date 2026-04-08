@@ -40,6 +40,11 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
     [navigate],
   );
 
+  const clear = useCallback(() => {
+    anchorRef.current = null;
+    void navigate({ to: '/commits', search: { s: '', commits: [] }, replace: true });
+  }, [navigate]);
+
   const selectCommit = useCallback(
     (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => {
       if (modifiers.metaKey) {
@@ -49,6 +54,10 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
           next.delete(sha);
         } else {
           next.add(sha);
+        }
+        if (next.size === 0) {
+          clear();
+          return;
         }
         navigateWithState(buildState([...next]), true);
         return;
@@ -80,13 +89,8 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
       anchorRef.current = sha;
       navigateWithState(buildState([sha]));
     },
-    [commits, selectedShas, navigateWithState],
+    [commits, selectedShas, navigateWithState, clear],
   );
-
-  const clear = useCallback(() => {
-    anchorRef.current = null;
-    void navigate({ to: '/commits', search: { s: '', commits: [] }, replace: true });
-  }, [navigate]);
 
   const diffRange = useMemo(() => {
     if (selectedShas.size === 0) {

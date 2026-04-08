@@ -260,7 +260,8 @@ export const App = () => {
     [commitSelection.isActive, commitDiffs.diffs, fileDiffs],
   );
 
-  useHashScroll(stackedDiffRef, selectedDiffs);
+  const hash = useRouterState({ select: (s: { location: { hash: string } }) => s.location.hash });
+  useHashScroll(stackedDiffRef, selectedDiffs, hash);
 
   const committedFileCount = committedFilePaths.length;
   const committedReviewedCount = useMemo(

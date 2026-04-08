@@ -83,6 +83,13 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
     [navigate],
   );
 
+  const pathname = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
+  const clear = useCallback(() => {
+    anchorRef.current = null;
+    const to = pathname === '/worktree' ? '/worktree' as const : '/changes' as const;
+    void navigate({ to, search: { s: '' }, replace: true });
+  }, [navigate, pathname]);
+
   const select = useCallback(
     (path: string, source: FileSource, hash?: string) => {
       anchorRef.current = { path, source };
@@ -104,9 +111,13 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
       } else {
         next.add(path);
       }
+      if (next.size === 0) {
+        clear();
+        return;
+      }
       navigateWithState(buildState([...next], source), source, { replace: true, hash });
     },
-    [navigateWithState, activeSource, selectedPaths],
+    [navigateWithState, activeSource, selectedPaths, clear],
   );
 
   const selectRange = useCallback(
@@ -135,10 +146,13 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
   );
 
   const selectAll = useCallback(
-    (_paths: string[], source: FileSource) => {
-      navigateWithState(buildState([SELECT_ALL], source), source, { replace: true });
+    (paths: string[], source: FileSource) => {
+      const allPaths = source === 'committed' ? committedFilePaths : worktreeFilePaths;
+      const isAll = paths.length === allPaths.length && paths.every((p) => allPaths.includes(p));
+      const value = isAll ? [SELECT_ALL] : paths;
+      navigateWithState(buildState(value, source), source, { replace: true });
     },
-    [navigateWithState],
+    [navigateWithState, committedFilePaths, worktreeFilePaths],
   );
 
   const toggleAll = useCallback(
@@ -153,6 +167,10 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
         for (const p of paths) {
           next.delete(p);
         }
+        if (next.size === 0) {
+          clear();
+          return;
+        }
         navigateWithState(buildState([...next], source), source, { replace: true, hash });
         return;
       }
@@ -162,15 +180,8 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
       }
       navigateWithState(buildState([...next], source), source, { replace: true, hash });
     },
-    [navigateWithState, activeSource, selectedPaths],
+    [navigateWithState, activeSource, selectedPaths, clear],
   );
-
-  const pathname = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
-  const clear = useCallback(() => {
-    anchorRef.current = null;
-    const to = pathname === '/worktree' ? '/worktree' as const : '/changes' as const;
-    void navigate({ to, search: { s: '' }, replace: true });
-  }, [navigate, pathname]);
 
   return {
     selectedPaths,

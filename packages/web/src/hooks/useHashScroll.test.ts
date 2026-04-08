@@ -16,52 +16,59 @@ const fileA: DiffFile = {
 
 describe('useHashScroll', () => {
   it('calls scrollToFile when hash contains a file path and diffs are present', () => {
-    window.location.hash = '#src/App.tsx';
     const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
-    renderHook(() =>{  useHashScroll(ref, [fileA]); });
+    renderHook(() => { useHashScroll(ref, [fileA], '#src/App.tsx'); });
 
     expect(ref.current.scrollToFile).toHaveBeenCalledWith('src/App.tsx');
-    window.location.hash = '';
   });
 
   it('calls scrollToLine when hash contains a line anchor', () => {
-    window.location.hash = '#src/App.tsx:L42';
     const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
-    renderHook(() =>{  useHashScroll(ref, [fileA]); });
+    renderHook(() => { useHashScroll(ref, [fileA], '#src/App.tsx:L42'); });
 
     expect(ref.current.scrollToLine).toHaveBeenCalledWith('src/App.tsx', 42);
-    window.location.hash = '';
   });
 
   it('does not scroll when diffs are empty', () => {
-    window.location.hash = '#src/App.tsx';
     const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
-    renderHook(() =>{  useHashScroll(ref, []); });
+    renderHook(() => { useHashScroll(ref, [], '#src/App.tsx'); });
 
     expect(ref.current.scrollToFile).not.toHaveBeenCalled();
-    window.location.hash = '';
   });
 
-  it('scrolls only once even when diffs change', () => {
-    window.location.hash = '#src/App.tsx';
+  it('does not re-scroll when diffs change but hash stays the same', () => {
     const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
     const { rerender } = renderHook(
-      ({ diffs }) =>{  useHashScroll(ref, diffs); },
-      { initialProps: { diffs: [fileA] } },
+      ({ diffs, hash }) => { useHashScroll(ref, diffs, hash); },
+      { initialProps: { diffs: [fileA], hash: '#src/App.tsx' } },
     );
 
     const fileB: DiffFile = { path: 'src/B.tsx', changeType: 'added', language: 'typescript', hunks: [] };
-    rerender({ diffs: [fileA, fileB] });
+    rerender({ diffs: [fileA, fileB], hash: '#src/App.tsx' });
 
     expect(ref.current.scrollToFile).toHaveBeenCalledTimes(1);
-    window.location.hash = '';
+  });
+
+  it('scrolls again when hash changes', () => {
+    const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
+    ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
+
+    const { rerender } = renderHook(
+      ({ diffs, hash }) => { useHashScroll(ref, diffs, hash); },
+      { initialProps: { diffs: [fileA], hash: '#src/App.tsx' } },
+    );
+
+    rerender({ diffs: [fileA], hash: '#src/B.tsx' });
+
+    expect(ref.current.scrollToFile).toHaveBeenCalledTimes(2);
+    expect(ref.current.scrollToFile).toHaveBeenLastCalledWith('src/B.tsx');
   });
 });

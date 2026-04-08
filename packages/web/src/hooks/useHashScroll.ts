@@ -8,16 +8,21 @@ import { parseHash } from './parseHash';
 export const useHashScroll = (
   viewerRef: RefObject<StackedDiffViewerHandle | null>,
   diffs: DiffFile[],
+  hash: string,
 ) => {
-  const hasScrolled = useRef(false);
+  const lastScrolledHash = useRef<string | null>(null);
 
   useEffect(() => {
-    if (hasScrolled.current || diffs.length === 0) {
+    if (diffs.length === 0) {
       return;
     }
 
-    const target = parseHash(window.location.hash);
+    const target = parseHash(hash);
     if (target == null) {
+      return;
+    }
+
+    if (lastScrolledHash.current === hash) {
       return;
     }
 
@@ -26,12 +31,12 @@ export const useHashScroll = (
       return;
     }
 
-    hasScrolled.current = true;
+    lastScrolledHash.current = hash;
 
     if (target.line != null) {
       viewer.scrollToLine(target.path, target.line);
     } else {
       viewer.scrollToFile(target.path);
     }
-  }, [diffs, viewerRef]);
+  }, [diffs, viewerRef, hash]);
 };

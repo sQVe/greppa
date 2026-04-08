@@ -72,14 +72,18 @@ const resolveState = async (s: string): Promise<StatePayload | null> => {
   if (cached != null) {
     return cached;
   }
-  const response = await fetch(`/api/state/${encodeURIComponent(s)}`);
-  if (!response.ok) {
+  try {
+    const response = await fetch(`/api/state/${encodeURIComponent(s)}`);
+    if (!response.ok) {
+      return null;
+    }
+    // oxlint-disable-next-line no-unsafe-type-assertion -- JSON response matches API schema
+    const state = (await response.json()) as StatePayload;
+    cacheState(s, state);
+    return state;
+  } catch {
     return null;
   }
-  // oxlint-disable-next-line no-unsafe-type-assertion -- JSON response matches API schema
-  const state = (await response.json()) as StatePayload;
-  cacheState(s, state);
-  return state;
 };
 
 const sectionForState = (state: StatePayload): '/changes' | '/worktree' | '/commits' => {

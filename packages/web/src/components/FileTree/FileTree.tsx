@@ -6,8 +6,6 @@ import type { ChangeType, FileNode } from '../../fixtures/types';
 
 import styles from './FileTree.module.css';
 
-const COLLAPSED_DIR: string = styles.collapsedDir ?? '';
-
 interface FileTreeProps {
   files: FileNode[];
   selectedPaths: Set<string>;
@@ -17,6 +15,8 @@ interface FileTreeProps {
   onExpandedKeysChange: (keys: Set<string | number>) => void;
   onCollapseDirectory?: (path: string) => void;
 }
+
+const COLLAPSED_DIR: string = styles.collapsedDir ?? '';
 
 const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
   added: 'A',

@@ -147,6 +147,7 @@ export const useFileSelection = (
     selectCommittedFile,
     selectWorktreeFile,
     deselectFile,
+    reviewedPaths,
     reviewedCount: reviewedPaths.size,
     totalCount: validPaths.size,
     selectedDiff,

@@ -206,6 +206,7 @@ export const App = () => {
     selectedSource,
     selectCommittedFile,
     selectWorktreeFile,
+    reviewedPaths: allReviewedPaths,
     selectedDiff: fixtureDiff,
     selectedThreads,
     selectedFileInfo,
@@ -250,8 +251,8 @@ export const App = () => {
 
   const committedFileCount = committedFilePaths.length;
   const committedReviewedCount = useMemo(
-    () => committedFilePaths.filter((p) => reviewedPaths.has(p)).length,
-    [committedFilePaths, reviewedPaths],
+    () => committedFilePaths.filter((p) => allReviewedPaths.has(p)).length,
+    [committedFilePaths, allReviewedPaths],
   );
   const worktreeFileCount = useMemo(() => collectFiles(worktreeFiles ?? EMPTY_FILES).length, [worktreeFiles]);
 

@@ -1,5 +1,5 @@
 import { IconFile, IconSettings } from '@tabler/icons-react';
-import * as Popover from '@radix-ui/react-popover';
+import { Popover } from '@greppa/ui';
 
 import { THEMES, usePreferences } from '../../hooks/usePreferences';
 

@@ -1,3 +1,4 @@
+/* eslint-disable only-throw-error -- TanStack Router redirect API requires throwing non-Error objects */
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router';
 import { zodValidator, fallback } from '@tanstack/zod-adapter';
 import { z } from 'zod';
@@ -107,10 +108,8 @@ const changesRoute = createRoute({
     }
     const target = sectionForState(state);
     if (target !== '/changes') {
-      // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
       throw redirect({ to: target, search: { s: search.s, ...state } });
     }
-    // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
     throw redirect({ to: '/changes', search: { s: search.s, file: state.file } });
   },
 });
@@ -129,10 +128,8 @@ const worktreeRoute = createRoute({
     }
     const target = sectionForState(state);
     if (target !== '/worktree') {
-      // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
       throw redirect({ to: target, search: { s: search.s, ...state } });
     }
-    // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
     throw redirect({ to: '/worktree', search: { s: search.s, wt: state.wt } });
   },
 });
@@ -151,10 +148,8 @@ const commitsRoute = createRoute({
     }
     const target = sectionForState(state);
     if (target !== '/commits') {
-      // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
       throw redirect({ to: target, search: { s: search.s, ...state } });
     }
-    // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
     throw redirect({ to: '/commits', search: { s: search.s, commits: state.commits } });
   },
 });
@@ -165,16 +160,13 @@ const reviewRoute = createRoute({
   validateSearch: zodValidator(reviewSearch),
   beforeLoad: async ({ search }) => {
     if (!search.s) {
-      // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
       throw redirect({ to: '/changes' });
     }
     const state = await resolveState(search.s);
     if (state == null) {
-      // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
       throw redirect({ to: '/changes' });
     }
     const target = sectionForState(state);
-    // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
     throw redirect({ to: target, search: { s: search.s, ...state } });
   },
 });
@@ -183,7 +175,6 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: () => {
-    // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
     throw redirect({ to: '/changes' });
   },
 });
@@ -192,7 +183,6 @@ const fileRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/file/$',
   beforeLoad: ({ params }) => {
-    // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
     throw redirect({ to: '/changes', search: { file: [params._splat], s: '' } });
   },
 });
@@ -201,7 +191,6 @@ const worktreeRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/wt/$',
   beforeLoad: ({ params }) => {
-    // eslint-disable-next-line only-throw-error -- TanStack Router redirect API
     throw redirect({ to: '/worktree', search: { wt: [params._splat], s: '' } });
   },
 });

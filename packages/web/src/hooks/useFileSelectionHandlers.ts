@@ -4,14 +4,6 @@ import type { FileNode } from '../fixtures/types';
 import type { useMultiSelect } from './useMultiSelect';
 import { collectDescendantFilePaths, collectFiles } from '../useFileSelection';
 
-const updateHash = (path: string) => {
-  window.history.replaceState(
-    null,
-    '',
-    `${window.location.pathname}${window.location.search}#${path}`,
-  );
-};
-
 export interface SelectModifiers {
   shiftKey: boolean;
   metaKey: boolean;
@@ -52,27 +44,24 @@ export const useFileSelectionHandlers = ({
   const handleSelectCommittedFile = useCallback(
     (path: string, modifiers: SelectModifiers) => {
       if (modifiers.shiftKey) {
-        multiSelect.selectRange(path, committedFilePaths, 'committed');
-        updateHash(path);
+        multiSelect.selectRange(path, committedFilePaths, 'committed', path);
         return;
       }
 
       if (modifiers.metaKey) {
         const isFile = allCommittedFilePaths.has(path);
         if (isFile) {
-          multiSelect.toggle(path, 'committed');
-          updateHash(path);
+          multiSelect.toggle(path, 'committed', path);
         } else {
           const children = collectDescendantFilePaths(files, path);
           if (children.length > 0) {
-            multiSelect.toggleAll(children, 'committed');
-            updateHash(children[0] ?? path);
+            multiSelect.toggleAll(children, 'committed', children[0] ?? path);
           }
         }
         return;
       }
 
-      multiSelect.select(path, 'committed');
+      multiSelect.select(path, 'committed', path);
     },
     [allCommittedFilePaths, committedFilePaths, files, multiSelect],
   );
@@ -95,27 +84,24 @@ export const useFileSelectionHandlers = ({
   const handleSelectWorktreeFile = useCallback(
     (path: string, modifiers: SelectModifiers) => {
       if (modifiers.shiftKey) {
-        multiSelect.selectRange(path, worktreeFilePaths, 'worktree');
-        updateHash(path);
+        multiSelect.selectRange(path, worktreeFilePaths, 'worktree', path);
         return;
       }
 
       if (modifiers.metaKey) {
         const isFile = allWorktreeFilePaths.has(path);
         if (isFile) {
-          multiSelect.toggle(path, 'worktree');
-          updateHash(path);
+          multiSelect.toggle(path, 'worktree', path);
         } else {
           const children = collectDescendantFilePaths(worktreeFiles, path);
           if (children.length > 0) {
-            multiSelect.toggleAll(children, 'worktree');
-            updateHash(children[0] ?? path);
+            multiSelect.toggleAll(children, 'worktree', children[0] ?? path);
           }
         }
         return;
       }
 
-      multiSelect.select(path, 'worktree');
+      multiSelect.select(path, 'worktree', path);
     },
     [allWorktreeFilePaths, worktreeFilePaths, worktreeFiles, multiSelect],
   );

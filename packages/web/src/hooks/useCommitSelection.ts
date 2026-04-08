@@ -6,15 +6,13 @@ import type { CommitEntry } from '@greppa/core';
 
 import type { StatePayload } from '../stateCache';
 import { cacheState, findExistingId, postState } from '../stateCache';
+import { toStringArray } from '../toStringArray';
 
 const buildState = (shas: string[]): StatePayload => ({
   file: [],
   wt: [],
   commits: shas,
 });
-
-const toStringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
 const selectCommitParams = (s: { location: { search: Record<string, unknown> } }) =>
   toStringArray(s.location.search.commits);

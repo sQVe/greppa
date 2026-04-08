@@ -3,11 +3,9 @@ import { useCallback, useEffect, useMemo } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
 import { useReviewState } from './hooks/useReviewState';
+import { toStringArray } from './toStringArray';
 
 export type FileSource = 'committed' | 'worktree';
-
-const toStringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
 const selectFileParams = (s: { location: { search: Record<string, unknown> } }) =>
   toStringArray(s.location.search.file);

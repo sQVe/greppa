@@ -206,7 +206,6 @@ export const App = () => {
     selectedSource,
     selectCommittedFile,
     selectWorktreeFile,
-    reviewedCount,
     selectedDiff: fixtureDiff,
     selectedThreads,
     selectedFileInfo,
@@ -249,7 +248,11 @@ export const App = () => {
     [commitSelection.isActive, commitDiffs.diffs, fileDiffs],
   );
 
-  const committedFileCount = useMemo(() => collectFiles(files).length, [files]);
+  const committedFileCount = committedFilePaths.length;
+  const committedReviewedCount = useMemo(
+    () => committedFilePaths.filter((p) => reviewedPaths.has(p)).length,
+    [committedFilePaths, reviewedPaths],
+  );
   const worktreeFileCount = useMemo(() => collectFiles(worktreeFiles ?? EMPTY_FILES).length, [worktreeFiles]);
 
   const activeReviewedPaths = multiSelect.activeSource === 'worktree' ? worktreeReviewedPaths : reviewedPaths;
@@ -284,10 +287,10 @@ export const App = () => {
     }
     return {
       mode: 'file-review',
-      reviewedCount: Math.min(reviewedCount, committedFileCount),
+      reviewedCount: committedReviewedCount,
       totalCount: committedFileCount,
     };
-  }, [activeSection, commitSelection.selectedShas, commitDiffs.diffs.length, worktreeFileCount, reviewedCount, committedFileCount]);
+  }, [activeSection, commitSelection.selectedShas, commitDiffs.diffs.length, worktreeFileCount, committedReviewedCount, committedFileCount]);
 
   if (refsLoading || refsError) {
     return <div className={styles.app} />;

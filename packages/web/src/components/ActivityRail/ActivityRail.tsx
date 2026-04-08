@@ -45,6 +45,7 @@ export const ActivityRail = ({ isFileTreeExpanded, onToggleFileTree }: ActivityR
                   key={theme}
                   className={styles.themeOption}
                   data-active={state.theme === theme}
+                  aria-pressed={state.theme === theme}
                   onClick={() => { set({ theme }); }}
                 >
                   {theme}

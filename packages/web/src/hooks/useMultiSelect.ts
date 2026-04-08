@@ -7,12 +7,17 @@ import type { StatePayload } from '../stateCache';
 import { cacheState, findExistingId, postState } from '../stateCache';
 import { toStringArray } from '../toStringArray';
 
-const SELECT_ALL = '*';
-
 interface MultiSelectOptions {
   committedFilePaths: string[];
   worktreeFilePaths: string[];
 }
+
+interface NavigateOptions {
+  replace?: boolean;
+  hash?: string;
+}
+
+const SELECT_ALL = '*';
 
 const resolveParams = (params: string[], allPaths: string[]): Set<string> => {
   if (params.length === 1 && params[0] === SELECT_ALL) {
@@ -60,11 +65,6 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
   }, [fileParams, wtParams]);
 
   const isMultiSelect = useMemo(() => selectedPaths.size > 1, [selectedPaths]);
-
-  interface NavigateOptions {
-    replace?: boolean;
-    hash?: string;
-  }
 
   const navigateWithState = useCallback(
     (state: StatePayload, source: FileSource, options?: NavigateOptions) => {

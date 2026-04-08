@@ -22,6 +22,12 @@ interface DiffContent {
   newContent: string;
 }
 
+interface StoredState {
+  file: string[];
+  wt: string[];
+  commits: string[];
+}
+
 const createCache = <T>(ttlMs: number, maxEntries: number) => {
   const store = new Map<string, CacheEntry<T>>();
 
@@ -237,12 +243,6 @@ const WorktreeDiffHandlers = HttpApiBuilder.group(Api, 'worktreeDiff', (handlers
 class StateNotFoundError extends Data.TaggedError('StateNotFound')<{
   message: string;
 }> {}
-
-interface StoredState {
-  file: string[];
-  wt: string[];
-  commits: string[];
-}
 
 const STATE_MAX_ENTRIES = 10_000;
 const stateStore = new Map<string, StoredState>();

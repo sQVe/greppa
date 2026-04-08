@@ -15,6 +15,7 @@ import { z } from 'zod';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
 import { parseSearch, stringifySearch } from './router';
+import { cacheState, clearAllStateCaches } from './stateCache';
 import { collectDescendantFilePaths, collectFiles, useFileSelection } from './useFileSelection';
 
 const testFiles: FileNode[] = [
@@ -76,13 +77,19 @@ const testFileInfoMap = new Map<string, FileInfo>([
 
 type HookResult = ReturnType<typeof useFileSelection>;
 
-const reviewSearch = z.object({
+const changesSearch = z.object({
+  s: fallback(z.string(), '').default(''),
   file: fallback(z.array(z.string()), []).default([]),
-  wt: fallback(z.array(z.string()), []).default([]),
-  commits: fallback(z.array(z.string()), []).default([]),
 });
 
-const renderFileSelection = async (initialLocation = '/review') => {
+const changesUrl = (files: string[]) => {
+  const full = { file: files, wt: [], commits: [] };
+  const id = `test-${Math.random().toString(36).slice(2, 6)}`;
+  cacheState(id, full);
+  return `/changes?s=${id}`;
+};
+
+const renderFileSelection = async (initialLocation = '/changes') => {
   const resultRef: RefObject<HookResult | null> = { current: null };
 
   const HookHost = () => {
@@ -92,12 +99,12 @@ const renderFileSelection = async (initialLocation = '/review') => {
   };
 
   const rootRoute = createRootRoute({ component: HookHost });
-  const reviewRoute = createRoute({
+  const changesRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/review',
-    validateSearch: zodValidator(reviewSearch),
+    path: '/changes',
+    validateSearch: zodValidator(changesSearch),
   });
-  const routeTree = rootRoute.addChildren([reviewRoute]);
+  const routeTree = rootRoute.addChildren([changesRoute]);
   const history = createMemoryHistory({ initialEntries: [initialLocation] });
   const router = createRouter({ routeTree, history, parseSearch, stringifySearch });
 
@@ -106,7 +113,11 @@ const renderFileSelection = async (initialLocation = '/review') => {
     expect(screen.getByTestId('hook-host')).toBeDefined();
   });
 
-  return { result: resultRef as RefObject<HookResult>, router };
+  const navigateTo = (path: string) => {
+    act(() => { void router.navigate({ to: '/changes', search: { s: '', file: [path] } }); });
+  };
+
+  return { result: resultRef as RefObject<HookResult>, router, navigateTo };
 };
 
 beforeEach(() => {
@@ -115,6 +126,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  clearAllStateCaches();
 });
 
 describe('collectFiles', () => {
@@ -186,32 +198,32 @@ describe('useFileSelection', () => {
 
   describe('selecting a file', () => {
     it('should update selected file path', async () => {
-      const { result } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/a.ts'); });
+      const { result, navigateTo } = await renderFileSelection();
+      navigateTo('src/a.ts');
       await waitFor(() => {
         expect(result.current.selectedFilePath).toBe('src/a.ts');
       });
     });
 
     it('should return the diff for the selected file', async () => {
-      const { result } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/a.ts'); });
+      const { result, navigateTo } = await renderFileSelection();
+      navigateTo('src/a.ts');
       await waitFor(() => {
         expect(result.current.selectedDiff?.path).toBe('src/a.ts');
       });
     });
 
     it('should return null diff when selected file has no diff', async () => {
-      const { result } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('c.ts'); });
+      const { result, navigateTo } = await renderFileSelection();
+      navigateTo('c.ts');
       await waitFor(() => {
         expect(result.current.selectedDiff).toBeNull();
       });
     });
 
     it('should filter comment threads to the selected file', async () => {
-      const { result } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/a.ts'); });
+      const { result, navigateTo } = await renderFileSelection();
+      navigateTo('src/a.ts');
       await waitFor(() => {
         expect(result.current.selectedThreads).toHaveLength(1);
         expect(result.current.selectedThreads[0]?.id).toBe('t1');
@@ -219,16 +231,16 @@ describe('useFileSelection', () => {
     });
 
     it('should return file info for the selected file', async () => {
-      const { result } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/a.ts'); });
+      const { result, navigateTo } = await renderFileSelection();
+      navigateTo('src/a.ts');
       await waitFor(() => {
         expect(result.current.selectedFileInfo?.path).toBe('src/a.ts');
       });
     });
 
     it('should return null file info when selected file has none', async () => {
-      const { result } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/b.ts'); });
+      const { result, navigateTo } = await renderFileSelection();
+      navigateTo('src/b.ts');
       await waitFor(() => {
         expect(result.current.selectedFileInfo).toBeNull();
       });
@@ -237,31 +249,31 @@ describe('useFileSelection', () => {
 
   describe('URL sync', () => {
     it('should read initial file from search params', async () => {
-      const { result } = await renderFileSelection('/review?file=src%2Fa.ts');
+      const { result } = await renderFileSelection(changesUrl(['src/a.ts']));
       expect(result.current.selectedFilePath).toBe('src/a.ts');
     });
 
     it('should ignore invalid file path in search params', async () => {
-      const { result } = await renderFileSelection('/review?file=nonexistent.ts');
+      const { result } = await renderFileSelection(changesUrl(['nonexistent.ts']));
       expect(result.current.selectedFilePath).toBeNull();
     });
 
-    it('should update search params when a file is selected', async () => {
-      const { result, router } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/a.ts'); });
+    it('should update search params when navigating', async () => {
+      const { router, navigateTo } = await renderFileSelection();
+      navigateTo('src/a.ts');
       await waitFor(() => {
         expect(router.state.location.search).toMatchObject({ file: ['src/a.ts'] });
       });
     });
 
     it('should respond to browser back/forward navigation', async () => {
-      const { result, router } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/a.ts'); });
+      const { result, router, navigateTo } = await renderFileSelection();
+      navigateTo('src/a.ts');
       await waitFor(() => {
         expect(result.current.selectedFilePath).toBe('src/a.ts');
       });
 
-      act(() => { result.current.selectCommittedFile('src/b.ts'); });
+      navigateTo('src/b.ts');
       await waitFor(() => {
         expect(result.current.selectedFilePath).toBe('src/b.ts');
       });
@@ -275,39 +287,39 @@ describe('useFileSelection', () => {
 
   describe('review tracking', () => {
     it('should mark an unreviewed file as reviewed on selection', async () => {
-      const { result } = await renderFileSelection();
+      const { result, navigateTo } = await renderFileSelection();
       expect(result.current.reviewedCount).toBe(1);
-      act(() => { result.current.selectCommittedFile('src/b.ts'); });
+      navigateTo('src/b.ts');
       await waitFor(() => {
         expect(result.current.reviewedCount).toBe(2);
       });
     });
 
     it('should not double-count an already-reviewed file', async () => {
-      const { result } = await renderFileSelection();
-      act(() => { result.current.selectCommittedFile('src/a.ts'); });
+      const { result, navigateTo } = await renderFileSelection();
+      navigateTo('src/a.ts');
       await waitFor(() => {
         expect(result.current.reviewedCount).toBe(1);
       });
     });
 
     it('should mark a file as reviewed when loaded via deep link', async () => {
-      const { result } = await renderFileSelection('/review?file=src%2Fb.ts');
+      const { result } = await renderFileSelection(changesUrl(['src/b.ts']));
       await waitFor(() => {
         expect(result.current.reviewedCount).toBe(2);
       });
     });
 
     it('should mark a file as reviewed on browser back navigation', async () => {
-      const { result, router } = await renderFileSelection();
+      const { result, router, navigateTo } = await renderFileSelection();
       expect(result.current.reviewedCount).toBe(1);
 
-      act(() => { result.current.selectCommittedFile('src/b.ts'); });
+      navigateTo('src/b.ts');
       await waitFor(() => {
         expect(result.current.reviewedCount).toBe(2);
       });
 
-      act(() => { result.current.selectCommittedFile('c.ts'); });
+      navigateTo('c.ts');
       await waitFor(() => {
         expect(result.current.reviewedCount).toBe(3);
       });

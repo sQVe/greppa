@@ -21,10 +21,13 @@ vi.mock('./components/DiffViewer/useSyntaxHighlighting', () => ({
   useMultiSyntaxHighlighting: () => new Map(),
 }));
 
-vi.mock('./hooks/useFileList', () => ({
-  useFileList: () => ({ files: null, isError: true, isLoading: false }),
-  buildFileTree: (entries: unknown[]) => entries,
-}));
+vi.mock('./hooks/useFileList', async () => {
+  const { files } = await import('./fixtures');
+  return {
+    useFileList: () => ({ files, isError: false, isLoading: false }),
+    buildFileTree: (entries: unknown[]) => entries,
+  };
+});
 
 vi.mock('./hooks/useWorktreeFiles', () => ({
   useWorktreeFiles: () => ({ files: null, isLoading: false, isError: false }),
@@ -53,29 +56,52 @@ vi.mock('./hooks/usePreferences', () => ({
 
 beforeEach(() => {
   localStorage.clear();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+    Promise.resolve(new Response('{}', { status: 200 })),
+  );
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
-const reviewSearch = z.object({
+const changesSearch = z.object({
+  s: fallback(z.string(), '').default(''),
   file: fallback(z.array(z.string()), []).default([]),
+});
+
+const worktreeSearch = z.object({
+  s: fallback(z.string(), '').default(''),
   wt: fallback(z.array(z.string()), []).default([]),
+});
+
+const commitsSearch = z.object({
+  s: fallback(z.string(), '').default(''),
   commits: fallback(z.array(z.string()), []).default([]),
 });
 
-const renderApp = (initialLocation = '/review') => {
+const renderApp = (initialLocation = '/changes') => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const rootRoute = createRootRoute({ component: App });
-  const reviewRoute = createRoute({
+  const changesRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/review',
-    validateSearch: zodValidator(reviewSearch),
+    path: '/changes',
+    validateSearch: zodValidator(changesSearch),
   });
-  const routeTree = rootRoute.addChildren([reviewRoute]);
+  const worktreeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/worktree',
+    validateSearch: zodValidator(worktreeSearch),
+  });
+  const commitsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/commits',
+    validateSearch: zodValidator(commitsSearch),
+  });
+  const routeTree = rootRoute.addChildren([changesRoute, worktreeRoute, commitsRoute]);
   const history = createMemoryHistory({ initialEntries: [initialLocation] });
   const router = createRouter({ routeTree, history, parseSearch, stringifySearch });
 

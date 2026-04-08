@@ -1,3 +1,4 @@
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
@@ -11,7 +12,7 @@ import type { FileTreeSection } from './components/FileTree/FileTreePanel';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
 import type { DiffFile, FileNode } from './fixtures/types';
-import { comments, diffs, fileInfoMap, files as fixtureFiles } from './fixtures';
+import { comments, diffs, fileInfoMap } from './fixtures';
 import { buildDiffFile } from './hooks/buildDiffFile';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
@@ -169,7 +170,20 @@ export const App = () => {
   const stackedDiffRef = useRef<StackedDiffViewerHandle>(null);
   const fileTreePanelRef = usePanelRef();
   const [isFileTreeExpanded, setIsFileTreeExpanded] = useState(true);
-  const [activeSection, setActiveSection] = useState<FileTreeSection>('committed');
+  const navigate = useNavigate();
+
+  const pathname = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
+  let activeSection: FileTreeSection = 'committed';
+  if (pathname === '/commits') {
+    activeSection = 'commits';
+  } else if (pathname === '/worktree') {
+    activeSection = 'worktree';
+  }
+
+  const handleToggleSection = useCallback((section: FileTreeSection) => {
+    const routes = { committed: '/changes', worktree: '/worktree', commits: '/commits' } as const;
+    void navigate({ to: routes[section] });
+  }, [navigate]);
 
   const handleToggleFileTree = useCallback(() => {
     const panel = fileTreePanelRef.current;
@@ -188,8 +202,8 @@ export const App = () => {
     panelIds: PANEL_IDS,
   });
 
-  const { files: apiFiles, isError } = useFileList(mergeBaseRef ?? '', newRef ?? '');
-  const files = isError || apiFiles == null ? fixtureFiles : apiFiles;
+  const { files: apiFiles } = useFileList(mergeBaseRef ?? '', newRef ?? '');
+  const files = apiFiles ?? EMPTY_FILES;
 
   const { files: worktreeFiles } = useWorktreeFiles();
 
@@ -204,8 +218,6 @@ export const App = () => {
   const {
     selectedFilePath,
     selectedSource,
-    selectCommittedFile,
-    selectWorktreeFile,
     reviewedPaths: allReviewedPaths,
     selectedDiff: fixtureDiff,
     selectedThreads,
@@ -229,8 +241,6 @@ export const App = () => {
     worktreeFiles: worktreeFiles ?? EMPTY_FILES,
     oldRef: mergeBaseRef ?? '',
     newRef: newRef ?? '',
-    selectCommittedFile,
-    selectWorktreeFile,
   });
 
   const fileDiffs = useSelectedDiffs({
@@ -324,6 +334,7 @@ export const App = () => {
             }}
           >
             <FileTreePanel
+              expandedSection={activeSection}
               committedFiles={files}
               worktreeFiles={worktreeFiles ?? EMPTY_FILES}
               commits={commits}
@@ -332,6 +343,7 @@ export const App = () => {
               selectedCommitShas={commitSelection.selectedShas}
               committedExpandedKeys={expandedKeys}
               worktreeExpandedKeys={worktreeExpandedKeys}
+              onToggleSection={handleToggleSection}
               onSelectCommittedFile={handleSelectCommittedFile}
               onSelectWorktreeFile={handleSelectWorktreeFile}
               onSelectCommittedDirectory={handleSelectCommittedDirectory}
@@ -339,7 +351,6 @@ export const App = () => {
               onSelectCommit={handleSelectCommit}
               onCommittedExpandedKeysChange={handleExpandedKeysChange}
               onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
-              onSectionChange={setActiveSection}
             />
           </Panel>
           <Separator className={styles.separator} />

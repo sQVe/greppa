@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import type { FileNode } from '../fixtures/types';
 import { collectFiles } from '../useFileSelection';
@@ -14,8 +14,6 @@ interface SelectionCoordinatorOptions {
   worktreeFiles: FileNode[];
   oldRef: string;
   newRef: string;
-  selectCommittedFile: (path: string) => void;
-  selectWorktreeFile: (path: string) => void;
 }
 
 export const useSelectionCoordinator = ({
@@ -23,67 +21,32 @@ export const useSelectionCoordinator = ({
   worktreeFiles,
   oldRef,
   newRef,
-  selectCommittedFile,
-  selectWorktreeFile,
 }: SelectionCoordinatorOptions) => {
-  const multiSelect = useMultiSelect();
+  const committedFilePaths = useMemo(
+    () => collectFiles(files).map((file) => file.path),
+    [files],
+  );
+  const worktreeFilePaths = useMemo(
+    () => collectFiles(worktreeFiles).map((file) => file.path),
+    [worktreeFiles],
+  );
+
+  const multiSelect = useMultiSelect({ committedFilePaths, worktreeFilePaths });
   const { commits } = useCommitList(oldRef, newRef);
   const commitSelection = useCommitSelection(commits);
 
-  const handleSelectCommit = useCallback(
-    (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => {
-      multiSelect.clear();
-      commitSelection.selectCommit(sha, modifiers);
-    },
-    [multiSelect, commitSelection],
-  );
+  const handleSelectCommit = commitSelection.selectCommit;
 
   const {
-    committedFilePaths,
-    worktreeFilePaths,
-    handleSelectCommittedFile: rawSelectCommittedFile,
-    handleSelectWorktreeFile: rawSelectWorktreeFile,
-    handleSelectCommittedDirectory: rawSelectCommittedDirectory,
-    handleSelectWorktreeDirectory: rawSelectWorktreeDirectory,
+    handleSelectCommittedFile,
+    handleSelectWorktreeFile,
+    handleSelectCommittedDirectory,
+    handleSelectWorktreeDirectory,
   } = useFileSelectionHandlers({
     files,
     worktreeFiles,
     multiSelect,
-    selectCommittedFile,
-    selectWorktreeFile,
   });
-
-  const handleSelectCommittedFile = useCallback(
-    (...args: Parameters<typeof rawSelectCommittedFile>) => {
-      commitSelection.clear();
-      rawSelectCommittedFile(...args);
-    },
-    [commitSelection, rawSelectCommittedFile],
-  );
-
-  const handleSelectWorktreeFile = useCallback(
-    (...args: Parameters<typeof rawSelectWorktreeFile>) => {
-      commitSelection.clear();
-      rawSelectWorktreeFile(...args);
-    },
-    [commitSelection, rawSelectWorktreeFile],
-  );
-
-  const handleSelectCommittedDirectory = useCallback(
-    (path: string) => {
-      commitSelection.clear();
-      rawSelectCommittedDirectory(path);
-    },
-    [commitSelection, rawSelectCommittedDirectory],
-  );
-
-  const handleSelectWorktreeDirectory = useCallback(
-    (path: string) => {
-      commitSelection.clear();
-      rawSelectWorktreeDirectory(path);
-    },
-    [commitSelection, rawSelectWorktreeDirectory],
-  );
 
   const commitDiffRange = commitSelection.diffRange;
   const commitFilePaths = useFileList(commitDiffRange?.oldRef ?? '', commitDiffRange?.newRef ?? '');

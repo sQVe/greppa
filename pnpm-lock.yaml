@@ -157,6 +157,9 @@ importers:
       motion:
         specifier: 12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      nanoid:
+        specifier: 5.1.7
+        version: 5.1.7
       react:
         specifier: 19.2.4
         version: 19.2.4
@@ -4042,6 +4045,14 @@ packages:
     engines: { node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1 }
     hasBin: true
 
+  nanoid@5.1.7:
+    resolution:
+      {
+        integrity: sha512-ua3NDgISf6jdwezAheMOk4mbE1LXjm1DfMUDMuJf4AqxLFK3ccGpgWizwa5YV7Yz9EpXwEaWoRXSb/BnV0t5dQ==,
+      }
+    engines: { node: ^18 || >=20 }
+    hasBin: true
+
   node-fetch@2.7.0:
     resolution:
       {
@@ -7539,6 +7550,8 @@ snapshots:
   multipasta@0.2.7: {}
 
   nanoid@3.3.11: {}
+
+  nanoid@5.1.7: {}
 
   node-fetch@2.7.0:
     dependencies:

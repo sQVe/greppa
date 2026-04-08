@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 
 import { NodeHttpServer } from '@effect/platform-node';
-import { Effect, Layer } from 'effect';
+import { Data, Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
 import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
 import { HttpApiBuilder } from 'effect/unstable/httpapi';
@@ -234,6 +234,42 @@ const WorktreeDiffHandlers = HttpApiBuilder.group(Api, 'worktreeDiff', (handlers
   })),
 );
 
+class StateNotFoundError extends Data.TaggedError('StateNotFound')<{
+  message: string;
+}> {}
+
+interface StoredState {
+  file: string[];
+  wt: string[];
+  commits: string[];
+}
+
+const STATE_MAX_ENTRIES = 10_000;
+const stateStore = new Map<string, StoredState>();
+
+const StateHandlers = HttpApiBuilder.group(Api, 'state', (handlers) =>
+  Effect.succeed(
+    handlers
+      .handle('saveState', ({ payload }) => {
+        if (stateStore.size >= STATE_MAX_ENTRIES) {
+          const firstKey = stateStore.keys().next().value;
+          if (firstKey != null) {
+            stateStore.delete(firstKey);
+          }
+        }
+        stateStore.set(payload.id, { file: [...payload.file], wt: [...payload.wt], commits: [...payload.commits] });
+        return Effect.succeed({ id: payload.id });
+      })
+      .handle('getState', ({ params }) => {
+        const state = stateStore.get(params.id);
+        if (state == null) {
+          return Effect.fail(new StateNotFoundError({ message: `State not found: ${params.id}` }));
+        }
+        return Effect.succeed(state);
+      }),
+  ),
+);
+
 export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(HealthHandlers),
   Layer.provide(FilesHandlers),
@@ -242,6 +278,7 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(CommitsHandlers),
   Layer.provide(WorktreeFilesHandlers),
   Layer.provide(WorktreeDiffHandlers),
+  Layer.provide(StateHandlers),
 );
 
 export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDistPath: string) => {

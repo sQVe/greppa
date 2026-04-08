@@ -1,7 +1,7 @@
 import type { CommitEntry } from '@greppa/core';
 import { IconChevronRight, IconFileDiff, IconGitBranch, IconGitCommit } from '@tabler/icons-react';
 import { motion } from 'motion/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
@@ -13,6 +13,7 @@ import styles from './FileTreePanel.module.css';
 export type FileTreeSection = 'committed' | 'worktree' | 'commits';
 
 interface FileTreePanelProps {
+  expandedSection: FileTreeSection;
   committedFiles: FileNode[];
   worktreeFiles: FileNode[];
   commits: CommitEntry[];
@@ -21,6 +22,7 @@ interface FileTreePanelProps {
   selectedCommitShas: Set<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
+  onToggleSection: (section: FileTreeSection) => void;
   onSelectCommittedFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectWorktreeFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectCommittedDirectory: (path: string) => void;
@@ -30,7 +32,6 @@ interface FileTreePanelProps {
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
   onCollapseCommittedDirectory?: (path: string) => void;
   onCollapseWorktreeDirectory?: (path: string) => void;
-  onSectionChange?: (section: FileTreeSection) => void;
 }
 
 const EMPTY_SET = new Set<string>();
@@ -51,6 +52,7 @@ const ICON_SIZE = 14;
 const ICON_STROKE = 2;
 
 export const FileTreePanel = ({
+  expandedSection,
   committedFiles,
   worktreeFiles,
   commits,
@@ -59,6 +61,7 @@ export const FileTreePanel = ({
   selectedCommitShas,
   committedExpandedKeys,
   worktreeExpandedKeys,
+  onToggleSection,
   onSelectCommittedFile,
   onSelectWorktreeFile,
   onSelectCommittedDirectory,
@@ -68,25 +71,7 @@ export const FileTreePanel = ({
   onWorktreeExpandedKeysChange,
   onCollapseCommittedDirectory,
   onCollapseWorktreeDirectory,
-  onSectionChange,
 }: FileTreePanelProps) => {
-  const [expandedSection, setExpandedSection] = useState<FileTreeSection>('committed');
-  const userToggled = useRef(false);
-
-  useEffect(() => {
-    if (userToggled.current) {
-      return;
-    }
-    let derived: FileTreeSection = 'commits';
-    if (collectFiles(committedFiles).length > 0) {
-      derived = 'committed';
-    } else if (collectFiles(worktreeFiles).length > 0) {
-      derived = 'worktree';
-    }
-    setExpandedSection(derived);
-    onSectionChange?.(derived);
-  }, [committedFiles, worktreeFiles]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const committedBodyRef = useRef<HTMLDivElement>(null);
   const worktreeBodyRef = useRef<HTMLDivElement>(null);
   const commitsBodyRef = useRef<HTMLDivElement>(null);
@@ -102,14 +87,12 @@ export const FileTreePanel = ({
     }
   };
 
-  const toggleSection = (section: FileTreeSection) => {
+  const handleToggle = (section: FileTreeSection) => {
     if (section === expandedSection) {
       return;
     }
-    userToggled.current = true;
     lockScroll();
-    setExpandedSection(section);
-    onSectionChange?.(section);
+    onToggleSection(section);
   };
 
   const handleExpandComplete = (section: FileTreeSection) => {
@@ -136,7 +119,7 @@ export const FileTreePanel = ({
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'committed'}
-          onClick={() => { toggleSection('committed'); }}
+          onClick={() => { handleToggle('committed'); }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -179,7 +162,7 @@ export const FileTreePanel = ({
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'worktree'}
-          onClick={() => { toggleSection('worktree'); }}
+          onClick={() => { handleToggle('worktree'); }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -222,7 +205,7 @@ export const FileTreePanel = ({
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'commits'}
-          onClick={() => { toggleSection('commits'); }}
+          onClick={() => { handleToggle('commits'); }}
         >
           <motion.span
             className={styles.sectionChevron}

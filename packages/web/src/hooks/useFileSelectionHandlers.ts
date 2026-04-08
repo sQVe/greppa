@@ -13,16 +13,12 @@ interface FileSelectionHandlersOptions {
   files: FileNode[];
   worktreeFiles: FileNode[];
   multiSelect: ReturnType<typeof useMultiSelect>;
-  selectCommittedFile: (path: string) => void;
-  selectWorktreeFile: (path: string) => void;
 }
 
 export const useFileSelectionHandlers = ({
   files,
   worktreeFiles,
   multiSelect,
-  selectCommittedFile,
-  selectWorktreeFile,
 }: FileSelectionHandlersOptions) => {
   const committedFilePaths = useMemo(
     () => collectFiles(files).map((file) => file.path),
@@ -66,9 +62,8 @@ export const useFileSelectionHandlers = ({
       }
 
       multiSelect.select(path, 'committed');
-      selectCommittedFile(path);
     },
-    [allCommittedFilePaths, committedFilePaths, files, multiSelect, selectCommittedFile],
+    [allCommittedFilePaths, committedFilePaths, files, multiSelect],
   );
 
   const handleSelectCommittedDirectory = useCallback(
@@ -107,9 +102,8 @@ export const useFileSelectionHandlers = ({
       }
 
       multiSelect.select(path, 'worktree');
-      selectWorktreeFile(path);
     },
-    [allWorktreeFilePaths, worktreeFilePaths, worktreeFiles, multiSelect, selectWorktreeFile],
+    [allWorktreeFilePaths, worktreeFilePaths, worktreeFiles, multiSelect],
   );
 
   const handleSelectWorktreeDirectory = useCallback(

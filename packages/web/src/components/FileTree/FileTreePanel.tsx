@@ -70,15 +70,22 @@ export const FileTreePanel = ({
   onCollapseWorktreeDirectory,
   onSectionChange,
 }: FileTreePanelProps) => {
-  const [expandedSection, setExpandedSection] = useState<FileTreeSection>(() => {
-    if (collectFiles(committedFiles).length > 0) return 'committed';
-    if (collectFiles(worktreeFiles).length > 0) return 'worktree';
-    return 'commits';
-  });
+  const [expandedSection, setExpandedSection] = useState<FileTreeSection>('committed');
+  const userToggled = useRef(false);
 
   useEffect(() => {
-    onSectionChange?.(expandedSection);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (userToggled.current) {
+      return;
+    }
+    let derived: FileTreeSection = 'commits';
+    if (collectFiles(committedFiles).length > 0) {
+      derived = 'committed';
+    } else if (collectFiles(worktreeFiles).length > 0) {
+      derived = 'worktree';
+    }
+    setExpandedSection(derived);
+    onSectionChange?.(derived);
+  }, [committedFiles, worktreeFiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const committedBodyRef = useRef<HTMLDivElement>(null);
   const worktreeBodyRef = useRef<HTMLDivElement>(null);
@@ -99,6 +106,7 @@ export const FileTreePanel = ({
     if (section === expandedSection) {
       return;
     }
+    userToggled.current = true;
     lockScroll();
     setExpandedSection(section);
     onSectionChange?.(section);

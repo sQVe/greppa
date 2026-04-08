@@ -7,11 +7,14 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
+import { zodValidator, fallback } from '@tanstack/zod-adapter';
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 import { App } from './App';
+import { parseSearch, stringifySearch } from './router';
 
 vi.mock('./components/DiffViewer/useSyntaxHighlighting', () => ({
   useSyntaxHighlighting: () => null,
@@ -56,16 +59,25 @@ afterEach(() => {
   cleanup();
 });
 
-const renderApp = (initialLocation = '/') => {
+const reviewSearch = z.object({
+  file: fallback(z.array(z.string()), []).default([]),
+  wt: fallback(z.array(z.string()), []).default([]),
+  commits: fallback(z.array(z.string()), []).default([]),
+});
+
+const renderApp = (initialLocation = '/review') => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const rootRoute = createRootRoute({ component: App });
-  const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/' });
-  const fileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/file/$' });
-  const routeTree = rootRoute.addChildren([indexRoute, fileRoute]);
+  const reviewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/review',
+    validateSearch: zodValidator(reviewSearch),
+  });
+  const routeTree = rootRoute.addChildren([reviewRoute]);
   const history = createMemoryHistory({ initialEntries: [initialLocation] });
-  const router = createRouter({ routeTree, history });
+  const router = createRouter({ routeTree, history, parseSearch, stringifySearch });
 
   return render(
     <QueryClientProvider client={queryClient}>

@@ -1,4 +1,4 @@
-import { useMatch, useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
@@ -43,10 +43,9 @@ export const useFileSelection = (
     [allWorktreeFiles],
   );
 
-  const fileMatch = useMatch({ from: '/file/$', shouldThrow: false });
-  const wtMatch = useMatch({ from: '/wt/$', shouldThrow: false });
-  const urlFile = fileMatch?.params._splat ?? null;
-  const urlWtFile = wtMatch?.params._splat ?? null;
+  const { file: fileParams, wt: wtParams } = useSearch({ from: '/review' });
+  const urlFile = fileParams.length === 1 ? fileParams[0] : null;
+  const urlWtFile = wtParams.length === 1 ? wtParams[0] : null;
   const navigate = useNavigate();
 
   const selectedSource: FileSource | null = useMemo(() => {
@@ -114,20 +113,20 @@ export const useFileSelection = (
 
   const selectCommittedFile = useCallback(
     (path: string) => {
-      void navigate({ to: '/file/$', params: { _splat: path } });
+      void navigate({ to: '/review', search: { file: [path], wt: [], commits: [] } });
     },
     [navigate],
   );
 
   const selectWorktreeFile = useCallback(
     (path: string) => {
-      void navigate({ to: '/wt/$', params: { _splat: path } });
+      void navigate({ to: '/review', search: { wt: [path], file: [], commits: [] } });
     },
     [navigate],
   );
 
   const deselectFile = useCallback(
-    () => { void navigate({ to: '/' }); },
+    () => { void navigate({ to: '/review', search: { file: [], wt: [], commits: [] } }); },
     [navigate],
   );
 

@@ -7,11 +7,14 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
+import { zodValidator, fallback } from '@tanstack/zod-adapter';
 import type { RefObject } from 'react';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
+import { parseSearch, stringifySearch } from './router';
 import { collectDescendantFilePaths, collectFiles, useFileSelection } from './useFileSelection';
 
 const testFiles: FileNode[] = [
@@ -73,7 +76,13 @@ const testFileInfoMap = new Map<string, FileInfo>([
 
 type HookResult = ReturnType<typeof useFileSelection>;
 
-const renderFileSelection = async (initialLocation = '/') => {
+const reviewSearch = z.object({
+  file: fallback(z.array(z.string()), []).default([]),
+  wt: fallback(z.array(z.string()), []).default([]),
+  commits: fallback(z.array(z.string()), []).default([]),
+});
+
+const renderFileSelection = async (initialLocation = '/review') => {
   const resultRef: RefObject<HookResult | null> = { current: null };
 
   const HookHost = () => {
@@ -83,12 +92,14 @@ const renderFileSelection = async (initialLocation = '/') => {
   };
 
   const rootRoute = createRootRoute({ component: HookHost });
-  const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/' });
-  const fileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/file/$' });
-  const wtRoute = createRoute({ getParentRoute: () => rootRoute, path: '/wt/$' });
-  const routeTree = rootRoute.addChildren([indexRoute, fileRoute, wtRoute]);
+  const reviewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/review',
+    validateSearch: zodValidator(reviewSearch),
+  });
+  const routeTree = rootRoute.addChildren([reviewRoute]);
   const history = createMemoryHistory({ initialEntries: [initialLocation] });
-  const router = createRouter({ routeTree, history });
+  const router = createRouter({ routeTree, history, parseSearch, stringifySearch });
 
   render(createElement(RouterProvider, { router }));
   await waitFor(() => {
@@ -225,21 +236,21 @@ describe('useFileSelection', () => {
   });
 
   describe('URL sync', () => {
-    it('should read initial file from URL path', async () => {
-      const { result } = await renderFileSelection('/file/src/a.ts');
+    it('should read initial file from search params', async () => {
+      const { result } = await renderFileSelection('/review?file=src%2Fa.ts');
       expect(result.current.selectedFilePath).toBe('src/a.ts');
     });
 
-    it('should ignore invalid file path in URL', async () => {
-      const { result } = await renderFileSelection('/file/nonexistent.ts');
+    it('should ignore invalid file path in search params', async () => {
+      const { result } = await renderFileSelection('/review?file=nonexistent.ts');
       expect(result.current.selectedFilePath).toBeNull();
     });
 
-    it('should update URL when a file is selected', async () => {
+    it('should update search params when a file is selected', async () => {
       const { result, router } = await renderFileSelection();
       act(() => { result.current.selectCommittedFile('src/a.ts'); });
       await waitFor(() => {
-        expect(router.state.location.pathname).toBe('/file/src/a.ts');
+        expect(router.state.location.search).toMatchObject({ file: ['src/a.ts'] });
       });
     });
 
@@ -281,7 +292,7 @@ describe('useFileSelection', () => {
     });
 
     it('should mark a file as reviewed when loaded via deep link', async () => {
-      const { result } = await renderFileSelection('/file/src/b.ts');
+      const { result } = await renderFileSelection('/review?file=src%2Fb.ts');
       await waitFor(() => {
         expect(result.current.reviewedCount).toBe(2);
       });

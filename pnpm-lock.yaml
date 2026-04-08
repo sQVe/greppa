@@ -148,6 +148,9 @@ importers:
       '@tanstack/react-virtual':
         specifier: 3.13.23
         version: 3.13.23(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tanstack/zod-adapter':
+        specifier: 1.166.9
+        version: 1.166.9(@tanstack/react-router@1.168.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(zod@4.3.6)
       effect:
         specifier: 4.0.0-beta.40
         version: 4.0.0-beta.40
@@ -172,6 +175,9 @@ importers:
       vscode-material-icons:
         specifier: 0.1.1
         version: 0.1.1
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 6.9.1
@@ -2855,6 +2861,16 @@ packages:
         integrity: sha512-zSz2Z2HNyLjCplANTDyl3BcdQJc2k1+yyFoKhNRmCr7V7dY8o8q5m8uFTI1/Pg1kL+Hgrz6u3Xo6eFUB7l66cg==,
       }
 
+  '@tanstack/zod-adapter@1.166.9':
+    resolution:
+      {
+        integrity: sha512-HHllQ/CKGi8YBbftv6OmzojtHM6Rk4UszAFICAgUMbwiqtKqjlIZQ/7mv2IPNxBb8YlOQgzyQ4jz2UTEXIi6YA==,
+      }
+    engines: { node: '>=20.19' }
+    peerDependencies:
+      '@tanstack/react-router': '>=1.43.2'
+      zod: ^3.23.8
+
   '@testing-library/dom@10.4.1':
     resolution:
       {
@@ -4870,6 +4886,12 @@ packages:
     engines: { node: '>= 14.6' }
     hasBin: true
 
+  zod@4.3.6:
+    resolution:
+      {
+        integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==,
+      }
+
   zwitch@2.0.4:
     resolution:
       {
@@ -6883,6 +6905,11 @@ snapshots:
 
   '@tanstack/virtual-core@3.13.23': {}
 
+  '@tanstack/zod-adapter@1.166.9(@tanstack/react-router@1.168.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(zod@4.3.6)':
+    dependencies:
+      '@tanstack/react-router': 1.168.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      zod: 4.3.6
+
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.29.0
@@ -8110,5 +8137,7 @@ snapshots:
   ws@8.20.0: {}
 
   yaml@2.8.3: {}
+
+  zod@4.3.6: {}
 
   zwitch@2.0.4: {}

@@ -28,6 +28,7 @@ export const postState = (id: string, state: StatePayload) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, ...state }),
-    // eslint-disable-next-line no-empty-function -- fire-and-forget by design
-  }).catch(() => { /* fire-and-forget */ });
+  }).catch(() => {
+    console.warn(`[greppa] Failed to persist state ${id}. Shared links may not resolve on reload.`);
+  });
 };

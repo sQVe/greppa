@@ -41,10 +41,8 @@ export const StateData = Schema.Struct({
 export type StateData = typeof StateData.Type;
 
 export const StateSaveRequest = Schema.Struct({
+  ...StateData.fields,
   id: Schema.String,
-  file: Schema.Array(Schema.String),
-  wt: Schema.Array(Schema.String),
-  commits: Schema.Array(Schema.String),
 });
 export type StateSaveRequest = typeof StateSaveRequest.Type;
 

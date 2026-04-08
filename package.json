@@ -31,6 +31,13 @@
     "vite-plus": "0.1.14",
     "vitest": "4.1.1"
   },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "@tanstack/zod-adapter>zod": "4"
+      }
+    }
+  },
   "engines": {
     "node": ">=22"
   },

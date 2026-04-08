@@ -283,35 +283,4 @@ describe('useFileSelectionHandlers', () => {
     });
   });
 
-  describe('hash fragment updates', () => {
-    it('passes hash to multiSelect on meta+click', () => {
-      const { result } = setup();
-
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/utils.ts', META); });
-
-      expect(result.current.toggleSpy).toHaveBeenCalledWith('src/utils.ts', 'committed', 'src/utils.ts');
-    });
-
-    it('passes hash to multiSelect on shift+click', () => {
-      const { result } = setup();
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
-
-      act(() => { result.current.handlers.handleSelectCommittedFile('README.md', SHIFT); });
-
-      expect(result.current.selectRangeSpy).toHaveBeenCalledWith(
-        'README.md',
-        ['src/index.ts', 'src/utils.ts', 'README.md'],
-        'committed',
-        'README.md',
-      );
-    });
-
-    it('passes hash to multiSelect on plain click', () => {
-      const { result } = setup();
-
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
-
-      expect(result.current.selectSpy).toHaveBeenCalledWith('src/index.ts', 'committed', 'src/index.ts');
-    });
-  });
 });

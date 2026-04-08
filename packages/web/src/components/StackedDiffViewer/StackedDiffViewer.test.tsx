@@ -169,7 +169,7 @@ describe('StackedDiffViewer', () => {
       const stickyHeader = screen.getByTestId('sticky-file-header');
       const reviewButtons = screen.getAllByRole('button')
         .filter((b) => !stickyHeader.contains(b))
-        .filter((b) => b.textContent.includes('eviewed'));
+        .filter((b) => b.textContent?.includes('eviewed'));
 
       const reviewedButtons = reviewButtons.filter((b) => b.textContent === '\u2713 Reviewed');
       const unreviewedButtons = reviewButtons.filter((b) => b.textContent === 'Mark reviewed');

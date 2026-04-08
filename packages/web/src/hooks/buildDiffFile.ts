@@ -174,9 +174,9 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
       content,
     }));
     return { ...base, hunks: [{
-      header: `@@ -1,1 +1,${lines.length} @@`,
-      oldStart: 1,
-      oldCount: 1,
+      header: `@@ -0,0 +1,${lines.length} @@`,
+      oldStart: 0,
+      oldCount: 0,
       newStart: 1,
       newCount: lines.length,
       lines: hunkLines,
@@ -192,11 +192,11 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
       content,
     }));
     return { ...base, hunks: [{
-      header: `@@ -1,${lines.length} +1,1 @@`,
+      header: `@@ -1,${lines.length} +0,0 @@`,
       oldStart: 1,
       oldCount: lines.length,
-      newStart: 1,
-      newCount: 1,
+      newStart: 0,
+      newCount: 0,
       lines: hunkLines,
     }] };
   }

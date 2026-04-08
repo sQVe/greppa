@@ -109,11 +109,13 @@ describe('buildFlatItems', () => {
     const hunkHeaders = items.filter((item) => item.kind === 'hunk-header');
     const diffRows = items.filter((item) => item.kind === 'diff-row');
 
+    expect(hunkHeaders).toHaveLength(2);
     if (hunkHeaders[0]?.kind === 'hunk-header' && hunkHeaders[1]?.kind === 'hunk-header') {
       expect(hunkHeaders[0].changeType).toBe('modified');
       expect(hunkHeaders[1].changeType).toBe('added');
     }
 
+    expect(diffRows.length).toBeGreaterThanOrEqual(3);
     if (diffRows[0]?.kind === 'diff-row' && diffRows[2]?.kind === 'diff-row') {
       expect(diffRows[0].changeType).toBe('modified');
       expect(diffRows[2].changeType).toBe('added');

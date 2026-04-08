@@ -32,7 +32,7 @@
 }
 
 .commentZero {
-  color: var(--gr-color-bg-surface-active);
+  color: var(--gr-color-text-muted);
 }
 
 .interactive {
@@ -49,7 +49,7 @@
 
 .percent {
   color: var(--gr-color-text-muted);
-  font-size: 0.625rem;
+  font-size: var(--gr-text-xxs);
 }
 
 .progressBar {

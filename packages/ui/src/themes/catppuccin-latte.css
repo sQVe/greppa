@@ -57,8 +57,8 @@
   --gr-color-diff-removed-border: rgb(210 15 57 / 40%);
 
   /* Diff — modified (yellow) */
-  --gr-color-diff-modified-bg: rgb(223 142 29 / 15%);
-  --gr-color-diff-modified-char-bg: rgb(223 142 29 / 12%);
-  --gr-color-diff-gutter-modified-bg: rgb(223 142 29 / 20%);
+  --gr-color-diff-modified-bg: rgb(223 142 29 / 8%);
+  --gr-color-diff-modified-char-bg: rgb(223 142 29 / 8%);
+  --gr-color-diff-gutter-modified-bg: rgb(223 142 29 / 6%);
   --gr-color-diff-modified-border: rgb(223 142 29 / 40%);
 }

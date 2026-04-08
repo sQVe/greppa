@@ -274,7 +274,7 @@ export const App = () => {
     if (activeSection === 'commits') {
       return {
         mode: 'commit-review',
-        commitSha: [...commitSelection.selectedShas][0] ?? '',
+        commitSha: [...commitSelection.selectedShas][0],
         reviewedCount: 0,
         totalCount: commitDiffs.diffs.length,
       };
@@ -312,7 +312,12 @@ export const App = () => {
             collapsible
             groupResizeBehavior="preserve-pixel-size"
             panelRef={fileTreePanelRef}
-            onResize={() => { setIsFileTreeExpanded(!fileTreePanelRef.current?.isCollapsed()); }}
+            onResize={() => {
+              const panel = fileTreePanelRef.current;
+              if (panel != null) {
+                setIsFileTreeExpanded(!panel.isCollapsed());
+              }
+            }}
           >
             <FileTreePanel
               committedFiles={files}

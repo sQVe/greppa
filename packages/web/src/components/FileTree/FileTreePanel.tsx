@@ -70,7 +70,11 @@ export const FileTreePanel = ({
   onCollapseWorktreeDirectory,
   onSectionChange,
 }: FileTreePanelProps) => {
-  const [expandedSection, setExpandedSection] = useState<FileTreeSection>('committed');
+  const [expandedSection, setExpandedSection] = useState<FileTreeSection>(() => {
+    if (collectFiles(committedFiles).length > 0) return 'committed';
+    if (collectFiles(worktreeFiles).length > 0) return 'worktree';
+    return 'commits';
+  });
 
   const committedBodyRef = useRef<HTMLDivElement>(null);
   const worktreeBodyRef = useRef<HTMLDivElement>(null);

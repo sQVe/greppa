@@ -7,6 +7,7 @@ import { StatusBar } from './StatusBar';
 import styles from './StatusBar.module.css';
 
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
 });
 
@@ -121,6 +122,7 @@ describe('StatusBar', () => {
       render(
         <StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />,
       );
+      expect(screen.getByText(/Cmd/)).toBeDefined();
       expect(screen.getByText(/\+Enter/)).toBeDefined();
       expect(screen.getByText('Esc')).toBeDefined();
     });

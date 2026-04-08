@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityRail } from './ActivityRail';
 
+const { mockSetPreferences } = vi.hoisted(() => ({
+  mockSetPreferences: vi.fn(),
+}));
+
 vi.mock('../../hooks/usePreferences', () => ({
   isTheme: (value: string) => ['catppuccin-mocha', 'catppuccin-latte'].includes(value),
   THEMES: ['catppuccin-mocha', 'catppuccin-latte'] as const,
@@ -13,8 +17,6 @@ vi.mock('../../hooks/usePreferences', () => ({
     set: mockSetPreferences,
   }),
 }));
-
-const mockSetPreferences = vi.fn();
 
 beforeEach(() => {
   mockSetPreferences.mockClear();

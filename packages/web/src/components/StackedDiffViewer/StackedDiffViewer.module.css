@@ -67,7 +67,7 @@
   align-items: center;
   gap: var(--gr-space-sm);
   font-family: var(--gr-font-mono);
-  font-size: 0.625rem;
+  font-size: var(--gr-text-xxs);
   color: var(--gr-color-text-muted);
   flex-shrink: 0;
 }
@@ -82,7 +82,7 @@
 
 .reviewButton {
   font-family: var(--gr-font-ui);
-  font-size: 0.625rem;
+  font-size: var(--gr-text-xxs);
   font-weight: 600;
   padding: 1px 8px;
   border-radius: 3px;

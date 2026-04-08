@@ -11,7 +11,7 @@ interface FileReviewProps {
 
 interface CommitReviewProps {
   mode: 'commit-review';
-  commitSha: string;
+  commitSha?: string;
   reviewedCount: number;
   totalCount: number;
 }
@@ -41,7 +41,8 @@ type StatusBarProps =
   | ReviewCompleteProps
   | ComposerOpenProps;
 
-const modifierKey = /mac|iphone|ipad/i.test(navigator.userAgent) ? 'Cmd' : 'Ctrl';
+const getModifierKey = () =>
+  typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.userAgent) ? 'Cmd' : 'Ctrl';
 
 const renderProgressBar = (reviewed: number, total: number) => {
   const percent = total > 0 ? (reviewed / total) * 100 : 0;
@@ -82,7 +83,9 @@ const renderLeftSegments = (props: StatusBarProps) => {
     case 'commit-review':
       return (
         <>
-          <div className={`${styles.segment} ${styles.interactive}`}>{props.commitSha}</div>
+          {props.commitSha != null && (
+            <div className={`${styles.segment} ${styles.interactive}`}>{props.commitSha}</div>
+          )}
           {renderReviewed(props.reviewedCount, props.totalCount)}
         </>
       );
@@ -135,7 +138,7 @@ const renderRightSegments = (mode: StatusBarMode) => {
     case 'composer-open':
       return (
         <div className={styles.segment}>
-          <kbd className={styles.kbd}>{modifierKey}+Enter</kbd> submit <kbd className={styles.kbd}>Esc</kbd> cancel
+          <kbd className={styles.kbd}>{getModifierKey()}+Enter</kbd> submit <kbd className={styles.kbd}>Esc</kbd> cancel
         </div>
       );
   }

@@ -12,7 +12,7 @@
 .segment {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--gr-space-sm);
   padding: 0 var(--gr-space-lg);
   height: 100%;
   color: var(--gr-color-text-muted);
@@ -64,7 +64,7 @@
 .progressFill {
   height: 100%;
   background: var(--gr-color-text-success);
-  border-radius: 2px;
+  border-radius: var(--gr-radius-sm);
 }
 
 .kbd {

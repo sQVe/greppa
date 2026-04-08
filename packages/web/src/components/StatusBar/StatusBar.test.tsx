@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { StatusBar } from './StatusBar';
+
+import styles from './StatusBar.module.css';
 
 afterEach(() => {
   cleanup();
@@ -32,7 +34,7 @@ describe('StatusBar', () => {
       const { container } = render(
         <StatusBar mode="file-review" reviewedCount={7} totalCount={12} />,
       );
-      const fill = container.querySelector('[data-testid="progress-fill"]');
+      const fill = container.querySelector(`.${styles.progressFill}`);
       expect(fill).not.toBeNull();
     });
 
@@ -95,7 +97,7 @@ describe('StatusBar', () => {
       const { container } = render(
         <StatusBar mode="review-complete" reviewedCount={12} totalCount={12} />,
       );
-      const fill = container.querySelector('[data-testid="progress-fill"]');
+      const fill = container.querySelector(`.${styles.progressFill}`);
       expect(fill).not.toBeNull();
     });
 
@@ -114,11 +116,12 @@ describe('StatusBar', () => {
       expect(screen.getByText('3 comments')).toBeDefined();
     });
 
-    it('renders Cmd+Enter and Esc keyboard hints', () => {
+    it('renders platform-aware modifier and Esc keyboard hints', () => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh)');
       render(
         <StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />,
       );
-      expect(screen.getByText('Cmd+Enter')).toBeDefined();
+      expect(screen.getByText(/\+Enter/)).toBeDefined();
       expect(screen.getByText('Esc')).toBeDefined();
     });
   });

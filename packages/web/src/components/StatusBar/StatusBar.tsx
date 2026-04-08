@@ -41,15 +41,13 @@ type StatusBarProps =
   | ReviewCompleteProps
   | ComposerOpenProps;
 
+const modifierKey = /mac|iphone|ipad/i.test(navigator.userAgent) ? 'Cmd' : 'Ctrl';
+
 const renderProgressBar = (reviewed: number, total: number) => {
   const percent = total > 0 ? (reviewed / total) * 100 : 0;
   return (
     <div className={styles.progressBar}>
-      <div
-        className={styles.progressFill}
-        data-testid="progress-fill"
-        style={{ width: `${percent}%` }}
-      />
+      <div className={styles.progressFill} style={{ width: `${percent}%` }} />
     </div>
   );
 };
@@ -137,7 +135,7 @@ const renderRightSegments = (mode: StatusBarMode) => {
     case 'composer-open':
       return (
         <div className={styles.segment}>
-          <kbd className={styles.kbd}>Cmd+Enter</kbd> submit <kbd className={styles.kbd}>Esc</kbd> cancel
+          <kbd className={styles.kbd}>{modifierKey}+Enter</kbd> submit <kbd className={styles.kbd}>Esc</kbd> cancel
         </div>
       );
   }

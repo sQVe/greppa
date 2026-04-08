@@ -21,6 +21,7 @@ import { useFileList } from './hooks/useFileList';
 import type { useMultiSelect } from './hooks/useMultiSelect';
 import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
+import { useHashScroll } from './hooks/useHashScroll';
 import { useSelectionCoordinator } from './hooks/useSelectionCoordinator';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
@@ -258,6 +259,8 @@ export const App = () => {
     () => (commitSelection.isActive ? commitDiffs.diffs : fileDiffs),
     [commitSelection.isActive, commitDiffs.diffs, fileDiffs],
   );
+
+  useHashScroll(stackedDiffRef, selectedDiffs);
 
   const committedFileCount = committedFilePaths.length;
   const committedReviewedCount = useMemo(

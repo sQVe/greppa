@@ -278,4 +278,38 @@ describe('useFileSelectionHandlers', () => {
       expect(result.current.selectSpy).toHaveBeenCalledWith('config.ts', 'worktree');
     });
   });
+
+  describe('hash fragment updates', () => {
+    it('updates hash via replaceState on meta+click', () => {
+      const replaceSpy = vi.spyOn(window.history, 'replaceState');
+      const { result } = setup();
+
+      act(() => { result.current.handlers.handleSelectCommittedFile('src/utils.ts', META); });
+
+      expect(replaceSpy).toHaveBeenCalledWith(null, '', expect.stringContaining('#src/utils.ts'));
+      replaceSpy.mockRestore();
+    });
+
+    it('updates hash via replaceState on shift+click', () => {
+      const replaceSpy = vi.spyOn(window.history, 'replaceState');
+      const { result } = setup();
+      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+      replaceSpy.mockClear();
+
+      act(() => { result.current.handlers.handleSelectCommittedFile('README.md', SHIFT); });
+
+      expect(replaceSpy).toHaveBeenCalledWith(null, '', expect.stringContaining('#README.md'));
+      replaceSpy.mockRestore();
+    });
+
+    it('does not update hash on plain click', () => {
+      const replaceSpy = vi.spyOn(window.history, 'replaceState');
+      const { result } = setup();
+
+      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+
+      expect(replaceSpy).not.toHaveBeenCalled();
+      replaceSpy.mockRestore();
+    });
+  });
 });

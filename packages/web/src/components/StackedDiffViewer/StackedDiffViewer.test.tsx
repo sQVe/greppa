@@ -223,6 +223,22 @@ describe('StackedDiffViewer', () => {
       ref.current?.scrollToFile('src/GitService.ts');
       expect(mockScrollToIndex).toHaveBeenCalledWith(expectedIndex, { align: 'start' });
     });
+
+    it('scrolls to the diff row matching the given line number', () => {
+      const ref = createRef<StackedDiffViewerHandle>();
+      render(<StackedDiffViewer ref={ref} diffs={[fileA, fileB]} />);
+      mockScrollToIndex.mockClear();
+
+      const flatItems = buildFlatItems([fileA, fileB]);
+      const expectedIndex = flatItems.findIndex(
+        (item) =>
+          item.kind === 'diff-row' &&
+          (item.row.right?.lineNumber === 3 || item.row.left?.lineNumber === 3),
+      );
+
+      ref.current?.scrollToLine('src/Api.ts', 3);
+      expect(mockScrollToIndex).toHaveBeenCalledWith(expectedIndex, { align: 'start' });
+    });
   });
 
   describe('sticky header overlay', () => {

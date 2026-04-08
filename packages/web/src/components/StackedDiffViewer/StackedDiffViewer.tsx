@@ -22,6 +22,7 @@ interface StackedDiffViewerProps {
 
 export interface StackedDiffViewerHandle {
   scrollToFile: (path: string) => void;
+  scrollToLine: (path: string, line: number) => void;
 }
 
 const ROW_HEIGHT = 36;
@@ -107,6 +108,28 @@ export const StackedDiffViewer = memo(forwardRef<StackedDiffViewerHandle, Stacke
         if (headerIdx !== -1) {
           virtualizerRef.current.scrollToIndex(headerIdx, { align: 'start' });
         }
+      },
+      scrollToLine: (path: string, line: number) => {
+        const headerIdx = flatItems.findIndex(
+          (item) => item.kind === 'file-header' && item.diff.path === path,
+        );
+        if (headerIdx === -1) {
+          return;
+        }
+        for (let i = headerIdx + 1; i < flatItems.length; i++) {
+          const current = flatItems[i];
+          if (current == null || current.kind === 'file-header') {
+            break;
+          }
+          if (
+            current.kind === 'diff-row' &&
+            (current.row.right?.lineNumber === line || current.row.left?.lineNumber === line)
+          ) {
+            virtualizerRef.current.scrollToIndex(i, { align: 'start' });
+            return;
+          }
+        }
+        virtualizerRef.current.scrollToIndex(headerIdx, { align: 'start' });
       },
     }), [flatItems]);
 

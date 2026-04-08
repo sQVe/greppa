@@ -78,7 +78,6 @@ extensions) replaces the current entry.
 | Click commit                              | `?commits=sha`               | pushState      |
 | Shift+click commit (range)                | `?commits=sha1..sha2`        | replaceState   |
 | Cmd+click commit (discrete toggle)        | `?commits=sha1&commits=sha2` | replaceState   |
-| Click minimap segment                     | `#filepath`                  | replaceState   |
 | Scroll past file boundary                 | no URL change                | —              |
 | Page load with `#target`                  | scroll to file after render  | —              |
 
@@ -87,7 +86,7 @@ extensions) replaces the current entry.
 URL drives scroll, never the reverse.
 
 - Scrolling through stacked diffs does not touch the URL.
-- Minimap clicks and file tree clicks update the hash via `replaceState`.
+- File tree clicks update the hash via `replaceState`.
 - On page load, if a hash fragment is present, `StackedDiffViewer.scrollToFile` runs after diffs
   render.
 - `activeFilePath` (from IntersectionObserver) highlights the file tree visually — React state only,

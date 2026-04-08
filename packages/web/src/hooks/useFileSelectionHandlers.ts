@@ -4,6 +4,14 @@ import type { FileNode } from '../fixtures/types';
 import type { useMultiSelect } from './useMultiSelect';
 import { collectDescendantFilePaths, collectFiles } from '../useFileSelection';
 
+const updateHash = (path: string) => {
+  window.history.replaceState(
+    null,
+    '',
+    `${window.location.pathname}${window.location.search}#${path}`,
+  );
+};
+
 export interface SelectModifiers {
   shiftKey: boolean;
   metaKey: boolean;
@@ -45,6 +53,7 @@ export const useFileSelectionHandlers = ({
     (path: string, modifiers: SelectModifiers) => {
       if (modifiers.shiftKey) {
         multiSelect.selectRange(path, committedFilePaths, 'committed');
+        updateHash(path);
         return;
       }
 
@@ -52,10 +61,12 @@ export const useFileSelectionHandlers = ({
         const isFile = allCommittedFilePaths.has(path);
         if (isFile) {
           multiSelect.toggle(path, 'committed');
+          updateHash(path);
         } else {
           const children = collectDescendantFilePaths(files, path);
           if (children.length > 0) {
             multiSelect.toggleAll(children, 'committed');
+            updateHash(children[0] ?? path);
           }
         }
         return;
@@ -85,6 +96,7 @@ export const useFileSelectionHandlers = ({
     (path: string, modifiers: SelectModifiers) => {
       if (modifiers.shiftKey) {
         multiSelect.selectRange(path, worktreeFilePaths, 'worktree');
+        updateHash(path);
         return;
       }
 
@@ -92,10 +104,12 @@ export const useFileSelectionHandlers = ({
         const isFile = allWorktreeFilePaths.has(path);
         if (isFile) {
           multiSelect.toggle(path, 'worktree');
+          updateHash(path);
         } else {
           const children = collectDescendantFilePaths(worktreeFiles, path);
           if (children.length > 0) {
             multiSelect.toggleAll(children, 'worktree');
+            updateHash(children[0] ?? path);
           }
         }
         return;

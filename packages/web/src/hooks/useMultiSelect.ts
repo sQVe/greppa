@@ -61,8 +61,13 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
 
   const isMultiSelect = useMemo(() => selectedPaths.size > 1, [selectedPaths]);
 
+  interface NavigateOptions {
+    replace?: boolean;
+    hash?: string;
+  }
+
   const navigateWithState = useCallback(
-    (state: StatePayload, source: FileSource, replace?: boolean, hash?: string) => {
+    (state: StatePayload, source: FileSource, options?: NavigateOptions) => {
       const existing = findExistingId(state);
       const id = existing ?? nanoid(4);
       if (existing == null) {
@@ -73,7 +78,7 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
       const routeSearch = source === 'committed'
         ? { s: id, file: state.file }
         : { s: id, wt: state.wt };
-      void navigate({ to, search: routeSearch, replace, hash });
+      void navigate({ to, search: routeSearch, replace: options?.replace, hash: options?.hash });
     },
     [navigate],
   );
@@ -81,7 +86,7 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
   const select = useCallback(
     (path: string, source: FileSource, hash?: string) => {
       anchorRef.current = { path, source };
-      navigateWithState(buildState([path], source), source, false, hash);
+      navigateWithState(buildState([path], source), source, { hash });
     },
     [navigateWithState],
   );
@@ -90,7 +95,7 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
     (path: string, source: FileSource, hash?: string) => {
       anchorRef.current = { path, source };
       if (activeSource !== source) {
-        navigateWithState(buildState([path], source), source, true, hash);
+        navigateWithState(buildState([path], source), source, { replace: true, hash });
         return;
       }
       const next = new Set(selectedPaths);
@@ -99,7 +104,7 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
       } else {
         next.add(path);
       }
-      navigateWithState(buildState([...next], source), source, true, hash);
+      navigateWithState(buildState([...next], source), source, { replace: true, hash });
     },
     [navigateWithState, activeSource, selectedPaths],
   );
@@ -109,7 +114,7 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
       const anchor = anchorRef.current?.source === source ? anchorRef.current.path : null;
       if (anchor == null) {
         anchorRef.current = { path, source };
-        navigateWithState(buildState([path], source), source, true, hash);
+        navigateWithState(buildState([path], source), source, { replace: true, hash });
         return;
       }
 
@@ -117,21 +122,21 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
       const targetIndex = orderedPaths.indexOf(path);
       if (anchorIndex === -1 || targetIndex === -1) {
         anchorRef.current = { path, source };
-        navigateWithState(buildState([path], source), source, true, hash);
+        navigateWithState(buildState([path], source), source, { replace: true, hash });
         return;
       }
 
       const start = Math.min(anchorIndex, targetIndex);
       const end = Math.max(anchorIndex, targetIndex);
       const rangePaths = orderedPaths.slice(start, end + 1);
-      navigateWithState(buildState(rangePaths, source), source, true, hash);
+      navigateWithState(buildState(rangePaths, source), source, { replace: true, hash });
     },
     [navigateWithState],
   );
 
   const selectAll = useCallback(
     (_paths: string[], source: FileSource) => {
-      navigateWithState(buildState([SELECT_ALL], source), source, true);
+      navigateWithState(buildState([SELECT_ALL], source), source, { replace: true });
     },
     [navigateWithState],
   );
@@ -139,7 +144,7 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
   const toggleAll = useCallback(
     (paths: string[], source: FileSource, hash?: string) => {
       if (activeSource !== source) {
-        navigateWithState(buildState(paths, source), source, true, hash);
+        navigateWithState(buildState(paths, source), source, { replace: true, hash });
         return;
       }
       const allSelected = paths.every((p) => selectedPaths.has(p));
@@ -148,14 +153,14 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
         for (const p of paths) {
           next.delete(p);
         }
-        navigateWithState(buildState([...next], source), source, true, hash);
+        navigateWithState(buildState([...next], source), source, { replace: true, hash });
         return;
       }
       const next = new Set(selectedPaths);
       for (const p of paths) {
         next.add(p);
       }
-      navigateWithState(buildState([...next], source), source, true, hash);
+      navigateWithState(buildState([...next], source), source, { replace: true, hash });
     },
     [navigateWithState, activeSource, selectedPaths],
   );

@@ -9,6 +9,7 @@ import { HttpApiBuilder } from 'effect/unstable/httpapi';
 import type { FileEntry } from '@greppa/core';
 
 import { Api } from './Api';
+import { CacheService, CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
 import { GitError, GitService, GitServiceLive, RefsConfig } from './GitService';
 import type { RefsConfigValue } from './GitService';
 
@@ -62,7 +63,6 @@ const createCache = <T>(ttlMs: number, maxEntries: number) => {
 
 const fileListCache = createCache<FileEntry[]>(30_000, 50);
 
-const diffContentCache = createCache<DiffContent>(30_000, 100);
 const worktreeDiffContentCache = createCache<DiffContent>(3_000, 100);
 
 const HealthHandlers = HttpApiBuilder.group(Api, 'health', (handlers) =>
@@ -106,6 +106,7 @@ const extractFilePath = (url: string, oldRef: string, newRef: string) => {
 const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
   Effect.gen(function* () {
     const git = yield* GitService;
+    const cache = yield* CacheService;
 
     const handleGetDiff = (params: { oldRef: string; newRef: string }, requestUrl: string) => {
       const { oldRef, newRef } = params;
@@ -124,7 +125,8 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
         }
         const changeType = entry.changeType;
         const contentKey = `${oldRef}:${newRef}:${filePath}`;
-        const cachedContent = diffContentCache.get(contentKey);
+        // oxlint-disable-next-line no-unsafe-type-assertion -- CacheService is type-erased at rest; this call site owns the DiffContent contract for `contentKey`
+        const cachedContent = (yield* cache.get(contentKey)) as DiffContent | null;
 
         if (cachedContent != null) {
           return { path: filePath, changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
@@ -134,7 +136,7 @@ const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
           changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
           changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
         ]);
-        diffContentCache.set(contentKey, { oldContent, newContent });
+        yield* cache.set(contentKey, { oldContent, newContent });
 
         return {
           path: filePath,
@@ -285,6 +287,7 @@ export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDist
   const StaticFiles = HttpStaticServer.layer({ root: webDistPath, spa: true });
   return HttpRouter.serve(Layer.mergeAll(ApiRoutes, StaticFiles)).pipe(
     Layer.provide(GitServiceLive),
+    Layer.provide(CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG)),
     Layer.provide(Layer.succeed(RefsConfig, refsConfig)),
     Layer.provide(NodeHttpServer.layer(createServer, { port })),
   );

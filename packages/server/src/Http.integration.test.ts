@@ -10,6 +10,7 @@ import { layer as EtagLayer } from 'effect/unstable/http/Etag';
 import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
 import { GitServiceLive, RefsConfig, RepoPath } from './GitService';
 import { ApiRoutes } from './Http';
 
@@ -35,6 +36,7 @@ const PlatformLayer = Layer.mergeAll(
   NodeHttpPlatform.layer,
   EtagLayer,
   GitServiceLive,
+  CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG),
   Layer.succeed(RepoPath, monorepoRoot),
   Layer.succeed(RefsConfig, { oldRef: 'main', newRef: 'HEAD', mergeBaseRef: parentSha ?? '' }),
 );

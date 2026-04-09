@@ -24,11 +24,11 @@ const testFiles: FileNode[] = [
     name: 'src',
     type: 'directory',
     children: [
-      { path: 'src/a.ts', name: 'a.ts', type: 'file', status: 'reviewed' },
-      { path: 'src/b.ts', name: 'b.ts', type: 'file', status: 'unreviewed' },
+      { path: 'src/a.ts', name: 'a.ts', type: 'file' },
+      { path: 'src/b.ts', name: 'b.ts', type: 'file' },
     ],
   },
-  { path: 'c.ts', name: 'c.ts', type: 'file', status: 'unreviewed' },
+  { path: 'c.ts', name: 'c.ts', type: 'file' },
 ];
 
 const testDiffs = new Map<string, DiffFile>([

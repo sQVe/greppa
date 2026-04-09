@@ -1,5 +1,4 @@
 export type ChangeType = 'added' | 'modified' | 'deleted' | 'renamed';
-export type ReviewStatus = 'reviewed' | 'unreviewed';
 
 export interface FileNode {
   path: string;
@@ -7,7 +6,6 @@ export interface FileNode {
   displayName?: string;
   type: 'file' | 'directory';
   changeType?: ChangeType;
-  status?: ReviewStatus;
   oldPath?: string;
   children?: FileNode[];
 }

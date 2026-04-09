@@ -400,8 +400,7 @@ export const App = () => {
           <Panel
             id="file-tree"
             defaultSize={240}
-            minSize={160}
-            maxSize="35%"
+            minSize={200}
             collapsible
             groupResizeBehavior="preserve-pixel-size"
             panelRef={fileTreePanelRef}
@@ -446,7 +445,6 @@ export const App = () => {
             id="detail-panel"
             defaultSize={320}
             minSize={200}
-            maxSize="35%"
             collapsible
             groupResizeBehavior="preserve-pixel-size"
           >

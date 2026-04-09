@@ -49,6 +49,23 @@ interface SelectedDiffsInput {
   worktreeFilePaths: string[];
 }
 
+interface ActiveTreeStateInput {
+  activeSource: FileSource | null;
+  committedReviewedPaths: Set<string>;
+  worktreeReviewedPaths: Set<string>;
+  toggleCommittedReviewed: (path: string) => void;
+  toggleWorktreeReviewed: (path: string) => void;
+}
+
+interface StatusBarPropsInput {
+  activeSection: FileTreeSection;
+  selectedCommitShas: Set<string>;
+  commitDiffCount: number;
+  worktreeFileCount: number;
+  committedReviewedCount: number;
+  committedFileCount: number;
+}
+
 const EMPTY_FILES: FileNode[] = [];
 const EMPTY_PATHS = new Set<string>();
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
@@ -175,14 +192,6 @@ const resolveActiveSection = (pathname: string) => {
   return 'committed';
 };
 
-interface ActiveTreeStateInput {
-  activeSource: FileSource | null;
-  committedReviewedPaths: Set<string>;
-  worktreeReviewedPaths: Set<string>;
-  toggleCommittedReviewed: (path: string) => void;
-  toggleWorktreeReviewed: (path: string) => void;
-}
-
 const useActiveTreeState = ({
   activeSource,
   committedReviewedPaths,
@@ -217,15 +226,6 @@ const useTreeSelection = (
 
   return { treeSelectedPaths, treeSelectedSource };
 };
-
-interface StatusBarPropsInput {
-  activeSection: FileTreeSection;
-  selectedCommitShas: Set<string>;
-  commitDiffCount: number;
-  worktreeFileCount: number;
-  committedReviewedCount: number;
-  committedFileCount: number;
-}
 
 const useStatusBarProps = ({
   activeSection,

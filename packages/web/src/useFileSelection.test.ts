@@ -170,16 +170,6 @@ describe('useFileSelection', () => {
       expect(result.current.selectedFilePath).toBeNull();
     });
 
-    it('should count pre-reviewed files', async () => {
-      const { result } = await renderFileSelection();
-      expect(result.current.reviewedCount).toBe(1);
-    });
-
-    it('should count total files', async () => {
-      const { result } = await renderFileSelection();
-      expect(result.current.totalCount).toBe(3);
-    });
-
     it('should return null diff when nothing is selected', async () => {
       const { result } = await renderFileSelection();
       expect(result.current.selectedDiff).toBeNull();
@@ -285,50 +275,24 @@ describe('useFileSelection', () => {
     });
   });
 
-  describe('review tracking', () => {
-    it('should mark an unreviewed file as reviewed on selection', async () => {
+  describe('review state', () => {
+    it('should not mutate review state when selecting a file', async () => {
       const { result, navigateTo } = await renderFileSelection();
-      expect(result.current.reviewedCount).toBe(1);
       navigateTo('src/b.ts');
-      await waitFor(() => {
-        expect(result.current.reviewedCount).toBe(2);
-      });
-    });
-
-    it('should not double-count an already-reviewed file', async () => {
-      const { result, navigateTo } = await renderFileSelection();
-      navigateTo('src/a.ts');
-      await waitFor(() => {
-        expect(result.current.reviewedCount).toBe(1);
-      });
-    });
-
-    it('should mark a file as reviewed when loaded via deep link', async () => {
-      const { result } = await renderFileSelection(changesUrl(['src/b.ts']));
-      await waitFor(() => {
-        expect(result.current.reviewedCount).toBe(2);
-      });
-    });
-
-    it('should mark a file as reviewed on browser back navigation', async () => {
-      const { result, router, navigateTo } = await renderFileSelection();
-      expect(result.current.reviewedCount).toBe(1);
-
-      navigateTo('src/b.ts');
-      await waitFor(() => {
-        expect(result.current.reviewedCount).toBe(2);
-      });
-
-      navigateTo('c.ts');
-      await waitFor(() => {
-        expect(result.current.reviewedCount).toBe(3);
-      });
-
-      router.history.back();
       await waitFor(() => {
         expect(result.current.selectedFilePath).toBe('src/b.ts');
-        expect(result.current.reviewedCount).toBe(3);
       });
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith('gr-review'));
+      expect(keys).toEqual([]);
+    });
+
+    it('should not mutate review state on deep link', async () => {
+      const { result } = await renderFileSelection(changesUrl(['src/b.ts']));
+      await waitFor(() => {
+        expect(result.current.selectedFilePath).toBe('src/b.ts');
+      });
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith('gr-review'));
+      expect(keys).toEqual([]);
     });
   });
 });

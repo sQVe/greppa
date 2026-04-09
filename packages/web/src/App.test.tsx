@@ -115,7 +115,7 @@ const renderApp = (initialLocation = '/changes') => {
 describe('App', () => {
   it('does not render a header', async () => {
     renderApp();
-    await screen.findByText('2 / 7');
+    await screen.findByText('0 / 7');
     expect(screen.queryByText('Greppa')).toBeNull();
   });
 
@@ -124,9 +124,9 @@ describe('App', () => {
     expect(await screen.findByTestId('activity-rail')).toBeDefined();
   });
 
-  it('renders the status bar with fixture review count', async () => {
+  it('renders the status bar with an initial zero reviewed count', async () => {
     renderApp();
-    expect(await screen.findByText('2 / 7')).toBeDefined();
+    expect(await screen.findByText('0 / 7')).toBeDefined();
   });
 
   it('renders the file tree', async () => {
@@ -145,16 +145,10 @@ describe('App', () => {
     expect(await screen.findByText('Select a file to view details')).toBeDefined();
   });
 
-  it('increments reviewed count when selecting an unreviewed file', async () => {
+  it('does not increment reviewed count when selecting a file', async () => {
     renderApp();
-    expect(await screen.findByText('2 / 7')).toBeDefined();
+    expect(await screen.findByText('0 / 7')).toBeDefined();
     await userEvent.click(await screen.findByText('rateLimiter.ts'));
-    expect(await screen.findByText('3 / 7')).toBeDefined();
-  });
-
-  it('does not increment when selecting an already-reviewed file', async () => {
-    renderApp();
-    await userEvent.click(await screen.findByText('validateToken.ts'));
-    expect(await screen.findByText('2 / 7')).toBeDefined();
+    expect(await screen.findByText('0 / 7')).toBeDefined();
   });
 });

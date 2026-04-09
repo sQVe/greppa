@@ -1,3 +1,10 @@
 .collapsedDir {
   opacity: 0.5;
 }
+
+.lineCount {
+  margin-left: auto;
+  font-size: 0.75rem;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}

@@ -114,6 +114,8 @@ export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
       type: 'file',
       changeType: entry.changeType,
       oldPath: entry.oldPath,
+      lineCount: entry.lineCount,
+      sizeTier: entry.sizeTier,
     };
 
     if (segments.length === 1) {

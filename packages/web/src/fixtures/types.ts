@@ -1,5 +1,7 @@
 export type ChangeType = 'added' | 'modified' | 'deleted' | 'renamed';
 
+export type SizeTier = 'small' | 'medium' | 'large';
+
 export interface FileNode {
   path: string;
   name: string;
@@ -7,6 +9,8 @@ export interface FileNode {
   type: 'file' | 'directory';
   changeType?: ChangeType;
   oldPath?: string;
+  lineCount?: number;
+  sizeTier?: SizeTier;
   children?: FileNode[];
 }
 

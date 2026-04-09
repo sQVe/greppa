@@ -6,8 +6,8 @@ import { buildFileTree, compactTree, propagateChangeType } from './useFileList';
 describe('buildFileTree', () => {
   it('builds nested tree from flat entries', () => {
     const entries = [
-      { path: 'src/index.ts', changeType: 'modified' as const },
-      { path: 'src/utils/helpers.ts', changeType: 'added' as const },
+      { path: 'src/index.ts', changeType: 'modified' as const, lineCount: 0, sizeTier: 'small' as const },
+      { path: 'src/utils/helpers.ts', changeType: 'added' as const, lineCount: 0, sizeTier: 'small' as const },
     ];
 
     const tree = buildFileTree(entries);
@@ -19,7 +19,9 @@ describe('buildFileTree', () => {
   });
 
   it('assigns changeType to file nodes', () => {
-    const entries = [{ path: 'README.md', changeType: 'added' as const }];
+    const entries = [
+      { path: 'README.md', changeType: 'added' as const, lineCount: 0, sizeTier: 'small' as const },
+    ];
 
     const tree = buildFileTree(entries);
 
@@ -29,7 +31,13 @@ describe('buildFileTree', () => {
 
   it('handles renamed files with oldPath', () => {
     const entries = [
-      { path: 'new/location.ts', changeType: 'renamed' as const, oldPath: 'old/location.ts' },
+      {
+        path: 'new/location.ts',
+        changeType: 'renamed' as const,
+        oldPath: 'old/location.ts',
+        lineCount: 0,
+        sizeTier: 'small' as const,
+      },
     ];
 
     const tree = buildFileTree(entries);
@@ -40,7 +48,9 @@ describe('buildFileTree', () => {
   });
 
   it('sets correct path on nested nodes', () => {
-    const entries = [{ path: 'a/b/c.ts', changeType: 'modified' as const }];
+    const entries = [
+      { path: 'a/b/c.ts', changeType: 'modified' as const, lineCount: 0, sizeTier: 'small' as const },
+    ];
 
     const tree = buildFileTree(entries);
 
@@ -51,8 +61,8 @@ describe('buildFileTree', () => {
 
   it('groups files under same directory', () => {
     const entries = [
-      { path: 'src/a.ts', changeType: 'modified' as const },
-      { path: 'src/b.ts', changeType: 'added' as const },
+      { path: 'src/a.ts', changeType: 'modified' as const, lineCount: 0, sizeTier: 'small' as const },
+      { path: 'src/b.ts', changeType: 'added' as const, lineCount: 0, sizeTier: 'small' as const },
     ];
 
     const tree = buildFileTree(entries);
@@ -63,8 +73,8 @@ describe('buildFileTree', () => {
 
   it('sorts directories before files', () => {
     const entries = [
-      { path: 'src/z.ts', changeType: 'modified' as const },
-      { path: 'src/a/b.ts', changeType: 'added' as const },
+      { path: 'src/z.ts', changeType: 'modified' as const, lineCount: 0, sizeTier: 'small' as const },
+      { path: 'src/a/b.ts', changeType: 'added' as const, lineCount: 0, sizeTier: 'small' as const },
     ];
 
     const tree = buildFileTree(entries);
@@ -72,6 +82,21 @@ describe('buildFileTree', () => {
 
     expect(children[0]?.type).toBe('directory');
     expect(children[1]?.type).toBe('file');
+  });
+
+  it('propagates lineCount and sizeTier onto file nodes', () => {
+    const entries = [
+      { path: 'src/index.ts', changeType: 'modified' as const, lineCount: 42, sizeTier: 'small' as const },
+      { path: 'src/large.ts', changeType: 'added' as const, lineCount: 750, sizeTier: 'large' as const },
+    ];
+
+    const tree = buildFileTree(entries);
+    const [fileA, fileB] = tree[0]?.children ?? [];
+
+    expect(fileA).toHaveProperty('lineCount', 42);
+    expect(fileA).toHaveProperty('sizeTier', 'small');
+    expect(fileB).toHaveProperty('lineCount', 750);
+    expect(fileB).toHaveProperty('sizeTier', 'large');
   });
 });
 

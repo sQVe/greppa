@@ -1,10 +1,23 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import type { CommitEntry, FileEntry } from '@greppa/core';
+import type { CommitEntry, FileEntry, SizeTier } from '@greppa/core';
 import { Data, Effect, Layer, ServiceMap, Stream } from 'effect';
 import { ChildProcess } from 'effect/unstable/process';
 import type { ChildProcessSpawner } from 'effect/unstable/process/ChildProcessSpawner';
+
+const SIZE_TIER_MEDIUM = 50;
+const SIZE_TIER_LARGE = 500;
+
+export const deriveSizeTier = (lineCount: number): SizeTier => {
+  if (lineCount >= SIZE_TIER_LARGE) {
+    return 'large';
+  }
+  if (lineCount >= SIZE_TIER_MEDIUM) {
+    return 'medium';
+  }
+  return 'small';
+};
 
 export class GitError extends Data.TaggedError('GitError')<{
   message: string;
@@ -50,11 +63,13 @@ const statusMap: Record<string, FileEntry['changeType']> = {
   U: 'modified',
 };
 
-export const parseNameStatus = (output: string): FileEntry[] =>
+type NameStatusEntry = Omit<FileEntry, 'lineCount' | 'sizeTier'>;
+
+export const parseNameStatus = (output: string): NameStatusEntry[] =>
   output
     .split('\n')
     .filter((line) => line.trim() !== '')
-    .flatMap((line): FileEntry[] => {
+    .flatMap((line): NameStatusEntry[] => {
       const parts = line.split('\t');
       const status = parts[0] ?? '';
 
@@ -69,6 +84,26 @@ export const parseNameStatus = (output: string): FileEntry[] =>
 
       return [{ path: parts[1] ?? '', changeType }];
     });
+
+const parseNumstatCount = (raw: string | undefined): number => {
+  if (raw == null || raw === '-') {
+    return 0;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : 0;
+};
+
+export const parseNumstat = (output: string): Map<string, number> => {
+  const result = new Map<string, number>();
+  for (const line of output.split('\n')) {
+    const parts = line.split('\t');
+    const path = parts[2];
+    if (path != null) {
+      result.set(path, parseNumstatCount(parts[0]) + parseNumstatCount(parts[1]));
+    }
+  }
+  return result;
+};
 
 const COMMIT_FIELD_SEP = '\x1f';
 
@@ -187,8 +222,22 @@ export const GitServiceLive = Layer.succeed(
   GitService.of({
     listFiles: (oldRef, newRef) =>
       Effect.all([validateRef(oldRef), validateRef(newRef)]).pipe(
-        Effect.flatMap(() => runGit(['diff', '--name-status', oldRef, newRef])),
-        Effect.map(parseNameStatus),
+        Effect.flatMap(() =>
+          Effect.all([
+            runGit(['diff', '--name-status', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
+            runGit(['diff', '--numstat', oldRef, newRef]).pipe(Effect.map(parseNumstat)),
+          ]),
+        ),
+        Effect.map(([nameStatus, numstat]) =>
+          nameStatus.map((entry): FileEntry => {
+            const lineCount = numstat.get(entry.path) ?? 0;
+            return {
+              ...entry,
+              lineCount,
+              sizeTier: deriveSizeTier(lineCount),
+            } as FileEntry;
+          }),
+        ),
       ),
     getFileContent: (ref, path) =>
       Effect.all([validateRef(ref), validatePath(path)]).pipe(
@@ -227,7 +276,13 @@ export const GitServiceLive = Layer.succeed(
         Effect.mapError((error) => new MergeBaseError({ message: error.message, cause: error })),
       ),
     listWorkingTreeFiles: () =>
-      runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
+      // TODO(greppa-30u): compute numstat for worktree (follow-up task)
+      runGit(['diff', '--name-status', 'HEAD']).pipe(
+        Effect.map(parseNameStatus),
+        Effect.map((entries) =>
+          entries.map((entry): FileEntry => ({ ...entry, lineCount: 0, sizeTier: 'small' } as FileEntry)),
+        ),
+      ),
     getWorkingTreeFileContent: (path) =>
       validatePath(path).pipe(
         Effect.flatMap(() =>

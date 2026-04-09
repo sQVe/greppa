@@ -165,7 +165,102 @@ const useSelectedDiffs = ({
   }, [multiSelect.isMultiSelect, multiDiffs.diffs, selectedDiff]);
 };
 
-// eslint-disable-next-line complexity -- pre-existing; extracting sub-hooks tracked separately
+const resolveActiveSection = (pathname: string): FileTreeSection => {
+  if (pathname === '/commits') {
+    return 'commits';
+  }
+  if (pathname === '/worktree') {
+    return 'worktree';
+  }
+  return 'committed';
+};
+
+interface ActiveTreeStateInput {
+  activeSource: FileSource | null;
+  committedReviewedPaths: Set<string>;
+  worktreeReviewedPaths: Set<string>;
+  toggleCommittedReviewed: (path: string) => void;
+  toggleWorktreeReviewed: (path: string) => void;
+}
+
+const useActiveTreeState = ({
+  activeSource,
+  committedReviewedPaths,
+  worktreeReviewedPaths,
+  toggleCommittedReviewed,
+  toggleWorktreeReviewed,
+}: ActiveTreeStateInput) => {
+  const isWorktree = activeSource === 'worktree';
+  return {
+    activeReviewedPaths: isWorktree ? worktreeReviewedPaths : committedReviewedPaths,
+    activeToggleReviewed: isWorktree ? toggleWorktreeReviewed : toggleCommittedReviewed,
+  };
+};
+
+const useTreeSelection = (
+  multiSelect: ReturnType<typeof useMultiSelect>,
+  selectedFilePath: string | null,
+  selectedSource: FileSource | null,
+) => {
+  const treeSelectedPaths = useMemo(() => {
+    if (multiSelect.selectedPaths.size > 0) {
+      return multiSelect.selectedPaths;
+    }
+    if (selectedFilePath != null && selectedSource != null) {
+      return new Set([selectedFilePath]);
+    }
+    return EMPTY_PATHS;
+  }, [multiSelect.selectedPaths, selectedFilePath, selectedSource]);
+
+  const treeSelectedSource =
+    multiSelect.selectedPaths.size > 0 ? multiSelect.activeSource : selectedSource;
+
+  return { treeSelectedPaths, treeSelectedSource };
+};
+
+interface StatusBarPropsInput {
+  activeSection: FileTreeSection;
+  selectedCommitShas: Set<string>;
+  commitDiffCount: number;
+  worktreeFileCount: number;
+  committedReviewedCount: number;
+  committedFileCount: number;
+}
+
+const useStatusBarProps = ({
+  activeSection,
+  selectedCommitShas,
+  commitDiffCount,
+  worktreeFileCount,
+  committedReviewedCount,
+  committedFileCount,
+}: StatusBarPropsInput): StatusBarProps =>
+  useMemo(() => {
+    if (activeSection === 'commits') {
+      return {
+        mode: 'commit-review',
+        commitSha: [...selectedCommitShas][0],
+        reviewedCount: 0,
+        totalCount: commitDiffCount,
+      };
+    }
+    if (activeSection === 'worktree') {
+      return { mode: 'working-tree', modifiedCount: worktreeFileCount };
+    }
+    return {
+      mode: 'file-review',
+      reviewedCount: committedReviewedCount,
+      totalCount: committedFileCount,
+    };
+  }, [
+    activeSection,
+    selectedCommitShas,
+    commitDiffCount,
+    worktreeFileCount,
+    committedReviewedCount,
+    committedFileCount,
+  ]);
+
 export const App = () => {
   const { newRef, mergeBaseRef, isLoading: refsLoading, isError: refsError } = useRefs();
   const stackedDiffRef = useRef<StackedDiffViewerHandle>(null);
@@ -174,12 +269,7 @@ export const App = () => {
   const navigate = useNavigate();
 
   const pathname = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
-  let activeSection: FileTreeSection = 'committed';
-  if (pathname === '/commits') {
-    activeSection = 'commits';
-  } else if (pathname === '/worktree') {
-    activeSection = 'worktree';
-  }
+  const activeSection = resolveActiveSection(pathname);
 
   const handleToggleSection = useCallback((section: FileTreeSection) => {
     const routes = { committed: '/changes', worktree: '/worktree', commits: '/commits' } as const;
@@ -269,42 +359,28 @@ export const App = () => {
   );
   const worktreeFileCount = useMemo(() => collectFiles(worktreeFiles ?? EMPTY_FILES).length, [worktreeFiles]);
 
-  const activeReviewedPaths = multiSelect.activeSource === 'worktree' ? worktreeReviewedPaths : reviewedPaths;
+  const { activeReviewedPaths, activeToggleReviewed } = useActiveTreeState({
+    activeSource: multiSelect.activeSource,
+    committedReviewedPaths: reviewedPaths,
+    worktreeReviewedPaths,
+    toggleCommittedReviewed: toggleReviewed,
+    toggleWorktreeReviewed,
+  });
 
-  const activeToggleReviewed = multiSelect.activeSource === 'worktree' ? toggleWorktreeReviewed : toggleReviewed;
+  const { treeSelectedPaths, treeSelectedSource } = useTreeSelection(
+    multiSelect,
+    selectedFilePath,
+    selectedSource,
+  );
 
-  const treeSelectedPaths = useMemo(() => {
-    if (multiSelect.selectedPaths.size > 0) {
-      return multiSelect.selectedPaths;
-    }
-    if (selectedFilePath != null && selectedSource != null) {
-      return new Set([selectedFilePath]);
-    }
-    return EMPTY_PATHS;
-  }, [multiSelect.selectedPaths, selectedFilePath, selectedSource]);
-
-  const treeSelectedSource = multiSelect.selectedPaths.size > 0
-    ? multiSelect.activeSource
-    : selectedSource;
-
-  const statusBarProps: StatusBarProps = useMemo(() => {
-    if (activeSection === 'commits') {
-      return {
-        mode: 'commit-review',
-        commitSha: [...commitSelection.selectedShas][0],
-        reviewedCount: 0,
-        totalCount: commitDiffs.diffs.length,
-      };
-    }
-    if (activeSection === 'worktree') {
-      return { mode: 'working-tree', modifiedCount: worktreeFileCount };
-    }
-    return {
-      mode: 'file-review',
-      reviewedCount: committedReviewedCount,
-      totalCount: committedFileCount,
-    };
-  }, [activeSection, commitSelection.selectedShas, commitDiffs.diffs.length, worktreeFileCount, committedReviewedCount, committedFileCount]);
+  const statusBarProps = useStatusBarProps({
+    activeSection,
+    selectedCommitShas: commitSelection.selectedShas,
+    commitDiffCount: commitDiffs.diffs.length,
+    worktreeFileCount,
+    committedReviewedCount,
+    committedFileCount,
+  });
 
   if (refsLoading || refsError) {
     return <div className={styles.app} />;

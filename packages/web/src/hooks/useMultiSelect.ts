@@ -1,10 +1,9 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { nanoid } from 'nanoid';
 import { useCallback, useMemo, useRef } from 'react';
 
 import type { FileSource } from '../useFileSelection';
 import type { StatePayload } from '../stateCache';
-import { cacheState, findExistingId, postState } from '../stateCache';
+import { getOrCreateStateId } from '../stateCache';
 import { toStringArray } from '../toStringArray';
 
 interface MultiSelectOptions {
@@ -68,12 +67,7 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
 
   const navigateWithState = useCallback(
     (state: StatePayload, source: FileSource, options?: NavigateOptions) => {
-      const existing = findExistingId(state);
-      const id = existing ?? nanoid(4);
-      if (existing == null) {
-        cacheState(id, state);
-        postState(id, state);
-      }
+      const id = getOrCreateStateId(state);
       const to = source === 'committed' ? '/changes' as const : '/worktree' as const;
       const routeSearch = source === 'committed'
         ? { s: id, file: state.file }

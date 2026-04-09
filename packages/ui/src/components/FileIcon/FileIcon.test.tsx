@@ -8,38 +8,50 @@ afterEach(() => {
   cleanup();
 });
 
+const getImg = (container: HTMLElement) => {
+  const img = container.querySelector('img');
+  if (img == null) {
+    throw new Error('expected FileIcon to render an img element');
+  }
+  return img;
+};
+
 describe('FileIcon', () => {
   it('renders an img for a file', () => {
-    const { container } = render(<FileIcon name="index.ts" />);
-    const img = container.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute('src')).toBe('/material-icons/typescript.svg');
+    const { container } = render(<FileIcon name="index.ts" baseUrl="/material-icons" />);
+    const img = getImg(container);
+    expect(img.getAttribute('src')).toBe('/material-icons/typescript.svg');
   });
 
   it('renders a closed folder icon for a directory', () => {
-    const { container } = render(<FileIcon name="src" isDirectory />);
-    const img = container.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute('src')).toBe('/material-icons/folder-src.svg');
+    const { container } = render(<FileIcon name="src" isDirectory baseUrl="/material-icons" />);
+    const img = getImg(container);
+    expect(img.getAttribute('src')).toBe('/material-icons/folder-src.svg');
   });
 
   it('renders an open folder icon when expanded', () => {
-    const { container } = render(<FileIcon name="src" isDirectory isExpanded />);
-    const img = container.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute('src')).toBe('/material-icons/folder-src-open.svg');
+    const { container } = render(
+      <FileIcon name="src" isDirectory isExpanded baseUrl="/material-icons" />,
+    );
+    const img = getImg(container);
+    expect(img.getAttribute('src')).toBe('/material-icons/folder-src-open.svg');
   });
 
   it('renders a generic folder icon for unknown directories', () => {
-    const { container } = render(<FileIcon name="mydir" isDirectory />);
-    const img = container.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute('src')).toBe('/material-icons/folder.svg');
+    const { container } = render(<FileIcon name="mydir" isDirectory baseUrl="/material-icons" />);
+    const img = getImg(container);
+    expect(img.getAttribute('src')).toBe('/material-icons/folder.svg');
   });
 
   it('renders aria-hidden on the img', () => {
-    const { container } = render(<FileIcon name="index.ts" />);
-    const img = container.querySelector('img');
-    expect(img!.getAttribute('aria-hidden')).toBe('true');
+    const { container } = render(<FileIcon name="index.ts" baseUrl="/material-icons" />);
+    const img = getImg(container);
+    expect(img.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('honors a custom baseUrl so the package is not tied to one hosting layout', () => {
+    const { container } = render(<FileIcon name="index.ts" baseUrl="/assets/icons" />);
+    const img = getImg(container);
+    expect(img.getAttribute('src')).toBe('/assets/icons/typescript.svg');
   });
 });

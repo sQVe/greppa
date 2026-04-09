@@ -16,7 +16,9 @@ interface FileTreeProps {
   onCollapseDirectory?: (path: string) => void;
 }
 
-const COLLAPSED_DIR: string = styles.collapsedDir ?? '';
+const COLLAPSED_DIR = styles.collapsedDir ?? '';
+
+const ICONS_BASE_URL = '/material-icons';
 
 const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
   added: 'A',
@@ -85,7 +87,12 @@ export const FileTree = ({
           {({ isExpanded }) => (
             <>
               {isDirectory ? <Tree.Chevron /> : <Tree.Indent />}
-              <FileIcon name={node.name} isDirectory={isDirectory} isExpanded={isExpanded} />
+              <FileIcon
+                name={node.name}
+                baseUrl={ICONS_BASE_URL}
+                isDirectory={isDirectory}
+                isExpanded={isExpanded}
+              />
               <Tree.Label>{label}</Tree.Label>
               {changeType != null && !isDirectory ? (
                 <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>

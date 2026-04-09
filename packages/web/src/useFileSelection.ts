@@ -1,8 +1,7 @@
 import { useRouterState } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import type { CommentThread, DiffFile, FileInfo, FileNode } from './fixtures/types';
-import { useReviewState } from './hooks/useReviewState';
 import { toStringArray } from './toStringArray';
 
 export type FileSource = 'committed' | 'worktree';
@@ -75,49 +74,6 @@ export const useFileSelection = (
     return null;
   }, [selectedSource, urlFile, urlWtFile]);
 
-  const allFiles = useMemo(
-    () => [...allCommittedFiles, ...allWorktreeFiles],
-    [allCommittedFiles, allWorktreeFiles],
-  );
-  const validPaths = useMemo(
-    () => new Set(allFiles.map((file) => file.path)),
-    [allFiles],
-  );
-
-  const { state: reviewState, set: setReviewState, get: getReviewState } = useReviewState('default');
-  const reviewedPaths = useMemo(
-    () => new Set(reviewState.reviewedPaths.filter((path) => validPaths.has(path))),
-    [reviewState.reviewedPaths, validPaths],
-  );
-
-  const initialReviewedPaths = useMemo(
-    () => allFiles.filter((file) => file.status === 'reviewed').map((file) => file.path),
-    [allFiles],
-  );
-
-  useEffect(() => {
-    if (initialReviewedPaths.length === 0) {
-      return;
-    }
-    const current = getReviewState();
-    const existing = new Set(current.reviewedPaths);
-    const missing = initialReviewedPaths.filter((path) => !existing.has(path));
-    if (missing.length > 0) {
-      setReviewState({ reviewedPaths: [...current.reviewedPaths, ...missing] });
-    }
-  }, [initialReviewedPaths, getReviewState, setReviewState]);
-
-  useEffect(() => {
-    if (selectedFilePath == null) {
-      return;
-    }
-    const current = getReviewState();
-    if (new Set(current.reviewedPaths).has(selectedFilePath)) {
-      return;
-    }
-    setReviewState({ reviewedPaths: [...current.reviewedPaths, selectedFilePath] });
-  }, [selectedFilePath, getReviewState, setReviewState]);
-
   const selectedDiff = selectedFilePath != null ? (diffs.get(selectedFilePath) ?? null) : null;
 
   const selectedThreads =
@@ -128,26 +84,11 @@ export const useFileSelection = (
   const selectedFileInfo =
     selectedFilePath != null ? (fileInfoMap.get(selectedFilePath) ?? null) : null;
 
-  const markReviewed = useCallback(
-    (path: string) => {
-      const current = getReviewState();
-      if (new Set(current.reviewedPaths).has(path)) {
-        return;
-      }
-      setReviewState({ reviewedPaths: [...current.reviewedPaths, path] });
-    },
-    [getReviewState, setReviewState],
-  );
-
   return {
     selectedFilePath,
     selectedSource,
-    reviewedPaths,
-    reviewedCount: reviewedPaths.size,
-    totalCount: validPaths.size,
     selectedDiff,
     selectedThreads,
     selectedFileInfo,
-    markReviewed,
   };
 };

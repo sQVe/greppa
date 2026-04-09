@@ -101,8 +101,32 @@ describe('GitService', () => {
       ]);
     });
 
-    it('should skip unknown status letters', () => {
-      const result = parseNameStatus('C100\tsrc.ts\tdst.ts\nM\ta.ts');
+    it('should parse copied file with similarity', () => {
+      const result = parseNameStatus('C100\told.ts\tnew.ts');
+
+      expect(result).toEqual([
+        { path: 'new.ts', changeType: 'renamed', oldPath: 'old.ts' },
+      ]);
+    });
+
+    it('should parse type-change as modified', () => {
+      const result = parseNameStatus('T\tpath/to/file');
+
+      expect(result).toEqual([
+        { path: 'path/to/file', changeType: 'modified' },
+      ]);
+    });
+
+    it('should parse unmerged file as modified', () => {
+      const result = parseNameStatus('U\tconflict.ts');
+
+      expect(result).toEqual([
+        { path: 'conflict.ts', changeType: 'modified' },
+      ]);
+    });
+
+    it('should skip truly unknown status letters', () => {
+      const result = parseNameStatus('Z\tfile.ts\nM\ta.ts');
 
       expect(result).toEqual([
         { path: 'a.ts', changeType: 'modified' },

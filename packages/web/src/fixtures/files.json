@@ -8,15 +8,13 @@
         "path": "src/auth/validateToken.ts",
         "name": "validateToken.ts",
         "type": "file",
-        "changeType": "modified",
-        "status": "reviewed"
+        "changeType": "modified"
       },
       {
         "path": "src/auth/hashPassword.ts",
         "name": "hashPassword.ts",
         "type": "file",
-        "changeType": "modified",
-        "status": "unreviewed"
+        "changeType": "modified"
       }
     ]
   },
@@ -29,8 +27,7 @@
         "path": "src/events/eventEmitter.ts",
         "name": "eventEmitter.ts",
         "type": "file",
-        "changeType": "modified",
-        "status": "unreviewed"
+        "changeType": "modified"
       }
     ]
   },
@@ -43,8 +40,7 @@
         "path": "src/middleware/rateLimiter.ts",
         "name": "rateLimiter.ts",
         "type": "file",
-        "changeType": "added",
-        "status": "unreviewed"
+        "changeType": "added"
       }
     ]
   },
@@ -57,8 +53,7 @@
         "path": "src/services/userService.ts",
         "name": "userService.ts",
         "type": "file",
-        "changeType": "modified",
-        "status": "unreviewed"
+        "changeType": "modified"
       }
     ]
   },
@@ -72,15 +67,13 @@
         "name": "createLogger.ts",
         "type": "file",
         "changeType": "renamed",
-        "oldPath": "src/utils/logger.ts",
-        "status": "unreviewed"
+        "oldPath": "src/utils/logger.ts"
       },
       {
         "path": "src/utils/config.ts",
         "name": "config.ts",
         "type": "file",
-        "changeType": "deleted",
-        "status": "reviewed"
+        "changeType": "deleted"
       }
     ]
   }

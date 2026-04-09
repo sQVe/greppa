@@ -8,6 +8,16 @@ import { useComputedDiffs } from './useComputedDiffs';
 import { useFileList } from './useFileList';
 import { useFileSelectionHandlers } from './useFileSelectionHandlers';
 import { useMultiSelect } from './useMultiSelect';
+import { usePrefetchNeighbors } from './usePrefetchNeighbors';
+
+const PREFETCH_DEPTH = 2;
+
+const primarySelectedPath = (selectedPaths: Set<string>, orderedPaths: string[]): string | null => {
+  if (selectedPaths.size === 0) {
+    return null;
+  }
+  return orderedPaths.find((path) => selectedPaths.has(path)) ?? null;
+};
 
 interface SelectionCoordinatorOptions {
   files: FileNode[];
@@ -22,9 +32,10 @@ export const useSelectionCoordinator = ({
   oldRef,
   newRef,
 }: SelectionCoordinatorOptions) => {
+  const committedOrderedFiles = useMemo(() => collectFiles(files), [files]);
   const committedFilePaths = useMemo(
-    () => collectFiles(files).map((file) => file.path),
-    [files],
+    () => committedOrderedFiles.map((file) => file.path),
+    [committedOrderedFiles],
   );
   const worktreeFilePaths = useMemo(
     () => collectFiles(worktreeFiles).map((file) => file.path),
@@ -32,6 +43,23 @@ export const useSelectionCoordinator = ({
   );
 
   const multiSelect = useMultiSelect({ committedFilePaths, worktreeFilePaths });
+
+  const committedSelectedPath =
+    multiSelect.activeSource === 'committed'
+      ? primarySelectedPath(multiSelect.selectedPaths, committedFilePaths)
+      : null;
+
+  // Worktree prefetch is intentionally not wired: usePrefetchNeighbors reuses
+  // useDiffContent's committed query key shape, which does not address the
+  // worktree diff endpoint. A second hook variant is needed before worktree
+  // navigation can benefit from Layer 2 prefetching.
+  usePrefetchNeighbors({
+    orderedFiles: committedOrderedFiles,
+    selectedPath: committedSelectedPath,
+    oldRef,
+    newRef,
+    depth: PREFETCH_DEPTH,
+  });
   const { commits } = useCommitList(oldRef, newRef);
   const commitSelection = useCommitSelection(commits);
 

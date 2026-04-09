@@ -46,6 +46,8 @@ const statusMap: Record<string, FileEntry['changeType']> = {
   A: 'added',
   M: 'modified',
   D: 'deleted',
+  T: 'modified',
+  U: 'modified',
 };
 
 export const parseNameStatus = (output: string): FileEntry[] =>
@@ -56,7 +58,7 @@ export const parseNameStatus = (output: string): FileEntry[] =>
       const parts = line.split('\t');
       const status = parts[0] ?? '';
 
-      if (status.startsWith('R')) {
+      if (status.startsWith('R') || status.startsWith('C')) {
         return [{ path: parts[2] ?? '', changeType: 'renamed', oldPath: parts[1] }];
       }
 

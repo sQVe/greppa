@@ -1,3 +1,5 @@
+import { nanoid } from 'nanoid';
+
 export interface StatePayload {
   file: string[];
   wt: string[];
@@ -31,4 +33,15 @@ export const postState = (id: string, state: StatePayload) => {
   }).catch(() => {
     console.warn(`[greppa] Failed to persist state ${id}. Shared links may not resolve on reload.`);
   });
+};
+
+export const getOrCreateStateId = (state: StatePayload): string => {
+  const existing = findExistingId(state);
+  if (existing != null) {
+    return existing;
+  }
+  const id = nanoid(4);
+  cacheState(id, state);
+  postState(id, state);
+  return id;
 };

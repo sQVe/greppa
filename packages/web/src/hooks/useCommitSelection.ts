@@ -1,11 +1,10 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { nanoid } from 'nanoid';
 import { useCallback, useMemo, useRef } from 'react';
 
 import type { CommitEntry } from '@greppa/core';
 
 import type { StatePayload } from '../stateCache';
-import { cacheState, findExistingId, postState } from '../stateCache';
+import { getOrCreateStateId } from '../stateCache';
 import { toStringArray } from '../toStringArray';
 
 const buildState = (shas: string[]): StatePayload => ({
@@ -29,12 +28,7 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
 
   const navigateWithState = useCallback(
     (state: StatePayload, replace?: boolean) => {
-      const existing = findExistingId(state);
-      const id = existing ?? nanoid(4);
-      if (existing == null) {
-        cacheState(id, state);
-        postState(id, state);
-      }
+      const id = getOrCreateStateId(state);
       void navigate({ to: '/commits', search: { s: id, commits: state.commits }, replace });
     },
     [navigate],

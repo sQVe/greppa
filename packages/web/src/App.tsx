@@ -165,7 +165,7 @@ const useSelectedDiffs = ({
   }, [multiSelect.isMultiSelect, multiDiffs.diffs, selectedDiff]);
 };
 
-const resolveActiveSection = (pathname: string): FileTreeSection => {
+const resolveActiveSection = (pathname: string) => {
   if (pathname === '/commits') {
     return 'commits';
   }

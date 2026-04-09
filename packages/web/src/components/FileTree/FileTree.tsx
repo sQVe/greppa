@@ -16,7 +16,7 @@ interface FileTreeProps {
   onCollapseDirectory?: (path: string) => void;
 }
 
-const COLLAPSED_DIR: string = styles.collapsedDir ?? '';
+const COLLAPSED_DIR = styles.collapsedDir ?? '';
 
 const ICONS_BASE_URL = '/material-icons';
 

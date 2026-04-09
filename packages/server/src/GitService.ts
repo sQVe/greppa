@@ -128,7 +128,10 @@ const runGit = (
     const exitCode = yield* handle.exitCode;
 
     if (exitCode !== 0) {
-      return yield* new GitError({ message: stderr.trim() || `git exited with code ${exitCode}` });
+      const trimmed = stderr.trim();
+      return yield* new GitError({
+        message: trimmed.length > 0 ? trimmed : `git exited with code ${exitCode}`,
+      });
     }
 
     return stdout;

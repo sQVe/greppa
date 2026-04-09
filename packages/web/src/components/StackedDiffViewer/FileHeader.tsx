@@ -46,8 +46,8 @@ const LANGUAGE_LABELS: Record<string, string> = {
   ini: 'Ini',
   java: 'Java',
   javascript: 'JavaScript',
-  javascriptreact: 'JavaScript JSX',
-  jsx: 'JavaScript JSX',
+  javascriptreact: 'JavaScript',
+  jsx: 'JavaScript',
   json: 'JSON',
   jsonc: 'JSON with Comments',
   jsonl: 'JSON Lines',
@@ -73,9 +73,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
   sql: 'SQL',
   swift: 'Swift',
   toml: 'TOML',
-  tsx: 'TypeScript JSX',
+  tsx: 'TypeScript',
   typescript: 'TypeScript',
-  typescriptreact: 'TypeScript JSX',
+  typescriptreact: 'TypeScript',
   xml: 'XML',
   xsl: 'XSL',
   yaml: 'YAML',
@@ -84,16 +84,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
 const formatLanguage = (language: string) =>
   LANGUAGE_LABELS[language] ?? language;
 
-const splitPath = (filePath: string) => {
-  const lastSlash = filePath.lastIndexOf('/');
-  if (lastSlash === -1) {
-    return { directory: '', filename: filePath };
-  }
-  return {
-    directory: filePath.slice(0, lastSlash + 1),
-    filename: filePath.slice(lastSlash + 1),
-  };
-};
+const splitPath = (filePath: string) => filePath.split('/');
 
 const computeDiffSize = (diff: DiffFile) => {
   let additions = 0;
@@ -112,7 +103,7 @@ const computeDiffSize = (diff: DiffFile) => {
 
 export const FileHeader = memo(({ diff, reviewedPaths, onToggleReviewed }: FileHeaderProps) => {
   const { additions, deletions } = useMemo(() => computeDiffSize(diff), [diff]);
-  const { directory, filename } = useMemo(() => splitPath(diff.path), [diff.path]);
+  const segments = useMemo(() => splitPath(diff.path), [diff.path]);
 
   return (
     <div
@@ -121,16 +112,23 @@ export const FileHeader = memo(({ diff, reviewedPaths, onToggleReviewed }: FileH
       data-file-path={diff.path}
       data-change-type={diff.changeType}
     >
-      <Badge variant={diff.changeType}>{CHANGE_LABELS[diff.changeType]}</Badge>
       <span className={styles.filePath}>
-        <span className={styles.filePathDir}>{directory}</span>
-        {filename}
+        {segments.map((segment, index) => {
+          const isLast = index === segments.length - 1;
+          return (
+            <span key={index} className={isLast ? styles.fileName : styles.filePathDir}>
+              {index > 0 && <span className={styles.pathSeparator}>/</span>}
+              {segment}
+            </span>
+          );
+        })}
       </span>
-      <span className={styles.metaItem}>
+      <Badge variant={diff.changeType}>{CHANGE_LABELS[diff.changeType]}</Badge>
+      <span className={styles.diffStat}>
         <span className={styles.additions}>+{additions}</span>
         <span className={styles.deletions}>{'\u2212'}{deletions}</span>
       </span>
-      <span className={styles.metaItem}>{formatLanguage(diff.language)}</span>
+      <span className={styles.language}>{formatLanguage(diff.language)}</span>
       <button
         type="button"
         aria-pressed={reviewedPaths?.has(diff.path) ?? false}

@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   height: 32px;
-  gap: var(--gr-space-lg);
+  gap: var(--gr-space-md);
   padding: 0 var(--gr-space-xl);
   background: var(--gr-color-bg-subtle);
   border-bottom: 1px solid
@@ -48,27 +48,42 @@
 }
 
 .filePath {
-  flex: 1;
+  display: inline-flex;
+  align-items: baseline;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   font-family: var(--gr-font-mono);
   font-size: var(--gr-text-sm);
-  font-weight: 500;
-  color: var(--gr-color-text-primary);
+  min-width: 0;
 }
 
 .filePathDir {
   color: var(--gr-color-text-muted);
+  font-weight: 400;
 }
 
-.metaItem {
-  display: flex;
-  align-items: center;
+.fileName {
+  color: var(--gr-color-text-primary);
+  font-weight: 600;
+}
+
+.pathSeparator {
+  display: inline-block;
+  margin: 0 2px;
+  color: color-mix(in srgb, var(--gr-color-text-muted) 55%, transparent);
+  font-weight: 400;
+}
+
+.diffStat {
+  display: inline-flex;
+  align-items: baseline;
   gap: var(--gr-space-sm);
+  margin-left: auto;
   font-family: var(--gr-font-mono);
-  font-size: var(--gr-text-xxs);
-  color: var(--gr-color-text-muted);
+  font-size: var(--gr-text-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
@@ -78,6 +93,15 @@
 
 .deletions {
   color: var(--gr-color-text-danger);
+}
+
+.language {
+  font-family: var(--gr-font-ui);
+  font-size: var(--gr-text-xxs);
+  font-weight: 600;
+  color: var(--gr-color-text-secondary);
+  flex-shrink: 0;
+  letter-spacing: 0.01em;
 }
 
 .reviewButton {

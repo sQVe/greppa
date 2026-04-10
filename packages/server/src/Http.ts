@@ -1,17 +1,20 @@
 import { createServer } from 'node:http';
 
 import { NodeHttpServer } from '@effect/platform-node';
-import { Data, Effect, Layer } from 'effect';
+import { Data, Effect, Layer, Stream } from 'effect';
+import type { ServiceMap } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
+import * as HttpServerResponse from 'effect/unstable/http/HttpServerResponse';
 import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
 import { HttpApiBuilder } from 'effect/unstable/httpapi';
+import type { ChildProcessSpawner } from 'effect/unstable/process/ChildProcessSpawner';
 
 import type { FileEntry } from '@greppa/core';
 
 import { Api } from './Api';
 import { CacheService, CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
 import { GitError, GitService, GitServiceLive, RefsConfig } from './GitService';
-import type { RefsConfigValue } from './GitService';
+import type { RefsConfigValue, RepoPath } from './GitService';
 
 interface CacheEntry<T> {
   value: T;
@@ -103,55 +106,52 @@ const extractFilePath = (url: string, oldRef: string, newRef: string) => {
   return decoded.slice(prefix.length);
 };
 
-const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
+const computeDiff = (oldRef: string, newRef: string, filePath: string) =>
   Effect.gen(function* () {
     const git = yield* GitService;
     const cache = yield* CacheService;
 
-    const handleGetDiff = (params: { oldRef: string; newRef: string }, requestUrl: string) => {
-      const { oldRef, newRef } = params;
-      const filePath = extractFilePath(requestUrl, oldRef, newRef);
+    const entries = yield* getFileList(oldRef, newRef);
+    const matchesPath = (entry: FileEntry) => entry.path === filePath;
+    const entry = entries.find(matchesPath);
+    if (entry == null) {
+      return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
+    }
+    const changeType = entry.changeType;
+    const contentKey = `${oldRef}:${newRef}:${filePath}`;
+    // oxlint-disable-next-line no-unsafe-type-assertion -- CacheService is type-erased at rest; this call site owns the DiffContent contract for `contentKey`
+    const cachedContent = (yield* cache.get(contentKey)) as DiffContent | null;
 
+    if (cachedContent != null) {
+      return { path: filePath, changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
+    }
+
+    const [oldContent, newContent] = yield* Effect.all([
+      changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
+      changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
+    ]);
+    yield* cache.set(contentKey, { oldContent, newContent });
+
+    return {
+      path: filePath,
+      changeType,
+      ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}),
+      oldContent,
+      newContent,
+    };
+  });
+
+const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
+  Effect.succeed(
+    handlers.handle('getDiff', ({ params, request }) => {
+      const { oldRef, newRef } = params;
+      const filePath = extractFilePath(request.url, oldRef, newRef);
       if (filePath === '') {
         return Effect.fail(new GitError({ message: 'File path is required' }));
       }
-
-      return Effect.gen(function* () {
-        const entries = yield* getFileList(oldRef, newRef);
-        const matchesPath = (entry: FileEntry) => entry.path === filePath;
-        const entry = entries.find(matchesPath);
-        if (entry == null) {
-          return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
-        }
-        const changeType = entry.changeType;
-        const contentKey = `${oldRef}:${newRef}:${filePath}`;
-        // oxlint-disable-next-line no-unsafe-type-assertion -- CacheService is type-erased at rest; this call site owns the DiffContent contract for `contentKey`
-        const cachedContent = (yield* cache.get(contentKey)) as DiffContent | null;
-
-        if (cachedContent != null) {
-          return { path: filePath, changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
-        }
-
-        const [oldContent, newContent] = yield* Effect.all([
-          changeType === 'added' ? Effect.succeed('') : git.getFileContent(oldRef, entry.oldPath ?? filePath),
-          changeType === 'deleted' ? Effect.succeed('') : git.getFileContent(newRef, filePath),
-        ]);
-        yield* cache.set(contentKey, { oldContent, newContent });
-
-        return {
-          path: filePath,
-          changeType,
-          ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}),
-          oldContent,
-          newContent,
-        };
-      });
-    };
-
-    return handlers.handle('getDiff', ({ params, request }) =>
-      handleGetDiff(params, request.url),
-    );
-  }),
+      return computeDiff(oldRef, newRef, filePath);
+    }),
+  ),
 );
 
 const CommitsHandlers = HttpApiBuilder.group(Api, 'commits', (handlers) =>
@@ -283,9 +283,47 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
   Layer.provide(StateHandlers),
 );
 
+const sseEncoder = new TextEncoder();
+
+const encodeSseEvent = (payload: unknown): Uint8Array =>
+  sseEncoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
+
+type WarmupServices = GitService | CacheService | ChildProcessSpawner | typeof RepoPath;
+
+const makeWarmupHandler = (services: ServiceMap.ServiceMap<WarmupServices>) =>
+  Effect.gen(function* () {
+    const params = yield* HttpRouter.params;
+    const oldRef = params.oldRef ?? '';
+    const newRef = params.newRef ?? '';
+    if (oldRef === '' || newRef === '') {
+      return yield* Effect.fail(new GitError({ message: 'oldRef and newRef are required' }));
+    }
+    const entries = yield* getFileList(oldRef, newRef).pipe(Effect.provideServices(services));
+    const nonLarge = entries.filter((entry) => entry.sizeTier !== 'large');
+
+    const stream = Stream.fromIterable(nonLarge).pipe(
+      Stream.mapEffect((entry) => computeDiff(oldRef, newRef, entry.path)),
+      Stream.map(encodeSseEvent),
+      Stream.provideServices(services),
+    );
+
+    return HttpServerResponse.stream(stream, {
+      contentType: 'text/event-stream',
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+  });
+
+export const WarmupRoute = Layer.effectDiscard(
+  Effect.gen(function* () {
+    const router = yield* HttpRouter.HttpRouter;
+    const services = yield* Effect.services<WarmupServices>();
+    yield* router.add('GET', '/api/warmup/:oldRef/:newRef', makeWarmupHandler(services));
+  }),
+);
+
 export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDistPath: string) => {
   const StaticFiles = HttpStaticServer.layer({ root: webDistPath, spa: true });
-  return HttpRouter.serve(Layer.mergeAll(ApiRoutes, StaticFiles)).pipe(
+  return HttpRouter.serve(Layer.mergeAll(ApiRoutes, WarmupRoute, StaticFiles)).pipe(
     Layer.provide(GitServiceLive),
     Layer.provide(CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG)),
     Layer.provide(Layer.succeed(RefsConfig, refsConfig)),

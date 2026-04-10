@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
 import { GitServiceLive, RefsConfig, RepoPath } from './GitService';
-import { ApiRoutes } from './Http';
+import { ApiRoutes, WarmupRoute } from './Http';
 
 const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
 
@@ -31,6 +31,19 @@ const resolveRef = (ref: string): string | null => {
 const parentSha = resolveRef('HEAD~1');
 const headSha = resolveRef('HEAD');
 
+const readSseEvents = async <T>(response: Response): Promise<T[]> => {
+  const text = await response.text();
+  const events: T[] = [];
+  for (const block of text.split('\n\n')) {
+    const trimmed = block.trim();
+    if (trimmed === '') continue;
+    if (trimmed.startsWith('data: ')) {
+      events.push(JSON.parse(trimmed.slice('data: '.length)) as T);
+    }
+  }
+  return events;
+};
+
 const PlatformLayer = Layer.mergeAll(
   NodeServices.layer,
   NodeHttpPlatform.layer,
@@ -41,7 +54,7 @@ const PlatformLayer = Layer.mergeAll(
   Layer.succeed(RefsConfig, { oldRef: 'main', newRef: 'HEAD', mergeBaseRef: parentSha ?? '' }),
 );
 
-const TestAppLayer = ApiRoutes.pipe(Layer.provide(PlatformLayer));
+const TestAppLayer = Layer.mergeAll(ApiRoutes, WarmupRoute).pipe(Layer.provide(PlatformLayer));
 
 let handler: (request: Request) => Promise<Response>;
 let dispose: () => Promise<void>;
@@ -130,6 +143,78 @@ describe('Http', () => {
       );
 
       expect(response.status).toBe(500);
+    });
+  });
+
+  describe.runIf(parentSha != null && headSha != null)('GET /api/warmup/:oldRef/:newRef', () => {
+    const oldRef = parentSha ?? '';
+    const newRef = headSha ?? '';
+
+    it('keeps /api/files P95 latency under 200ms while warm-up runs concurrently', async () => {
+      const warmupResponse = await handler(
+        new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+      );
+      expect(warmupResponse.status).toBe(200);
+      const warmupReader = warmupResponse.body!.getReader();
+
+      const timings: number[] = [];
+      for (let i = 0; i < 10; i++) {
+        const start = performance.now();
+        const response = await handler(
+          new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
+        );
+        await response.json();
+        timings.push(performance.now() - start);
+      }
+
+      await warmupReader.cancel();
+
+      timings.sort((a, b) => a - b);
+      const p95 = timings[Math.max(0, Math.ceil(0.95 * timings.length) - 1)]!;
+      expect(p95).toBeLessThan(200);
+    });
+
+    it('completes cleanly when the response body is cancelled mid-flight', async () => {
+      const response = await handler(
+        new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+      );
+      expect(response.status).toBe(200);
+      expect(response.body).not.toBeNull();
+
+      const reader = response.body!.getReader();
+      const firstChunk = await reader.read();
+      expect(firstChunk.done).toBe(false);
+
+      await reader.cancel();
+    });
+
+    it('streams a DiffResponse SSE event for each non-large file', async () => {
+      const filesResponse = await handler(
+        new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
+      );
+      const files = (await filesResponse.json()) as { path: string; sizeTier: string }[];
+      const expectedNonLarge = files.filter((file) => file.sizeTier !== 'large');
+
+      const response = await handler(
+        new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/event-stream');
+
+      const events = await readSseEvents<{
+        path: string;
+        changeType: string;
+        oldContent: string;
+        newContent: string;
+      }>(response);
+      expect(events).toHaveLength(expectedNonLarge.length);
+      for (const event of events) {
+        expect(typeof event.path).toBe('string');
+        expect(typeof event.changeType).toBe('string');
+        expect(typeof event.oldContent).toBe('string');
+        expect(typeof event.newContent).toBe('string');
+      }
     });
   });
 

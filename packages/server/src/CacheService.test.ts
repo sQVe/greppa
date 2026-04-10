@@ -47,6 +47,20 @@ describe('CacheService', () => {
 
       expect(value).toBeNull();
     });
+
+    it('returns null for an entry at exactly ttlMs (boundary is exclusive)', async () => {
+      const value = await run(
+        { ttlMs: 1_000, max: 10 },
+        Effect.gen(function* () {
+          const cache = yield* CacheService;
+          yield* cache.set('k', 'hello');
+          vi.advanceTimersByTime(1_000);
+          return yield* cache.get('k');
+        }),
+      );
+
+      expect(value).toBeNull();
+    });
   });
 
   describe('max-entries capacity', () => {
@@ -71,6 +85,26 @@ describe('CacheService', () => {
       expect(result.a).toBe('A');
       expect(result.b).toBeNull();
       expect(result.c).toBe('C');
+    });
+
+    it('refreshing an existing key at capacity does not evict a sibling', async () => {
+      const result = await run(
+        { ttlMs: 60_000, max: 2 },
+        Effect.gen(function* () {
+          const cache = yield* CacheService;
+          yield* cache.set('a', 'A');
+          yield* cache.set('b', 'B');
+          // Re-set an existing key: must not count toward capacity, so 'a' must survive.
+          yield* cache.set('b', 'B2');
+          return {
+            a: yield* cache.get('a'),
+            b: yield* cache.get('b'),
+          };
+        }),
+      );
+
+      expect(result.a).toBe('A');
+      expect(result.b).toBe('B2');
     });
   });
 

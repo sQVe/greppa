@@ -26,12 +26,22 @@ interface DiffContent {
   newContent: string;
 }
 
+const isDiffContent = (value: unknown): value is DiffContent =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as Partial<DiffContent>).oldContent === 'string' &&
+  typeof (value as Partial<DiffContent>).newContent === 'string';
+
 interface StoredState {
   file: string[];
   wt: string[];
   commits: string[];
 }
 
+// TODO(greppa-30u): migrate fileListCache, worktreeDiffContentCache, and worktreeFileListCache
+// to CacheService. Only diffContentCache was migrated in the first pass because it is the only
+// cache shared between the REST handler and the SSE warm-up stream. The rest still use this
+// local TTL map; keep them here until a multi-instance CacheService shape is designed.
 const createCache = <T>(ttlMs: number, maxEntries: number) => {
   const store = new Map<string, CacheEntry<T>>();
 
@@ -119,10 +129,9 @@ const computeDiff = (oldRef: string, newRef: string, filePath: string) =>
     }
     const changeType = entry.changeType;
     const contentKey = `${oldRef}:${newRef}:${filePath}`;
-    // oxlint-disable-next-line no-unsafe-type-assertion -- CacheService is type-erased at rest; this call site owns the DiffContent contract for `contentKey`
-    const cachedContent = (yield* cache.get(contentKey)) as DiffContent | null;
+    const cachedContent = yield* cache.get(contentKey);
 
-    if (cachedContent != null) {
+    if (isDiffContent(cachedContent)) {
       return { path: filePath, changeType, ...(entry.oldPath != null ? { oldPath: entry.oldPath } : {}), ...cachedContent };
     }
 
@@ -307,10 +316,17 @@ const makeWarmupHandler = (services: ServiceMap.ServiceMap<WarmupServices>) =>
 
     // A single bad file (binary, encoding error, missing blob) must not terminate the
     // stream — the browser would read a mid-stream close as a disconnect and reconnect,
-    // re-running warm-up against the same bad file forever.
+    // re-running warm-up against the same bad file forever. Log the failure so a
+    // partially-broken warm-up is debuggable rather than silent.
     const diffs = Stream.fromIterable(nonLarge).pipe(
       Stream.mapEffect(
-        (entry) => computeDiff(oldRef, newRef, entry.path).pipe(Effect.orElseSucceed(() => null)),
+        (entry) =>
+          computeDiff(oldRef, newRef, entry.path).pipe(
+            Effect.tapError((error) =>
+              Effect.logWarning(`warm-up failed for ${entry.path}`, error),
+            ),
+            Effect.orElseSucceed(() => null),
+          ),
         { concurrency: WARMUP_CONCURRENCY },
       ),
       Stream.filter((value) => value != null),

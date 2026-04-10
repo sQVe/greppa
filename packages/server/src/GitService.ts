@@ -276,11 +276,19 @@ export const GitServiceLive = Layer.succeed(
         Effect.mapError((error) => new MergeBaseError({ message: error.message, cause: error })),
       ),
     listWorkingTreeFiles: () =>
-      // TODO(greppa-30u): compute numstat for worktree (follow-up task)
-      runGit(['diff', '--name-status', 'HEAD']).pipe(
-        Effect.map(parseNameStatus),
-        Effect.map((entries) =>
-          entries.map((entry): FileEntry => ({ ...entry, lineCount: 0, sizeTier: 'small' })),
+      Effect.all([
+        runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
+        runGit(['diff', '--numstat', 'HEAD']).pipe(Effect.map(parseNumstat)),
+      ]).pipe(
+        Effect.map(([nameStatus, numstat]) =>
+          nameStatus.map((entry): FileEntry => {
+            const lineCount = numstat.get(entry.path) ?? 0;
+            return {
+              ...entry,
+              lineCount,
+              sizeTier: deriveSizeTier(lineCount),
+            };
+          }),
         ),
       ),
     getWorkingTreeFileContent: (path) =>

@@ -345,6 +345,17 @@ describe('GitService', () => {
         expect(entry.path).toBeTruthy();
       }
     });
+
+    it('should carry numeric lineCount and valid sizeTier on every entry', async () => {
+      const result = (await runGitService((git) => git.listWorkingTreeFiles())) as FileEntry[];
+
+      for (const entry of result) {
+        expect(typeof entry.lineCount).toBe('number');
+        expect(Number.isFinite(entry.lineCount)).toBe(true);
+        expect(entry.lineCount).toBeGreaterThanOrEqual(0);
+        expect(['small', 'medium', 'large']).toContain(entry.sizeTier);
+      }
+    });
   });
 
   describe.runIf(parentSha != null && headSha != null)('listCommits', () => {

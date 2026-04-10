@@ -235,7 +235,7 @@ export const GitServiceLive = Layer.succeed(
               ...entry,
               lineCount,
               sizeTier: deriveSizeTier(lineCount),
-            } as FileEntry;
+            };
           }),
         ),
       ),
@@ -280,7 +280,7 @@ export const GitServiceLive = Layer.succeed(
       runGit(['diff', '--name-status', 'HEAD']).pipe(
         Effect.map(parseNameStatus),
         Effect.map((entries) =>
-          entries.map((entry): FileEntry => ({ ...entry, lineCount: 0, sizeTier: 'small' } as FileEntry)),
+          entries.map((entry): FileEntry => ({ ...entry, lineCount: 0, sizeTier: 'small' })),
         ),
       ),
     getWorkingTreeFileContent: (path) =>

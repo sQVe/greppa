@@ -110,13 +110,7 @@ describe('useWarmup', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('skips pushed diffs whose triple is already cached in diffCache', async () => {
-    vi.spyOn(diffCache, 'getDiff').mockResolvedValue({
-      path: 'src/already.ts',
-      changeType: 'modified',
-      oldContent: 'prev-old',
-      newContent: 'prev-new',
-    });
+  it('overwrites an existing diffCache entry so a refreshed warm-up wins', async () => {
     const setSpy = vi.spyOn(diffCache, 'setDiff').mockResolvedValue(undefined);
 
     renderHook(() => {
@@ -124,20 +118,23 @@ describe('useWarmup', () => {
     });
 
     const eventSource = FakeEventSource.instances[0]!;
-    eventSource.emit({
+    const freshDiff = {
       path: 'src/already.ts',
-      changeType: 'modified',
+      changeType: 'modified' as const,
       oldContent: 'new-old',
       newContent: 'new-new',
-    });
-    await Promise.resolve();
-    await Promise.resolve();
+    };
+    eventSource.emit(freshDiff);
 
-    expect(setSpy).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(setSpy).toHaveBeenCalledWith(
+        { oldRef: 'refOld', newRef: 'refNew', path: 'src/already.ts' },
+        freshDiff,
+      );
+    });
   });
 
   it('writes each pushed diff to diffCache.setDiff with the matching triple', async () => {
-    vi.spyOn(diffCache, 'getDiff').mockResolvedValue(null);
     const setSpy = vi.spyOn(diffCache, 'setDiff').mockResolvedValue(undefined);
 
     renderHook(() => {

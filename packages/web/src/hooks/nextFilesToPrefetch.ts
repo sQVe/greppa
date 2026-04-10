@@ -14,11 +14,9 @@ export const nextFilesToPrefetch = (
   }
 
   const result: FileNode[] = [];
-  for (const node of orderedFiles.slice(index + 1)) {
-    if (result.length >= depth) {
-      break;
-    }
-    if (node.sizeTier === 'large') {
+  for (let i = index + 1; i < orderedFiles.length && result.length < depth; i++) {
+    const node = orderedFiles[i];
+    if (node == null || node.sizeTier === 'large') {
       continue;
     }
     result.push(node);

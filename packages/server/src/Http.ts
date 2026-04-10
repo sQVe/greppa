@@ -285,8 +285,12 @@ export const ApiRoutes = HttpApiBuilder.layer(Api).pipe(
 
 const sseEncoder = new TextEncoder();
 
-const encodeSseEvent = (payload: unknown): Uint8Array =>
+const encodeSseData = (payload: unknown): Uint8Array =>
   sseEncoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
+
+const SSE_DONE_EVENT = sseEncoder.encode('event: done\ndata: {}\n\n');
+
+const WARMUP_CONCURRENCY = 2;
 
 type WarmupServices = GitService | CacheService | ChildProcessSpawner | typeof RepoPath;
 
@@ -301,9 +305,21 @@ const makeWarmupHandler = (services: ServiceMap.ServiceMap<WarmupServices>) =>
     const entries = yield* getFileList(oldRef, newRef).pipe(Effect.provideServices(services));
     const nonLarge = entries.filter((entry) => entry.sizeTier !== 'large');
 
-    const stream = Stream.fromIterable(nonLarge).pipe(
-      Stream.mapEffect((entry) => computeDiff(oldRef, newRef, entry.path)),
-      Stream.map(encodeSseEvent),
+    // A single bad file (binary, encoding error, missing blob) must not terminate the
+    // stream — the browser would read a mid-stream close as a disconnect and reconnect,
+    // re-running warm-up against the same bad file forever.
+    const diffs = Stream.fromIterable(nonLarge).pipe(
+      Stream.mapEffect(
+        (entry) => computeDiff(oldRef, newRef, entry.path).pipe(Effect.orElseSucceed(() => null)),
+        { concurrency: WARMUP_CONCURRENCY },
+      ),
+      Stream.filter((value) => value != null),
+      Stream.map(encodeSseData),
+    );
+
+    // Terminal event lets the client explicitly close(); without it, EventSource treats
+    // the normal response close as a disconnection and auto-reconnects indefinitely.
+    const stream = Stream.concat(diffs, Stream.succeed(SSE_DONE_EVENT)).pipe(
       Stream.provideServices(services),
     );
 

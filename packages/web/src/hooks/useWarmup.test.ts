@@ -14,29 +14,46 @@ class FakeEventSource {
   static instances: FakeEventSource[] = [];
   readyState = 1;
   url: string;
-  close = vi.fn();
-  private readonly _listeners = new Set<(event: MessageEvent) => void>();
+  close = vi.fn(() => {
+    this.readyState = 2;
+  });
+  private readonly _listeners = new Map<string, Set<(event: Event) => void>>();
 
   constructor(url: string) {
     this.url = url;
     FakeEventSource.instances.push(this);
   }
 
-  addEventListener(type: string, listener: (event: MessageEvent) => void) {
-    if (type === 'message') {
-      this._listeners.add(listener);
+  addEventListener(type: string, listener: (event: Event) => void) {
+    let set = this._listeners.get(type);
+    if (set == null) {
+      set = new Set();
+      this._listeners.set(type, set);
     }
+    set.add(listener);
   }
 
-  removeEventListener(type: string, listener: (event: MessageEvent) => void) {
-    if (type === 'message') {
-      this._listeners.delete(listener);
-    }
+  removeEventListener(type: string, listener: (event: Event) => void) {
+    this._listeners.get(type)?.delete(listener);
   }
 
   emit(payload: unknown) {
     const event = { data: JSON.stringify(payload) } as MessageEvent<string>;
-    for (const listener of this._listeners) {
+    for (const listener of this._listeners.get('message') ?? []) {
+      listener(event);
+    }
+  }
+
+  emitDone() {
+    const event = { data: '{}' } as MessageEvent<string>;
+    for (const listener of this._listeners.get('done') ?? []) {
+      listener(event);
+    }
+  }
+
+  emitError() {
+    const event = {} as Event;
+    for (const listener of this._listeners.get('error') ?? []) {
       listener(event);
     }
   }
@@ -149,5 +166,48 @@ describe('useWarmup', () => {
         },
       );
     });
+  });
+
+  it('closes the EventSource when the server emits a done event', () => {
+    renderHook(() => {
+      useWarmup('refOld', 'refNew', [file('src/a.ts')]);
+    });
+
+    const eventSource = FakeEventSource.instances[0]!;
+    expect(eventSource.close).not.toHaveBeenCalled();
+
+    eventSource.emitDone();
+
+    expect(eventSource.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the EventSource on error instead of letting it auto-reconnect', () => {
+    renderHook(() => {
+      useWarmup('refOld', 'refNew', [file('src/a.ts')]);
+    });
+
+    const eventSource = FakeEventSource.instances[0]!;
+    expect(eventSource.close).not.toHaveBeenCalled();
+
+    eventSource.emitError();
+
+    expect(eventSource.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not open a new EventSource when only the files array identity changes', () => {
+    const firstFiles = [file('src/a.ts')];
+    const { rerender } = renderHook(
+      ({ files }) => {
+        useWarmup('refOld', 'refNew', files);
+      },
+      { initialProps: { files: firstFiles } },
+    );
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+
+    rerender({ files: [file('src/a.ts')] });
+    rerender({ files: [file('src/a.ts')] });
+
+    expect(FakeEventSource.instances).toHaveLength(1);
   });
 });

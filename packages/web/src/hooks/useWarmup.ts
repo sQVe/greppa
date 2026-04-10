@@ -10,8 +10,10 @@ export const useWarmup = (
   newRef: string | null,
   files: readonly FileNode[] | null,
 ): void => {
+  const hasFiles = files != null;
+
   useEffect(() => {
-    if (oldRef == null || newRef == null || files == null || oldRef === '' || newRef === '') {
+    if (oldRef == null || newRef == null || !hasFiles || oldRef === '' || newRef === '') {
       return;
     }
 
@@ -34,11 +36,29 @@ export const useWarmup = (
         .catch(() => undefined);
     };
 
+    // The server emits a terminal `done` event after the final diff. Without this
+    // explicit close, the browser treats the normal response close as a disconnect
+    // and auto-reconnects, re-running the full warmup stream forever.
+    const onDone = () => {
+      eventSource.close();
+    };
+
+    // EventSource.onerror fires on any transport error; default behavior is to
+    // reconnect. We always want to surrender — a mid-stream failure would otherwise
+    // trigger the same reconnect loop as a normal close.
+    const onError = () => {
+      eventSource.close();
+    };
+
     eventSource.addEventListener('message', onMessage);
+    eventSource.addEventListener('done', onDone);
+    eventSource.addEventListener('error', onError);
 
     return () => {
       eventSource.removeEventListener('message', onMessage);
+      eventSource.removeEventListener('done', onDone);
+      eventSource.removeEventListener('error', onError);
       eventSource.close();
     };
-  }, [oldRef, newRef, files]);
+  }, [oldRef, newRef, hasFiles]);
 };

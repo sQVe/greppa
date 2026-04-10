@@ -31,14 +31,29 @@ const resolveRef = (ref: string): string | null => {
 const parentSha = resolveRef('HEAD~1');
 const headSha = resolveRef('HEAD');
 
-const readSseEvents = async <T>(response: Response): Promise<T[]> => {
+interface SseEvent<T> {
+  type: string;
+  data: T;
+}
+
+const readSseEvents = async <T>(response: Response): Promise<SseEvent<T>[]> => {
   const text = await response.text();
-  const events: T[] = [];
+  const events: SseEvent<T>[] = [];
   for (const block of text.split('\n\n')) {
     const trimmed = block.trim();
     if (trimmed === '') continue;
-    if (trimmed.startsWith('data: ')) {
-      events.push(JSON.parse(trimmed.slice('data: '.length)) as T);
+    let type = 'message';
+    let dataLine: string | null = null;
+    for (const line of trimmed.split('\n')) {
+      if (line.startsWith('event: ')) {
+        type = line.slice('event: '.length);
+      } else if (line.startsWith('data: ')) {
+        dataLine = line.slice('data: '.length);
+      }
+    }
+    if (dataLine != null) {
+      // oxlint-disable-next-line no-unsafe-type-assertion -- test helper parses SSE payloads into caller-provided generic T
+      events.push({ type, data: JSON.parse(dataLine) as T });
     }
   }
   return events;
@@ -192,6 +207,7 @@ describe('Http', () => {
       const filesResponse = await handler(
         new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
       );
+      // oxlint-disable-next-line no-unsafe-type-assertion -- test fixture asserts shape it produces
       const files = (await filesResponse.json()) as { path: string; sizeTier: string }[];
       const expectedNonLarge = files.filter((file) => file.sizeTier !== 'large');
 
@@ -208,13 +224,25 @@ describe('Http', () => {
         oldContent: string;
         newContent: string;
       }>(response);
-      expect(events).toHaveLength(expectedNonLarge.length);
-      for (const event of events) {
-        expect(typeof event.path).toBe('string');
-        expect(typeof event.changeType).toBe('string');
-        expect(typeof event.oldContent).toBe('string');
-        expect(typeof event.newContent).toBe('string');
+      const diffEvents = events.filter((event) => event.type === 'message');
+      expect(diffEvents).toHaveLength(expectedNonLarge.length);
+      for (const event of diffEvents) {
+        expect(typeof event.data.path).toBe('string');
+        expect(typeof event.data.changeType).toBe('string');
+        expect(typeof event.data.oldContent).toBe('string');
+        expect(typeof event.data.newContent).toBe('string');
       }
+    });
+
+    it('emits a terminal `done` event after the final diff so clients can stop reconnecting', async () => {
+      const response = await handler(
+        new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+      );
+
+      expect(response.status).toBe(200);
+      const events = await readSseEvents<unknown>(response);
+      expect(events.length).toBeGreaterThan(0);
+      expect(events[events.length - 1]?.type).toBe('done');
     });
   });
 

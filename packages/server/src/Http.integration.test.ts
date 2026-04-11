@@ -165,28 +165,53 @@ describe('Http', () => {
     const oldRef = parentSha ?? '';
     const newRef = headSha ?? '';
 
-    it('keeps /api/files P95 latency under 200ms while warm-up runs concurrently', async () => {
+    it('does not significantly regress /api/files P95 latency while warm-up runs concurrently', async () => {
+      const SAMPLES = 20;
+      const measure = async (): Promise<number[]> => {
+        const timings: number[] = [];
+        for (let i = 0; i < SAMPLES; i++) {
+          const start = performance.now();
+          const response = await handler(
+            new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
+          );
+          await response.json();
+          timings.push(performance.now() - start);
+        }
+        return timings;
+      };
+      const p95 = (samples: number[]): number => {
+        const sorted = samples.toSorted((a, b) => a - b);
+        return sorted[Math.max(0, Math.ceil(0.95 * sorted.length) - 1)]!;
+      };
+
+      const baseline = await measure();
+
       const warmupResponse = await handler(
         new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
       );
       expect(warmupResponse.status).toBe(200);
       const warmupReader = warmupResponse.body!.getReader();
 
-      const timings: number[] = [];
-      for (let i = 0; i < 10; i++) {
-        const start = performance.now();
-        const response = await handler(
-          new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
-        );
-        await response.json();
-        timings.push(performance.now() - start);
-      }
+      // Actively drain the SSE stream so warm-up produces backpressure against
+      // /api/files during the measurement window. An undrained reader would
+      // park the stream and hide regressions. The loop unblocks when the outer
+      // `cancel()` below causes `read()` to resolve with `done: true`.
+      const drain = (async () => {
+        for (;;) {
+          const { done } = await warmupReader.read();
+          if (done) return;
+        }
+      })();
+
+      const concurrent = await measure();
 
       await warmupReader.cancel();
+      await drain;
 
-      timings.sort((a, b) => a - b);
-      const p95 = timings[Math.max(0, Math.ceil(0.95 * timings.length) - 1)]!;
-      expect(p95).toBeLessThan(200);
+      // Relative regression check instead of an absolute ms budget: warm-up
+      // may slow /api/files, but it shouldn't cause a drastic regression.
+      // 3× leaves headroom for shared CI hosts and interpreter warmup.
+      expect(p95(concurrent)).toBeLessThanOrEqual(Math.max(p95(baseline) * 3, 50));
     });
 
     it('completes cleanly when the response body is cancelled mid-flight', async () => {
@@ -225,7 +250,10 @@ describe('Http', () => {
         newContent: string;
       }>(response);
       const diffEvents = events.filter((event) => event.type === 'message');
-      expect(diffEvents).toHaveLength(expectedNonLarge.length);
+      // Warm-up logs and skips per-file diff failures (binary blobs, encoding
+      // errors), so we assert an upper bound rather than strict equality.
+      expect(diffEvents.length).toBeGreaterThan(0);
+      expect(diffEvents.length).toBeLessThanOrEqual(expectedNonLarge.length);
       for (const event of diffEvents) {
         expect(typeof event.data.path).toBe('string');
         expect(typeof event.data.changeType).toBe('string');

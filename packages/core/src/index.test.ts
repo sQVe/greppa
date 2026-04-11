@@ -50,20 +50,26 @@ describe('FileEntry', () => {
     });
   });
 
-  it('decodes entry with lineCount and sizeTier', () => {
-    const result = Schema.decodeUnknownSync(FileEntry)({
-      path: 'a.ts',
-      changeType: 'modified',
-      lineCount: 42,
-      sizeTier: 'small',
-    });
+  it('rejects negative lineCount', () => {
+    expect(() =>
+      Schema.decodeUnknownSync(FileEntry)({
+        path: 'a.ts',
+        changeType: 'modified',
+        lineCount: -1,
+        sizeTier: 'small',
+      }),
+    ).toThrow();
+  });
 
-    expect(result).toEqual({
-      path: 'a.ts',
-      changeType: 'modified',
-      lineCount: 42,
-      sizeTier: 'small',
-    });
+  it('rejects non-integer lineCount', () => {
+    expect(() =>
+      Schema.decodeUnknownSync(FileEntry)({
+        path: 'a.ts',
+        changeType: 'modified',
+        lineCount: 1.5,
+        sizeTier: 'small',
+      }),
+    ).toThrow();
   });
 });
 

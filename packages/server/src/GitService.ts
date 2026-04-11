@@ -117,6 +117,12 @@ export const parseNumstat = (output: string): Map<string, number> => {
       const newPath = tokens[i + 2];
       if (newPath != null && newPath !== '') {
         result.set(newPath, count);
+      } else {
+        // A rename header (trailing tab) without a follow-up path token indicates
+        // truncated or corrupt git output — surface it so a silently-miskeyed
+        // cache entry doesn't become a debugging rabbit hole later.
+        // oxlint-disable-next-line no-console -- pure parser; no logger plumbed in
+        console.warn(`parseNumstat: malformed rename record, missing newPath token (added+deleted=${count})`);
       }
       i += 3;
       continue;

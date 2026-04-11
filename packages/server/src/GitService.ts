@@ -62,6 +62,8 @@ export const RefsConfig = ServiceMap.Reference<RefsConfigValue>('greppa/RefsConf
   },
 });
 
+type NameStatusEntry = Omit<FileEntry, 'lineCount' | 'sizeTier'>;
+
 const statusMap: Record<string, FileEntry['changeType']> = {
   A: 'added',
   M: 'modified',
@@ -69,8 +71,6 @@ const statusMap: Record<string, FileEntry['changeType']> = {
   T: 'modified',
   U: 'modified',
 };
-
-type NameStatusEntry = Omit<FileEntry, 'lineCount' | 'sizeTier'>;
 
 export const parseNameStatus = (output: string): NameStatusEntry[] =>
   output

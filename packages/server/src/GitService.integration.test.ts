@@ -1,16 +1,19 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
+import type { CommitEntry, FileEntry } from '@greppa/core';
 import { NodeServices } from '@effect/platform-node';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  deriveSizeTier,
   GitService,
   GitServiceLive,
   MergeBaseError,
   parseCommitLog,
   parseNameStatus,
+  parseNumstat,
   RepoPath,
   ResolveRefError,
 } from './GitService';
@@ -143,6 +146,56 @@ describe('GitService', () => {
     });
   });
 
+  describe('parseNumstat', () => {
+    it('parses a numeric record into added+removed', () => {
+      const result = parseNumstat('3\t2\tsrc/index.ts\0');
+
+      expect(result.get('src/index.ts')).toBe(5);
+    });
+
+    it('parses multiple NUL-terminated records', () => {
+      const result = parseNumstat('3\t2\ta.ts\x0010\t0\tb.ts\x000\t7\tc.ts\x00');
+
+      expect(result.get('a.ts')).toBe(5);
+      expect(result.get('b.ts')).toBe(10);
+      expect(result.get('c.ts')).toBe(7);
+      expect(result.size).toBe(3);
+    });
+
+    it('treats binary diff as zero lines', () => {
+      const result = parseNumstat('-\t-\tassets/logo.png\0');
+
+      expect(result.get('assets/logo.png')).toBe(0);
+    });
+
+    it('keys renamed files by the new path', () => {
+      // git diff --numstat -z rename format: "added\tdeleted\t\0oldpath\0newpath\0"
+      const result = parseNumstat('9\t39\t\0packages/old/file.css\0packages/new/file.css\0');
+
+      expect(result.get('packages/new/file.css')).toBe(48);
+      expect(result.size).toBe(1);
+    });
+
+    it('handles a rename followed by a regular entry', () => {
+      const result = parseNumstat('2\t1\t\x00old/a.ts\x00new/a.ts\x0010\t0\tregular/b.ts\x00');
+
+      expect(result.get('new/a.ts')).toBe(3);
+      expect(result.get('regular/b.ts')).toBe(10);
+      expect(result.size).toBe(2);
+    });
+  });
+
+  describe('deriveSizeTier', () => {
+    it('derives size tier from line count at 50/500 boundaries', () => {
+      expect(deriveSizeTier(0)).toBe('small');
+      expect(deriveSizeTier(49)).toBe('small');
+      expect(deriveSizeTier(50)).toBe('medium');
+      expect(deriveSizeTier(499)).toBe('medium');
+      expect(deriveSizeTier(500)).toBe('large');
+      expect(deriveSizeTier(9999)).toBe('large');
+    });
+  });
+
   describe('parseCommitLog', () => {
     it('should parse a single commit', () => {
       const output = 'abc123full\x1fabc123\x1ffix: some bug\x1fAlice\x1f2026-04-03T10:00:00+00:00';
@@ -189,12 +242,24 @@ describe('GitService', () => {
     const newRef = headSha ?? '';
 
     it('should list changed files between two refs', async () => {
-      const result = await runGitService((git) => git.listFiles(oldRef, newRef));
+      const result = (await runGitService((git) => git.listFiles(oldRef, newRef))) as FileEntry[];
 
       expect(result.length).toBeGreaterThan(0);
       for (const entry of result) {
         expect(['added', 'modified', 'deleted', 'renamed']).toContain(entry.changeType);
         expect(entry.path).toBeTruthy();
+      }
+    });
+
+    it('should carry numeric lineCount and valid sizeTier on every entry', async () => {
+      const result = (await runGitService((git) => git.listFiles(oldRef, newRef))) as FileEntry[];
+
+      expect(result.length).toBeGreaterThan(0);
+      for (const entry of result) {
+        expect(typeof entry.lineCount).toBe('number');
+        expect(Number.isFinite(entry.lineCount)).toBe(true);
+        expect(entry.lineCount).toBeGreaterThanOrEqual(0);
+        expect(['small', 'medium', 'large']).toContain(entry.sizeTier);
       }
     });
 
@@ -213,9 +278,9 @@ describe('GitService', () => {
 
   describe('getFileContent', () => {
     it('should return content for valid ref and path', async () => {
-      const result = await runGitService((git) =>
+      const result = (await runGitService((git) =>
         git.getFileContent('HEAD', 'package.json'),
-      );
+      )) as string;
 
       expect(result).toContain('"name"');
       expect(result.length).toBeGreaterThan(0);
@@ -235,10 +300,27 @@ describe('GitService', () => {
   });
 
   describe('resolveRef', () => {
-    it('should succeed for a valid branch name', async () => {
-      const result = await runGitService((git) => git.resolveRef('HEAD'));
+    it('returns the resolved 40-char SHA for a symbolic ref', async () => {
+      const result = (await runGitService((git) => git.resolveRef('HEAD'))) as string;
 
-      expect(result).toBe('HEAD');
+      expect(result).toMatch(/^[0-9a-f]{40}$/);
+    });
+
+    it('returns the same SHA when called with that SHA directly', async () => {
+      const sha = (await runGitService((git) => git.resolveRef('HEAD'))) as string;
+      const second = (await runGitService((git) => git.resolveRef(sha))) as string;
+
+      expect(second).toBe(sha);
+    });
+
+    it('expands an abbreviated SHA to the full 40-char form', async () => {
+      const fullSha = (await runGitService((git) => git.resolveRef('HEAD'))) as string;
+      const abbrev = fullSha.slice(0, 8);
+
+      const resolved = (await runGitService((git) => git.resolveRef(abbrev))) as string;
+
+      expect(resolved).toBe(fullSha);
+      expect(resolved).toMatch(/^[0-9a-f]{40}$/);
     });
 
     it('should fail with ResolveRefError for nonexistent ref', async () => {
@@ -255,13 +337,15 @@ describe('GitService', () => {
       );
 
       expect(error).toBeInstanceOf(ResolveRefError);
-      expect(error.message).toContain('Invalid ref');
+      if (error instanceof ResolveRefError) {
+        expect(error.message).toContain('Invalid ref');
+      }
     });
   });
 
   describe.runIf(hasDefaultBranchRef)('detectDefaultBranch', () => {
     it('should return the default branch name', async () => {
-      const result = await runGitService((git) => git.detectDefaultBranch());
+      const result = (await runGitService((git) => git.detectDefaultBranch())) as string;
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
@@ -286,7 +370,7 @@ describe('GitService', () => {
 
   describe('listWorkingTreeFiles', () => {
     it('should return an array of FileEntry', async () => {
-      const result = await runGitService((git) => git.listWorkingTreeFiles());
+      const result = (await runGitService((git) => git.listWorkingTreeFiles())) as FileEntry[];
 
       expect(Array.isArray(result)).toBe(true);
       for (const entry of result) {
@@ -294,11 +378,22 @@ describe('GitService', () => {
         expect(entry.path).toBeTruthy();
       }
     });
+
+    it('should carry numeric lineCount and valid sizeTier on every entry', async () => {
+      const result = (await runGitService((git) => git.listWorkingTreeFiles())) as FileEntry[];
+
+      for (const entry of result) {
+        expect(typeof entry.lineCount).toBe('number');
+        expect(Number.isFinite(entry.lineCount)).toBe(true);
+        expect(entry.lineCount).toBeGreaterThanOrEqual(0);
+        expect(['small', 'medium', 'large']).toContain(entry.sizeTier);
+      }
+    });
   });
 
   describe.runIf(parentSha != null && headSha != null)('listCommits', () => {
     it('should return commits between two refs', async () => {
-      const result = await runGitService((git) => git.listCommits('HEAD~1', 'HEAD'));
+      const result = (await runGitService((git) => git.listCommits('HEAD~1', 'HEAD'))) as CommitEntry[];
 
       expect(result.length).toBeGreaterThan(0);
       for (const entry of result) {

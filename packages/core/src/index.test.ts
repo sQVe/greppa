@@ -20,9 +20,16 @@ describe('FileEntry', () => {
     const result = Schema.decodeUnknownSync(FileEntry)({
       path: 'a.ts',
       changeType: 'modified',
+      lineCount: 3,
+      sizeTier: 'small',
     });
 
-    expect(result).toEqual({ path: 'a.ts', changeType: 'modified' });
+    expect(result).toEqual({
+      path: 'a.ts',
+      changeType: 'modified',
+      lineCount: 3,
+      sizeTier: 'small',
+    });
   });
 
   it('decodes entry with oldPath', () => {
@@ -30,9 +37,39 @@ describe('FileEntry', () => {
       path: 'b.ts',
       changeType: 'renamed',
       oldPath: 'a.ts',
+      lineCount: 12,
+      sizeTier: 'small',
     });
 
-    expect(result).toEqual({ path: 'b.ts', changeType: 'renamed', oldPath: 'a.ts' });
+    expect(result).toEqual({
+      path: 'b.ts',
+      changeType: 'renamed',
+      oldPath: 'a.ts',
+      lineCount: 12,
+      sizeTier: 'small',
+    });
+  });
+
+  it('rejects negative lineCount', () => {
+    expect(() =>
+      Schema.decodeUnknownSync(FileEntry)({
+        path: 'a.ts',
+        changeType: 'modified',
+        lineCount: -1,
+        sizeTier: 'small',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects non-integer lineCount', () => {
+    expect(() =>
+      Schema.decodeUnknownSync(FileEntry)({
+        path: 'a.ts',
+        changeType: 'modified',
+        lineCount: 1.5,
+        sizeTier: 'small',
+      }),
+    ).toThrow();
   });
 });
 

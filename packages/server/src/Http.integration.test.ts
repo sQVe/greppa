@@ -10,8 +10,9 @@ import { layer as EtagLayer } from 'effect/unstable/http/Etag';
 import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { GitServiceLive, RefsConfig, RepoPath } from './GitService';
-import { ApiRoutes } from './Http';
+import { CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
+import { GitServiceLive, RefsConfig, RepoPath, Sha } from './GitService';
+import { ApiRoutes, WarmupRoute } from './Http';
 
 const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
 
@@ -30,16 +31,49 @@ const resolveRef = (ref: string): string | null => {
 const parentSha = resolveRef('HEAD~1');
 const headSha = resolveRef('HEAD');
 
+interface SseEvent<T> {
+  type: string;
+  data: T;
+}
+
+const readSseEvents = async <T>(response: Response): Promise<SseEvent<T>[]> => {
+  const text = await response.text();
+  const events: SseEvent<T>[] = [];
+  for (const block of text.split('\n\n')) {
+    const trimmed = block.trim();
+    if (trimmed === '') continue;
+    let type = 'message';
+    let dataLine: string | null = null;
+    for (const line of trimmed.split('\n')) {
+      if (line.startsWith('event: ')) {
+        type = line.slice('event: '.length);
+      } else if (line.startsWith('data: ')) {
+        dataLine = line.slice('data: '.length);
+      }
+    }
+    if (dataLine != null) {
+      // oxlint-disable-next-line no-unsafe-type-assertion -- test helper parses SSE payloads into caller-provided generic T
+      events.push({ type, data: JSON.parse(dataLine) as T });
+    }
+  }
+  return events;
+};
+
 const PlatformLayer = Layer.mergeAll(
   NodeServices.layer,
   NodeHttpPlatform.layer,
   EtagLayer,
   GitServiceLive,
+  CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG),
   Layer.succeed(RepoPath, monorepoRoot),
-  Layer.succeed(RefsConfig, { oldRef: 'main', newRef: 'HEAD', mergeBaseRef: parentSha ?? '' }),
+  Layer.succeed(RefsConfig, {
+    oldRef: Sha('main'),
+    newRef: Sha('HEAD'),
+    mergeBaseRef: Sha(parentSha ?? ''),
+  }),
 );
 
-const TestAppLayer = ApiRoutes.pipe(Layer.provide(PlatformLayer));
+const TestAppLayer = Layer.mergeAll(ApiRoutes, WarmupRoute).pipe(Layer.provide(PlatformLayer));
 
 let handler: (request: Request) => Promise<Response>;
 let dispose: () => Promise<void>;
@@ -128,6 +162,129 @@ describe('Http', () => {
       );
 
       expect(response.status).toBe(500);
+    });
+  });
+
+  describe.runIf(parentSha != null && headSha != null)('GET /api/warmup/:oldRef/:newRef', () => {
+    const oldRef = parentSha ?? '';
+    const newRef = headSha ?? '';
+
+    // Perf assertion is skipped by default: on shared CI hosts a latency-ratio
+    // bound either leaks false failures or has to be so loose that it can't
+    // catch real regressions. Run manually with PERF=1 when debugging warm-up
+    // backpressure.
+    // oxlint-disable-next-line node/no-process-env -- test-only opt-in gate
+    it.skipIf(process.env.PERF !== '1')(
+      'does not significantly regress /api/files P95 latency while warm-up runs concurrently',
+      async () => {
+        const SAMPLES = 20;
+        const measure = async (): Promise<number[]> => {
+          const timings: number[] = [];
+          for (let i = 0; i < SAMPLES; i++) {
+            const start = performance.now();
+            const response = await handler(
+              new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
+            );
+            await response.json();
+            timings.push(performance.now() - start);
+          }
+          return timings;
+        };
+        const p95 = (samples: number[]): number => {
+          const sorted = samples.toSorted((a, b) => a - b);
+          return sorted[Math.max(0, Math.ceil(0.95 * sorted.length) - 1)]!;
+        };
+
+        const baseline = await measure();
+
+        const warmupResponse = await handler(
+          new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+        );
+        expect(warmupResponse.status).toBe(200);
+        const warmupReader = warmupResponse.body!.getReader();
+
+        const drain = (async () => {
+          for (;;) {
+            const { done } = await warmupReader.read();
+            if (done) return;
+          }
+        })();
+
+        const concurrent = await measure();
+
+        await warmupReader.cancel();
+        await drain;
+
+        expect(p95(concurrent)).toBeLessThanOrEqual(Math.max(p95(baseline) * 3, 50));
+      },
+    );
+
+    it('completes cleanly when the response body is cancelled mid-flight', async () => {
+      const response = await handler(
+        new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+      );
+      expect(response.status).toBe(200);
+      expect(response.body).not.toBeNull();
+
+      const reader = response.body!.getReader();
+      const firstChunk = await reader.read();
+      expect(firstChunk.done).toBe(false);
+
+      await reader.cancel();
+    });
+
+    it('streams a DiffResponse SSE event for each non-large file', async () => {
+      const filesResponse = await handler(
+        new Request(`http://localhost/api/files?oldRef=${oldRef}&newRef=${newRef}`),
+      );
+      // oxlint-disable-next-line no-unsafe-type-assertion -- test fixture asserts shape it produces
+      const files = (await filesResponse.json()) as { path: string; sizeTier: string }[];
+      const expectedPaths = new Set(
+        files.filter((file) => file.sizeTier !== 'large').map((file) => file.path),
+      );
+
+      const response = await handler(
+        new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/event-stream');
+
+      const events = await readSseEvents<{
+        path: string;
+        changeType: string;
+        oldContent: string;
+        newContent: string;
+      }>(response);
+      const diffEvents = events.filter((event) => event.type === 'message');
+      const validChangeTypes = new Set(['added', 'modified', 'deleted', 'renamed']);
+      const emittedPaths = new Set(diffEvents.map((event) => event.data.path));
+      const missingPaths = [...expectedPaths].filter((path) => !emittedPaths.has(path));
+
+      // Warm-up logs and skips per-file diff failures (binary blobs, encoding
+      // errors), so a small number of misses can be legitimate. Tolerate up to
+      // one missing file relative to the expected non-large set; anything more
+      // indicates the warm-up is silently losing files.
+      expect(missingPaths.length).toBeLessThanOrEqual(1);
+      expect(diffEvents.length).toBeGreaterThan(0);
+
+      for (const event of diffEvents) {
+        expect(expectedPaths.has(event.data.path)).toBe(true);
+        expect(validChangeTypes.has(event.data.changeType)).toBe(true);
+        expect(typeof event.data.oldContent).toBe('string');
+        expect(typeof event.data.newContent).toBe('string');
+      }
+    });
+
+    it('emits a terminal `done` event after the final diff so clients can stop reconnecting', async () => {
+      const response = await handler(
+        new Request(`http://localhost/api/warmup/${oldRef}/${newRef}`),
+      );
+
+      expect(response.status).toBe(200);
+      const events = await readSseEvents<unknown>(response);
+      expect(events.length).toBeGreaterThan(0);
+      expect(events[events.length - 1]?.type).toBe('done');
     });
   });
 

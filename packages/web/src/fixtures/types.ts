@@ -1,3 +1,5 @@
+import type { SizeTier } from '@greppa/core';
+
 export type ChangeType = 'added' | 'modified' | 'deleted' | 'renamed';
 
 export interface FileNode {
@@ -7,6 +9,8 @@ export interface FileNode {
   type: 'file' | 'directory';
   changeType?: ChangeType;
   oldPath?: string;
+  lineCount?: number;
+  sizeTier?: SizeTier;
   children?: FileNode[];
 }
 

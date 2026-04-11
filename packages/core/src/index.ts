@@ -10,10 +10,19 @@ export const ChangeType = Schema.Union([
 ]);
 export type ChangeType = typeof ChangeType.Type;
 
+export const SizeTier = Schema.Union([
+  Schema.Literal('small'),
+  Schema.Literal('medium'),
+  Schema.Literal('large'),
+]);
+export type SizeTier = typeof SizeTier.Type;
+
 export const FileEntry = Schema.Struct({
   path: Schema.String,
   changeType: ChangeType,
   oldPath: Schema.optional(Schema.String),
+  lineCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  sizeTier: SizeTier,
 });
 export type FileEntry = typeof FileEntry.Type;
 

@@ -154,6 +154,9 @@ importers:
       effect:
         specifier: 4.0.0-beta.40
         version: 4.0.0-beta.40
+      idb-keyval:
+        specifier: 6.2.2
+        version: 6.2.2
       motion:
         specifier: 12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -200,6 +203,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 6.0.1
         version: 6.0.1(vite@8.0.2(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0)(yaml@2.8.3))
+      fake-indexeddb:
+        specifier: 6.2.5
+        version: 6.2.5
       happy-dom:
         specifier: 20.8.8
         version: 20.8.8
@@ -3485,6 +3491,13 @@ packages:
         integrity: sha512-UOiS2in6/Q0FK0R0q6UY9vYpQ21mr/Qn1KOnte7vsACuNJf514WvCCUHSRCPcgjPT2bAhNIJdlE6bVap1GKmeg==,
       }
 
+  fake-indexeddb@6.2.5:
+    resolution:
+      {
+        integrity: sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w==,
+      }
+    engines: { node: '>=18' }
+
   fast-check@4.6.0:
     resolution:
       {
@@ -3647,6 +3660,12 @@ packages:
         integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==,
       }
     engines: { node: '>=0.10.0' }
+
+  idb-keyval@6.2.2:
+    resolution:
+      {
+        integrity: sha512-yjD9nARJ/jb1g+CvD0tlhUHOrJ9Sy0P8T9MF3YaLlHnSRpwPfpTX0XIvpmw3gAJUmEu3FiICLBDPXVwyEvrleg==,
+      }
 
   ignore@5.3.2:
     resolution:
@@ -7234,6 +7253,8 @@ snapshots:
 
   extendable-error@0.1.7: {}
 
+  fake-indexeddb@6.2.5: {}
+
   fast-check@4.6.0:
     dependencies:
       pure-rand: 8.3.0
@@ -7347,6 +7368,8 @@ snapshots:
   iconv-lite@0.7.2:
     dependencies:
       safer-buffer: 2.1.2
+
+  idb-keyval@6.2.2: {}
 
   ignore@5.3.2: {}
 

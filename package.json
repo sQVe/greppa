@@ -32,6 +32,9 @@
     "vitest": "4.1.1"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@ast-grep/cli"
+    ],
     "peerDependencyRules": {
       "allowedVersions": {
         "@tanstack/zod-adapter>zod": "4"

@@ -23,6 +23,7 @@ import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
 import { useHashScroll } from './hooks/useHashScroll';
 import { useSelectionCoordinator } from './hooks/useSelectionCoordinator';
+import { useWarmup } from './hooks/useWarmup';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
 import { collectFiles, useFileSelection } from './useFileSelection';
@@ -295,6 +296,8 @@ export const App = () => {
 
   const { files: apiFiles } = useFileList(mergeBaseRef ?? '', newRef ?? '');
   const files = apiFiles ?? EMPTY_FILES;
+
+  useWarmup(mergeBaseRef ?? null, newRef ?? null, apiFiles);
 
   const { files: worktreeFiles } = useWorktreeFiles();
 

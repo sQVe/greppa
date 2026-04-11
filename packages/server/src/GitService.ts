@@ -1,10 +1,39 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import type { CommitEntry, FileEntry } from '@greppa/core';
-import { Data, Effect, Layer, ServiceMap, Stream } from 'effect';
+import type { CommitEntry, FileEntry, SizeTier } from '@greppa/core';
+import { Brand, Data, Effect, Layer, ServiceMap, Stream } from 'effect';
 import { ChildProcess } from 'effect/unstable/process';
 import type { ChildProcessSpawner } from 'effect/unstable/process/ChildProcessSpawner';
+
+// Branded opaque type for resolved 40-char commit SHAs. Functions that require
+// immutable cache keys should accept `Sha` so the compiler rejects branch
+// names, HEAD, or short SHAs at the call site — the SHA-resolution step must
+// happen once, at the CLI boundary, not scattered across consumers.
+export type Sha = string & Brand.Brand<'Sha'>;
+
+export interface RefsConfigValue {
+  oldRef: Sha;
+  newRef: Sha;
+  mergeBaseRef: Sha;
+}
+
+type NameStatusEntry = Omit<FileEntry, 'lineCount' | 'sizeTier'>;
+
+export const Sha = Brand.nominal<Sha>();
+
+const SIZE_TIER_MEDIUM = 50;
+const SIZE_TIER_LARGE = 500;
+
+export const deriveSizeTier = (lineCount: number): SizeTier => {
+  if (lineCount >= SIZE_TIER_LARGE) {
+    return 'large';
+  }
+  if (lineCount >= SIZE_TIER_MEDIUM) {
+    return 'medium';
+  }
+  return 'small';
+};
 
 export class GitError extends Data.TaggedError('GitError')<{
   message: string;
@@ -26,12 +55,6 @@ export class MergeBaseError extends Data.TaggedError('MergeBaseError')<{
   cause?: unknown;
 }> {}
 
-export interface RefsConfigValue {
-  oldRef: string;
-  newRef: string;
-  mergeBaseRef: string;
-}
-
 export const RepoPath = ServiceMap.Reference('greppa/RepoPath', {
   defaultValue: () => process.cwd(),
 });
@@ -50,11 +73,11 @@ const statusMap: Record<string, FileEntry['changeType']> = {
   U: 'modified',
 };
 
-export const parseNameStatus = (output: string): FileEntry[] =>
+export const parseNameStatus = (output: string): NameStatusEntry[] =>
   output
     .split('\n')
     .filter((line) => line.trim() !== '')
-    .flatMap((line): FileEntry[] => {
+    .flatMap((line): NameStatusEntry[] => {
       const parts = line.split('\t');
       const status = parts[0] ?? '';
 
@@ -69,6 +92,54 @@ export const parseNameStatus = (output: string): FileEntry[] =>
 
       return [{ path: parts[1] ?? '', changeType }];
     });
+
+const parseNumstatCount = (raw: string | undefined): number => {
+  if (raw == null || raw === '-') {
+    return 0;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : 0;
+};
+
+// git diff --numstat -z emits records terminated by NUL. Regular entries look
+// like `added\tdeleted\tpath\0`. Renames are spread across three NUL-separated
+// tokens: `added\tdeleted\t\0`, `oldpath\0`, `newpath\0`. Keying by the new
+// path keeps lineCount aligned with the post-rename FileEntry.path.
+export const parseNumstat = (output: string): Map<string, number> => {
+  const result = new Map<string, number>();
+  const tokens = output.split('\0');
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i] ?? '';
+    if (token === '') {
+      i += 1;
+      continue;
+    }
+    const parts = token.split('\t');
+    if (parts.length < 3) {
+      i += 1;
+      continue;
+    }
+    const count = parseNumstatCount(parts[0]) + parseNumstatCount(parts[1]);
+    if (parts[2] === '') {
+      const newPath = tokens[i + 2];
+      if (newPath != null && newPath !== '') {
+        result.set(newPath, count);
+      } else {
+        // A rename header (trailing tab) without a follow-up path token indicates
+        // truncated or corrupt git output — surface it so a silently-miskeyed
+        // cache entry doesn't become a debugging rabbit hole later.
+        // oxlint-disable-next-line no-console -- pure parser; no logger plumbed in
+        console.warn(`parseNumstat: malformed rename record, missing newPath token (added+deleted=${count})`);
+      }
+      i += 3;
+      continue;
+    }
+    result.set(parts[2] ?? '', count);
+    i += 1;
+  }
+  return result;
+};
 
 const COMMIT_FIELD_SEP = '\x1f';
 
@@ -157,7 +228,7 @@ export class GitService extends ServiceMap.Service<
     ) => Effect.Effect<string, GitError, ChildProcessSpawner | typeof RepoPath>;
     resolveRef: (
       ref: string,
-    ) => Effect.Effect<string, ResolveRefError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<Sha, ResolveRefError, ChildProcessSpawner | typeof RepoPath>;
     detectDefaultBranch: () => Effect.Effect<
       string,
       DetectDefaultBranchError,
@@ -166,7 +237,7 @@ export class GitService extends ServiceMap.Service<
     mergeBase: (
       ref1: string,
       ref2: string,
-    ) => Effect.Effect<string, MergeBaseError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<Sha, MergeBaseError, ChildProcessSpawner | typeof RepoPath>;
     listWorkingTreeFiles: () => Effect.Effect<
       FileEntry[],
       GitError,
@@ -187,8 +258,22 @@ export const GitServiceLive = Layer.succeed(
   GitService.of({
     listFiles: (oldRef, newRef) =>
       Effect.all([validateRef(oldRef), validateRef(newRef)]).pipe(
-        Effect.flatMap(() => runGit(['diff', '--name-status', oldRef, newRef])),
-        Effect.map(parseNameStatus),
+        Effect.flatMap(() =>
+          Effect.all([
+            runGit(['diff', '--name-status', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
+            runGit(['diff', '--numstat', '-z', oldRef, newRef]).pipe(Effect.map(parseNumstat)),
+          ]),
+        ),
+        Effect.map(([nameStatus, numstat]) =>
+          nameStatus.map((entry): FileEntry => {
+            const lineCount = numstat.get(entry.path) ?? 0;
+            return {
+              ...entry,
+              lineCount,
+              sizeTier: deriveSizeTier(lineCount),
+            };
+          }),
+        ),
       ),
     getFileContent: (ref, path) =>
       Effect.all([validateRef(ref), validatePath(path)]).pipe(
@@ -196,8 +281,8 @@ export const GitServiceLive = Layer.succeed(
       ),
     resolveRef: (ref) =>
       validateRef(ref).pipe(
-        Effect.flatMap(() => runGit(['rev-parse', '--verify', ref])),
-        Effect.map(() => ref),
+        Effect.flatMap(() => runGit(['rev-parse', '--verify', `${ref}^{commit}`])),
+        Effect.map((output) => Sha(output.trim())),
         Effect.mapError((error) => new ResolveRefError({ message: error.message, cause: error })),
       ),
     detectDefaultBranch: () => {
@@ -223,11 +308,25 @@ export const GitServiceLive = Layer.succeed(
     mergeBase: (ref1, ref2) =>
       Effect.all([validateRef(ref1), validateRef(ref2)]).pipe(
         Effect.flatMap(() => runGit(['merge-base', ref1, ref2])),
-        Effect.map((output) => output.trim()),
+        Effect.map((output) => Sha(output.trim())),
         Effect.mapError((error) => new MergeBaseError({ message: error.message, cause: error })),
       ),
     listWorkingTreeFiles: () =>
-      runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
+      Effect.all([
+        runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
+        runGit(['diff', '--numstat', '-z', 'HEAD']).pipe(Effect.map(parseNumstat)),
+      ]).pipe(
+        Effect.map(([nameStatus, numstat]) =>
+          nameStatus.map((entry): FileEntry => {
+            const lineCount = numstat.get(entry.path) ?? 0;
+            return {
+              ...entry,
+              lineCount,
+              sizeTier: deriveSizeTier(lineCount),
+            };
+          }),
+        ),
+      ),
     getWorkingTreeFileContent: (path) =>
       validatePath(path).pipe(
         Effect.flatMap(() =>

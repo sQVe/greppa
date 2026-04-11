@@ -210,6 +210,7 @@ describe('useWarmup', () => {
     ['empty oldRef', '', 'refNew', [file('src/a.ts')]],
     ['empty newRef', 'refOld', '', [file('src/a.ts')]],
     ['null files', 'refOld', 'refNew', null],
+    ['empty files', 'refOld', 'refNew', []],
   ])('does not open an EventSource when %s', (_label, oldRef, newRef, files) => {
     renderHook(() => {
       useWarmup(oldRef, newRef, files);

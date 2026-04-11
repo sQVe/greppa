@@ -10,7 +10,7 @@ export const useWarmup = (
   newRef: string | null,
   files: readonly FileNode[] | null,
 ): void => {
-  const hasFiles = files != null;
+  const hasFiles = files != null && files.length > 0;
 
   useEffect(() => {
     if (oldRef == null || newRef == null || !hasFiles || oldRef === '' || newRef === '') {

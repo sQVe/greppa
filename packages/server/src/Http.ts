@@ -38,36 +38,33 @@ interface StoredState {
   commits: string[];
 }
 
-// TODO(greppa-30u): migrate fileListCache, worktreeDiffContentCache, and worktreeFileListCache
-// to CacheService. Only diffContentCache was migrated in the first pass because it is the only
-// cache shared between the REST handler and the SSE warm-up stream. The rest still use this
-// local TTL map; keep them here until a multi-instance CacheService shape is designed.
+// Mirrors CacheService's LRU-by-insertion-order semantics for caches that don't
+// need Effect wrapping (REST-only, not shared with the SSE warm-up path). Keeping
+// behavior aligned means a future consolidation is a mechanical rename.
 const createCache = <T>(ttlMs: number, maxEntries: number) => {
   const store = new Map<string, CacheEntry<T>>();
 
-  const evictStale = () => {
-    const now = Date.now();
-    for (const [key, entry] of store) {
-      if (now - entry.timestamp >= ttlMs) {
-        store.delete(key);
-      }
-    }
-  };
-
   return {
     get: (key: string): T | null => {
-      const cached = store.get(key);
-      if (cached != null && Date.now() - cached.timestamp < ttlMs) {
-        return cached.value;
+      const entry = store.get(key);
+      if (entry == null) {
+        return null;
       }
-      return null;
+      if (Date.now() - entry.timestamp >= ttlMs) {
+        store.delete(key);
+        return null;
+      }
+      store.delete(key);
+      store.set(key, entry);
+      return entry.value;
     },
     set: (key: string, value: T) => {
+      store.delete(key);
       if (store.size >= maxEntries) {
-        evictStale();
-      }
-      if (store.size >= maxEntries) {
-        store.clear();
+        const oldest = store.keys().next().value;
+        if (oldest != null) {
+          store.delete(oldest);
+        }
       }
       store.set(key, { value, timestamp: Date.now() });
     },

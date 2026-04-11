@@ -116,18 +116,12 @@ const extractFilePath = (url: string, oldRef: string, newRef: string) => {
   return decoded.slice(prefix.length);
 };
 
-const computeDiff = (oldRef: string, newRef: string, filePath: string) =>
+const computeDiffForEntry = (oldRef: string, newRef: string, entry: FileEntry) =>
   Effect.gen(function* () {
     const git = yield* GitService;
     const cache = yield* CacheService;
 
-    const entries = yield* getFileList(oldRef, newRef);
-    const matchesPath = (entry: FileEntry) => entry.path === filePath;
-    const entry = entries.find(matchesPath);
-    if (entry == null) {
-      return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
-    }
-    const changeType = entry.changeType;
+    const { path: filePath, changeType } = entry;
     const contentKey = `${oldRef}:${newRef}:${filePath}`;
     const cachedContent = yield* cache.get(contentKey);
 
@@ -148,6 +142,16 @@ const computeDiff = (oldRef: string, newRef: string, filePath: string) =>
       oldContent,
       newContent,
     };
+  });
+
+const computeDiff = (oldRef: string, newRef: string, filePath: string) =>
+  Effect.gen(function* () {
+    const entries = yield* getFileList(oldRef, newRef);
+    const entry = entries.find((candidate) => candidate.path === filePath);
+    if (entry == null) {
+      return yield* Effect.fail(new GitError({ message: `File not found in diff: ${filePath}` }));
+    }
+    return yield* computeDiffForEntry(oldRef, newRef, entry);
   });
 
 const DiffHandlers = HttpApiBuilder.group(Api, 'diff', (handlers) =>
@@ -321,7 +325,7 @@ const makeWarmupHandler = (services: ServiceMap.ServiceMap<WarmupServices>) =>
     const diffs = Stream.fromIterable(nonLarge).pipe(
       Stream.mapEffect(
         (entry) =>
-          computeDiff(oldRef, newRef, entry.path).pipe(
+          computeDiffForEntry(oldRef, newRef, entry).pipe(
             Effect.tapError((error) =>
               Effect.logWarning(`warm-up failed for ${entry.path}`, error),
             ),

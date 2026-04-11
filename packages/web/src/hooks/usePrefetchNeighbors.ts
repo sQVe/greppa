@@ -34,9 +34,14 @@ export const usePrefetchNeighbors = ({
       return;
     }
     for (const neighbor of neighborsRef.current) {
+      // Match useDiffContent's query options so the prefetched entry is
+      // reused on selection and a speculative prefetch doesn't retry on
+      // transient errors.
       void queryClient.prefetchQuery({
         queryKey: ['diff', oldRef, newRef, neighbor.path],
         queryFn: () => fetchDiffContent(oldRef, newRef, neighbor.path),
+        retry: false,
+        staleTime: Number.POSITIVE_INFINITY,
       });
     }
   }, [queryClient, oldRef, newRef, signature]);

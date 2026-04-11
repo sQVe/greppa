@@ -55,6 +55,14 @@ describe('usePrefetchNeighbors', () => {
       ['diff', 'HEAD~1', 'HEAD', 'b.ts'],
       ['diff', 'HEAD~1', 'HEAD', 'c.ts'],
     ]);
+
+    for (const [options] of prefetchSpy.mock.calls) {
+      // Match the canonical diff query so prefetched entries are reused by
+      // useDiffContent without a refetch and speculative prefetches don't
+      // re-attempt on transient failures.
+      expect(options.retry).toBe(false);
+      expect(options.staleTime).toBe(Number.POSITIVE_INFINITY);
+    }
   });
 
   it('does not re-fire when re-rendered with an equivalent ordered list', () => {

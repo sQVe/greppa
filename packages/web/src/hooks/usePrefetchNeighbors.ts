@@ -21,30 +21,23 @@ export const usePrefetchNeighbors = ({
   depth,
 }: UsePrefetchNeighborsOptions): void => {
   const queryClient = useQueryClient();
-  const lastSignatureRef = useRef<string | null>(null);
+  const neighborsRef = useRef<FileNode[]>([]);
+  neighborsRef.current = nextFilesToPrefetch(orderedFiles, selectedPath, depth);
+
+  // Key off a value-stable signature instead of orderedFiles identity — a
+  // query refetch or parent re-render with a fresh array but identical path
+  // set would otherwise re-trigger prefetch on every render.
+  const signature = `${selectedPath ?? ''}\u0000${oldRef}\u0000${newRef}\u0000${neighborsRef.current.map((n) => n.path).join('\u0001')}`;
 
   useEffect(() => {
     if (oldRef === '' || newRef === '') {
       return;
     }
-
-    const neighbors = nextFilesToPrefetch(orderedFiles, selectedPath, depth);
-    const signature = [
-      selectedPath ?? '',
-      oldRef,
-      newRef,
-      neighbors.map((n) => n.path).join('\u0001'),
-    ].join('\u0000');
-    if (lastSignatureRef.current === signature) {
-      return;
-    }
-    lastSignatureRef.current = signature;
-
-    for (const neighbor of neighbors) {
+    for (const neighbor of neighborsRef.current) {
       void queryClient.prefetchQuery({
         queryKey: ['diff', oldRef, newRef, neighbor.path],
         queryFn: () => fetchDiffContent(oldRef, newRef, neighbor.path),
       });
     }
-  }, [queryClient, orderedFiles, selectedPath, oldRef, newRef, depth]);
+  }, [queryClient, oldRef, newRef, signature]);
 };

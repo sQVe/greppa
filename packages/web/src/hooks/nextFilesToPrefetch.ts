@@ -16,7 +16,7 @@ export const nextFilesToPrefetch = (
   const result: FileNode[] = [];
   for (let i = index + 1; i < orderedFiles.length && result.length < depth; i++) {
     const node = orderedFiles[i];
-    if (node == null || node.sizeTier === 'large') {
+    if (node?.type !== 'file' || node.sizeTier === 'large') {
       continue;
     }
     result.push(node);

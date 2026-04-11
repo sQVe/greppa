@@ -52,4 +52,41 @@ describe('diffCache', () => {
 
     expect(result).toEqual(value);
   });
+
+  it('propagates setDiff rejections so callers can decide how to handle quota/private-mode errors', async () => {
+    vi.resetModules();
+    vi.doMock('idb-keyval', () => ({
+      createStore: vi.fn(() => ({})),
+      get: vi.fn(),
+      set: vi.fn(() => Promise.reject(new DOMException('QuotaExceededError', 'QuotaExceededError'))),
+    }));
+
+    const { setDiff } = await import('./diffCache');
+    const key = { oldRef: 'q', newRef: 'r', path: 'src/oom.ts' };
+    const value: DiffResponse = {
+      path: 'src/oom.ts',
+      changeType: 'modified',
+      oldContent: 'old',
+      newContent: 'new',
+    };
+
+    await expect(setDiff(key, value)).rejects.toThrow('QuotaExceededError');
+    vi.doUnmock('idb-keyval');
+  });
+
+  it('propagates getDiff rejections so callers see transport-level IndexedDB failures', async () => {
+    vi.resetModules();
+    vi.doMock('idb-keyval', () => ({
+      createStore: vi.fn(() => ({})),
+      get: vi.fn(() => Promise.reject(new Error('transaction aborted'))),
+      set: vi.fn(),
+    }));
+
+    const { getDiff } = await import('./diffCache');
+
+    await expect(
+      getDiff({ oldRef: 'a', newRef: 'b', path: 'c' }),
+    ).rejects.toThrow('transaction aborted');
+    vi.doUnmock('idb-keyval');
+  });
 });

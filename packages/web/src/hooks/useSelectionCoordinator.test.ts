@@ -1,14 +1,15 @@
 // @vitest-environment happy-dom
+// oxlint-disable-next-line import/no-unassigned-import -- side-effect polyfill for IndexedDB under happy-dom
+import 'fake-indexeddb/auto';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { FileNode } from '../fixtures/types';
-import { usePrefetchNeighbors } from './usePrefetchNeighbors';
 import { useSelectionCoordinator } from './useSelectionCoordinator';
-
-vi.mock('./usePrefetchNeighbors', () => ({
-  usePrefetchNeighbors: vi.fn(),
-}));
 
 vi.mock('./useMultiSelect', () => ({
   useMultiSelect: () => ({
@@ -53,37 +54,61 @@ vi.mock('./useFileSelectionHandlers', () => ({
   }),
 }));
 
-const mockedPrefetchNeighbors = vi.mocked(usePrefetchNeighbors);
-
 const file = (path: string): FileNode => ({ path, name: path, type: 'file' });
+
+const createWrapper = (queryClient: QueryClient) =>
+  ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children);
 
 describe('useSelectionCoordinator', () => {
   beforeEach(() => {
-    mockedPrefetchNeighbors.mockClear();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ path: 'stub', changeType: 'modified' }),
+    } as Response);
   });
 
-  it('invokes usePrefetchNeighbors with depth 2 for the committed context', () => {
+  it('prefetches the two committed files following the selection at depth 2', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery');
+    const files = [file('src/a.ts'), file('src/b.ts'), file('src/c.ts'), file('src/d.ts')];
+
+    renderHook(
+      () => {
+        useSelectionCoordinator({
+          files,
+          worktreeFiles: [],
+          oldRef: 'HEAD~1',
+          newRef: 'HEAD',
+        });
+      },
+      { wrapper: createWrapper(queryClient) },
+    );
+
+    const queryKeys = prefetchSpy.mock.calls.map((call) => call[0].queryKey);
+    expect(queryKeys).toEqual([
+      ['diff', 'HEAD~1', 'HEAD', 'src/b.ts'],
+      ['diff', 'HEAD~1', 'HEAD', 'src/c.ts'],
+    ]);
+  });
+
+  it('does not prefetch when refs are unset', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery');
     const files = [file('src/a.ts'), file('src/b.ts'), file('src/c.ts')];
 
-    renderHook(() => {
-      useSelectionCoordinator({
-        files,
-        worktreeFiles: [],
-        oldRef: 'HEAD~1',
-        newRef: 'HEAD',
-      });
-    });
-
-    const committedCall = mockedPrefetchNeighbors.mock.calls.find(
-      (call) => call[0].oldRef === 'HEAD~1' && call[0].newRef === 'HEAD',
+    renderHook(
+      () => {
+        useSelectionCoordinator({
+          files,
+          worktreeFiles: [],
+          oldRef: '',
+          newRef: '',
+        });
+      },
+      { wrapper: createWrapper(queryClient) },
     );
-    expect(committedCall).toBeDefined();
-    expect(committedCall?.[0].depth).toBe(2);
-    expect(committedCall?.[0].selectedPath).toBe('src/a.ts');
-    expect(committedCall?.[0].orderedFiles.map((n) => n.path)).toEqual([
-      'src/a.ts',
-      'src/b.ts',
-      'src/c.ts',
-    ]);
+
+    expect(prefetchSpy).not.toHaveBeenCalled();
   });
 });

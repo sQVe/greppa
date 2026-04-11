@@ -191,6 +191,33 @@ describe('useWarmup', () => {
     expect(eventSource.close).toHaveBeenCalledTimes(1);
   });
 
+  it('closes the EventSource on unmount even if no terminal event has fired', () => {
+    const { unmount } = renderHook(() => {
+      useWarmup('refOld', 'refNew', [file('src/a.ts')]);
+    });
+
+    const eventSource = FakeEventSource.instances[0]!;
+    expect(eventSource.close).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(eventSource.close).toHaveBeenCalledTimes(1);
+  });
+
+  it.each<[string, string | null, string | null, readonly FileNode[] | null]>([
+    ['null oldRef', null, 'refNew', [file('src/a.ts')]],
+    ['null newRef', 'refOld', null, [file('src/a.ts')]],
+    ['empty oldRef', '', 'refNew', [file('src/a.ts')]],
+    ['empty newRef', 'refOld', '', [file('src/a.ts')]],
+    ['null files', 'refOld', 'refNew', null],
+  ])('does not open an EventSource when %s', (_label, oldRef, newRef, files) => {
+    renderHook(() => {
+      useWarmup(oldRef, newRef, files);
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(0);
+  });
+
   it('does not open a new EventSource when only the files array identity changes', () => {
     const firstFiles = [file('src/a.ts')];
     const { rerender } = renderHook(

@@ -313,6 +313,16 @@ describe('GitService', () => {
       expect(second).toBe(sha);
     });
 
+    it('expands an abbreviated SHA to the full 40-char form', async () => {
+      const fullSha = (await runGitService((git) => git.resolveRef('HEAD'))) as string;
+      const abbrev = fullSha.slice(0, 8);
+
+      const resolved = (await runGitService((git) => git.resolveRef(abbrev))) as string;
+
+      expect(resolved).toBe(fullSha);
+      expect(resolved).toMatch(/^[0-9a-f]{40}$/);
+    });
+
     it('should fail with ResolveRefError for nonexistent ref', async () => {
       const error = await runGitService((git) =>
         git.resolveRef('nonexistent-ref-xyz').pipe(Effect.flip),

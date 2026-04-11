@@ -11,7 +11,7 @@ import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
-import { GitServiceLive, RefsConfig, RepoPath } from './GitService';
+import { GitServiceLive, RefsConfig, RepoPath, Sha } from './GitService';
 import { ApiRoutes, WarmupRoute } from './Http';
 
 const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
@@ -66,7 +66,11 @@ const PlatformLayer = Layer.mergeAll(
   GitServiceLive,
   CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG),
   Layer.succeed(RepoPath, monorepoRoot),
-  Layer.succeed(RefsConfig, { oldRef: 'main', newRef: 'HEAD', mergeBaseRef: parentSha ?? '' }),
+  Layer.succeed(RefsConfig, {
+    oldRef: Sha('main'),
+    newRef: Sha('HEAD'),
+    mergeBaseRef: Sha(parentSha ?? ''),
+  }),
 );
 
 const TestAppLayer = Layer.mergeAll(ApiRoutes, WarmupRoute).pipe(Layer.provide(PlatformLayer));

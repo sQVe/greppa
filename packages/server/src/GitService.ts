@@ -2,9 +2,16 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 import type { CommitEntry, FileEntry, SizeTier } from '@greppa/core';
-import { Data, Effect, Layer, ServiceMap, Stream } from 'effect';
+import { Brand, Data, Effect, Layer, ServiceMap, Stream } from 'effect';
 import { ChildProcess } from 'effect/unstable/process';
 import type { ChildProcessSpawner } from 'effect/unstable/process/ChildProcessSpawner';
+
+// Branded opaque type for resolved 40-char commit SHAs. Functions that require
+// immutable cache keys should accept `Sha` so the compiler rejects branch
+// names, HEAD, or short SHAs at the call site — the SHA-resolution step must
+// happen once, at the CLI boundary, not scattered across consumers.
+export type Sha = string & Brand.Brand<'Sha'>;
+export const Sha = Brand.nominal<Sha>();
 
 const SIZE_TIER_MEDIUM = 50;
 const SIZE_TIER_LARGE = 500;
@@ -40,9 +47,9 @@ export class MergeBaseError extends Data.TaggedError('MergeBaseError')<{
 }> {}
 
 export interface RefsConfigValue {
-  oldRef: string;
-  newRef: string;
-  mergeBaseRef: string;
+  oldRef: Sha;
+  newRef: Sha;
+  mergeBaseRef: Sha;
 }
 
 export const RepoPath = ServiceMap.Reference('greppa/RepoPath', {
@@ -220,7 +227,7 @@ export class GitService extends ServiceMap.Service<
     ) => Effect.Effect<string, GitError, ChildProcessSpawner | typeof RepoPath>;
     resolveRef: (
       ref: string,
-    ) => Effect.Effect<string, ResolveRefError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<Sha, ResolveRefError, ChildProcessSpawner | typeof RepoPath>;
     detectDefaultBranch: () => Effect.Effect<
       string,
       DetectDefaultBranchError,
@@ -229,7 +236,7 @@ export class GitService extends ServiceMap.Service<
     mergeBase: (
       ref1: string,
       ref2: string,
-    ) => Effect.Effect<string, MergeBaseError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<Sha, MergeBaseError, ChildProcessSpawner | typeof RepoPath>;
     listWorkingTreeFiles: () => Effect.Effect<
       FileEntry[],
       GitError,
@@ -274,7 +281,7 @@ export const GitServiceLive = Layer.succeed(
     resolveRef: (ref) =>
       validateRef(ref).pipe(
         Effect.flatMap(() => runGit(['rev-parse', '--verify', `${ref}^{commit}`])),
-        Effect.map((output) => output.trim()),
+        Effect.map((output) => Sha(output.trim())),
         Effect.mapError((error) => new ResolveRefError({ message: error.message, cause: error })),
       ),
     detectDefaultBranch: () => {
@@ -300,7 +307,7 @@ export const GitServiceLive = Layer.succeed(
     mergeBase: (ref1, ref2) =>
       Effect.all([validateRef(ref1), validateRef(ref2)]).pipe(
         Effect.flatMap(() => runGit(['merge-base', ref1, ref2])),
-        Effect.map((output) => output.trim()),
+        Effect.map((output) => Sha(output.trim())),
         Effect.mapError((error) => new MergeBaseError({ message: error.message, cause: error })),
       ),
     listWorkingTreeFiles: () =>

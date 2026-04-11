@@ -11,6 +11,15 @@ import type { ChildProcessSpawner } from 'effect/unstable/process/ChildProcessSp
 // names, HEAD, or short SHAs at the call site — the SHA-resolution step must
 // happen once, at the CLI boundary, not scattered across consumers.
 export type Sha = string & Brand.Brand<'Sha'>;
+
+export interface RefsConfigValue {
+  oldRef: Sha;
+  newRef: Sha;
+  mergeBaseRef: Sha;
+}
+
+type NameStatusEntry = Omit<FileEntry, 'lineCount' | 'sizeTier'>;
+
 export const Sha = Brand.nominal<Sha>();
 
 const SIZE_TIER_MEDIUM = 50;
@@ -46,12 +55,6 @@ export class MergeBaseError extends Data.TaggedError('MergeBaseError')<{
   cause?: unknown;
 }> {}
 
-export interface RefsConfigValue {
-  oldRef: Sha;
-  newRef: Sha;
-  mergeBaseRef: Sha;
-}
-
 export const RepoPath = ServiceMap.Reference('greppa/RepoPath', {
   defaultValue: () => process.cwd(),
 });
@@ -61,8 +64,6 @@ export const RefsConfig = ServiceMap.Reference<RefsConfigValue>('greppa/RefsConf
     throw new Error('RefsConfig must be provided');
   },
 });
-
-type NameStatusEntry = Omit<FileEntry, 'lineCount' | 'sizeTier'>;
 
 const statusMap: Record<string, FileEntry['changeType']> = {
   A: 'added',

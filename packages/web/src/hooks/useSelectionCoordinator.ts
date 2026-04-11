@@ -10,6 +10,13 @@ import { useFileSelectionHandlers } from './useFileSelectionHandlers';
 import { useMultiSelect } from './useMultiSelect';
 import { usePrefetchNeighbors } from './usePrefetchNeighbors';
 
+interface SelectionCoordinatorOptions {
+  files: FileNode[];
+  worktreeFiles: FileNode[];
+  oldRef: string;
+  newRef: string;
+}
+
 const PREFETCH_DEPTH = 2;
 
 const primarySelectedPath = (selectedPaths: Set<string>, orderedPaths: string[]): string | null => {
@@ -18,13 +25,6 @@ const primarySelectedPath = (selectedPaths: Set<string>, orderedPaths: string[])
   }
   return orderedPaths.find((path) => selectedPaths.has(path)) ?? null;
 };
-
-interface SelectionCoordinatorOptions {
-  files: FileNode[];
-  worktreeFiles: FileNode[];
-  oldRef: string;
-  newRef: string;
-}
 
 export const useSelectionCoordinator = ({
   files,

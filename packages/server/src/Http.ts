@@ -26,17 +26,17 @@ interface DiffContent {
   newContent: string;
 }
 
-const isDiffContent = (value: unknown): value is DiffContent =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as Partial<DiffContent>).oldContent === 'string' &&
-  typeof (value as Partial<DiffContent>).newContent === 'string';
-
 interface StoredState {
   file: string[];
   wt: string[];
   commits: string[];
 }
+
+const isDiffContent = (value: unknown): value is DiffContent =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as Partial<DiffContent>).oldContent === 'string' &&
+  typeof (value as Partial<DiffContent>).newContent === 'string';
 
 // Mirrors CacheService's LRU-by-insertion-order semantics for caches that don't
 // need Effect wrapping (REST-only, not shared with the SSE warm-up path). Keeping

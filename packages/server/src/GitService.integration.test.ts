@@ -147,14 +147,14 @@ describe('GitService', () => {
   });
 
   describe('parseNumstat', () => {
-    it('parses a numeric line into added+removed', () => {
-      const result = parseNumstat('3\t2\tsrc/index.ts');
+    it('parses a numeric record into added+removed', () => {
+      const result = parseNumstat('3\t2\tsrc/index.ts\0');
 
       expect(result.get('src/index.ts')).toBe(5);
     });
 
-    it('parses multiple newline-separated lines', () => {
-      const result = parseNumstat('3\t2\ta.ts\n10\t0\tb.ts\n0\t7\tc.ts');
+    it('parses multiple NUL-terminated records', () => {
+      const result = parseNumstat('3\t2\ta.ts\x0010\t0\tb.ts\x000\t7\tc.ts\x00');
 
       expect(result.get('a.ts')).toBe(5);
       expect(result.get('b.ts')).toBe(10);
@@ -163,9 +163,25 @@ describe('GitService', () => {
     });
 
     it('treats binary diff as zero lines', () => {
-      const result = parseNumstat('-\t-\tassets/logo.png');
+      const result = parseNumstat('-\t-\tassets/logo.png\0');
 
       expect(result.get('assets/logo.png')).toBe(0);
+    });
+
+    it('keys renamed files by the new path', () => {
+      // git diff --numstat -z rename format: "added\tdeleted\t\0oldpath\0newpath\0"
+      const result = parseNumstat('9\t39\t\0packages/old/file.css\0packages/new/file.css\0');
+
+      expect(result.get('packages/new/file.css')).toBe(48);
+      expect(result.size).toBe(1);
+    });
+
+    it('handles a rename followed by a regular entry', () => {
+      const result = parseNumstat('2\t1\t\x00old/a.ts\x00new/a.ts\x0010\t0\tregular/b.ts\x00');
+
+      expect(result.get('new/a.ts')).toBe(3);
+      expect(result.get('regular/b.ts')).toBe(10);
+      expect(result.size).toBe(2);
     });
   });
 

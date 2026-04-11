@@ -93,14 +93,36 @@ const parseNumstatCount = (raw: string | undefined): number => {
   return Number.isFinite(value) ? value : 0;
 };
 
+// git diff --numstat -z emits records terminated by NUL. Regular entries look
+// like `added\tdeleted\tpath\0`. Renames are spread across three NUL-separated
+// tokens: `added\tdeleted\t\0`, `oldpath\0`, `newpath\0`. Keying by the new
+// path keeps lineCount aligned with the post-rename FileEntry.path.
 export const parseNumstat = (output: string): Map<string, number> => {
   const result = new Map<string, number>();
-  for (const line of output.split('\n')) {
-    const parts = line.split('\t');
-    const path = parts[2];
-    if (path != null) {
-      result.set(path, parseNumstatCount(parts[0]) + parseNumstatCount(parts[1]));
+  const tokens = output.split('\0');
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i] ?? '';
+    if (token === '') {
+      i += 1;
+      continue;
     }
+    const parts = token.split('\t');
+    if (parts.length < 3) {
+      i += 1;
+      continue;
+    }
+    const count = parseNumstatCount(parts[0]) + parseNumstatCount(parts[1]);
+    if (parts[2] === '') {
+      const newPath = tokens[i + 2];
+      if (newPath != null && newPath !== '') {
+        result.set(newPath, count);
+      }
+      i += 3;
+      continue;
+    }
+    result.set(parts[2] ?? '', count);
+    i += 1;
   }
   return result;
 };
@@ -225,7 +247,7 @@ export const GitServiceLive = Layer.succeed(
         Effect.flatMap(() =>
           Effect.all([
             runGit(['diff', '--name-status', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
-            runGit(['diff', '--numstat', oldRef, newRef]).pipe(Effect.map(parseNumstat)),
+            runGit(['diff', '--numstat', '-z', oldRef, newRef]).pipe(Effect.map(parseNumstat)),
           ]),
         ),
         Effect.map(([nameStatus, numstat]) =>
@@ -278,7 +300,7 @@ export const GitServiceLive = Layer.succeed(
     listWorkingTreeFiles: () =>
       Effect.all([
         runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
-        runGit(['diff', '--numstat', 'HEAD']).pipe(Effect.map(parseNumstat)),
+        runGit(['diff', '--numstat', '-z', 'HEAD']).pipe(Effect.map(parseNumstat)),
       ]).pipe(
         Effect.map(([nameStatus, numstat]) =>
           nameStatus.map((entry): FileEntry => {

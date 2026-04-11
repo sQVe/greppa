@@ -33,14 +33,17 @@ const resolveRefs = (
   Effect.gen(function* () {
     const git = yield* GitService;
 
-    const oldRef = Option.isSome(oldRefOption)
+    const oldRefInput = Option.isSome(oldRefOption)
       ? oldRefOption.value
       : yield* git.detectDefaultBranch();
 
-    const newRef = Option.isSome(newRefOption) ? newRefOption.value : 'HEAD';
+    const newRefInput = Option.isSome(newRefOption) ? newRefOption.value : 'HEAD';
 
-    yield* git.resolveRef(oldRef);
-    yield* git.resolveRef(newRef);
+    // Resolve to immutable SHAs so downstream caches (file list, diff content,
+    // and the web's IndexedDB diffCache) key on commits that don't move out
+    // from under them when branches advance.
+    const oldRef = yield* git.resolveRef(oldRefInput);
+    const newRef = yield* git.resolveRef(newRefInput);
     const mergeBaseRef = yield* git.mergeBase(oldRef, newRef);
 
     return { oldRef, newRef, mergeBaseRef };

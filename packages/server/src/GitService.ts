@@ -267,8 +267,8 @@ export const GitServiceLive = Layer.succeed(
       ),
     resolveRef: (ref) =>
       validateRef(ref).pipe(
-        Effect.flatMap(() => runGit(['rev-parse', '--verify', ref])),
-        Effect.map(() => ref),
+        Effect.flatMap(() => runGit(['rev-parse', '--verify', `${ref}^{commit}`])),
+        Effect.map((output) => output.trim()),
         Effect.mapError((error) => new ResolveRefError({ message: error.message, cause: error })),
       ),
     detectDefaultBranch: () => {

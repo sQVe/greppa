@@ -300,10 +300,17 @@ describe('GitService', () => {
   });
 
   describe('resolveRef', () => {
-    it('should succeed for a valid branch name', async () => {
-      const result = await runGitService((git) => git.resolveRef('HEAD'));
+    it('returns the resolved 40-char SHA for a symbolic ref', async () => {
+      const result = (await runGitService((git) => git.resolveRef('HEAD'))) as string;
 
-      expect(result).toBe('HEAD');
+      expect(result).toMatch(/^[0-9a-f]{40}$/);
+    });
+
+    it('returns the same SHA when called with that SHA directly', async () => {
+      const sha = (await runGitService((git) => git.resolveRef('HEAD'))) as string;
+      const second = (await runGitService((git) => git.resolveRef(sha))) as string;
+
+      expect(second).toBe(sha);
     });
 
     it('should fail with ResolveRefError for nonexistent ref', async () => {

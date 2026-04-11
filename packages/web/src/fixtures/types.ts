@@ -9,7 +9,6 @@ export interface FileNode {
   type: 'file' | 'directory';
   changeType?: ChangeType;
   oldPath?: string;
-  lineCount?: number;
   sizeTier?: SizeTier;
   children?: FileNode[];
 }

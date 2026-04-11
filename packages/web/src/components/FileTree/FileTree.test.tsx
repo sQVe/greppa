@@ -258,28 +258,6 @@ describe('FileTree', () => {
     expect(keys.has('src/middleware')).toBe(true);
   });
 
-  it('should render lineCount beside file names', () => {
-    const filesWithLineCount: FileNode[] = [
-      {
-        path: 'src/example.ts',
-        name: 'example.ts',
-        type: 'file',
-        changeType: 'modified',
-        lineCount: 125,
-        sizeTier: 'medium',
-      },
-    ];
-    render(
-      <FileTree
-        {...defaultProps}
-        files={filesWithLineCount}
-        expandedKeys={collectDirectoryIds(filesWithLineCount)}
-      />,
-    );
-
-    expect(screen.getByText('125')).toBeDefined();
-  });
-
   it('should not render badges on directories with changeType', () => {
     const dirWithChange: FileNode[] = [
       {

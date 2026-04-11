@@ -21,7 +21,6 @@ export const FileEntry = Schema.Struct({
   path: Schema.String,
   changeType: ChangeType,
   oldPath: Schema.optional(Schema.String),
-  lineCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   sizeTier: SizeTier,
 });
 export type FileEntry = typeof FileEntry.Type;

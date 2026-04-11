@@ -18,7 +18,7 @@ export interface RefsConfigValue {
   mergeBaseRef: Sha;
 }
 
-type NameStatusEntry = Omit<FileEntry, 'lineCount' | 'sizeTier'>;
+type NameStatusEntry = Omit<FileEntry, 'sizeTier'>;
 
 export const Sha = Brand.nominal<Sha>();
 
@@ -104,7 +104,7 @@ const parseNumstatCount = (raw: string | undefined): number => {
 // git diff --numstat -z emits records terminated by NUL. Regular entries look
 // like `added\tdeleted\tpath\0`. Renames are spread across three NUL-separated
 // tokens: `added\tdeleted\t\0`, `oldpath\0`, `newpath\0`. Keying by the new
-// path keeps lineCount aligned with the post-rename FileEntry.path.
+// path keeps the count aligned with the post-rename FileEntry.path.
 export const parseNumstat = (output: string): Map<string, number> => {
   const result = new Map<string, number>();
   const tokens = output.split('\0');
@@ -269,7 +269,6 @@ export const GitServiceLive = Layer.succeed(
             const lineCount = numstat.get(entry.path) ?? 0;
             return {
               ...entry,
-              lineCount,
               sizeTier: deriveSizeTier(lineCount),
             };
           }),
@@ -321,7 +320,6 @@ export const GitServiceLive = Layer.succeed(
             const lineCount = numstat.get(entry.path) ?? 0;
             return {
               ...entry,
-              lineCount,
               sizeTier: deriveSizeTier(lineCount),
             };
           }),

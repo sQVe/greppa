@@ -46,9 +46,8 @@ export const FileTree = ({
 
   const renderItem = (node: FileNode): ReactNode => {
     const isDirectory = node.type === 'directory';
-    const { changeType, lineCount } = node;
+    const { changeType } = node;
     const label = node.displayName ?? node.name;
-    const showLineCount = !isDirectory && lineCount != null && lineCount > 0;
 
     return (
       <Tree.Item
@@ -97,9 +96,6 @@ export const FileTree = ({
               <Tree.Label>{label}</Tree.Label>
               {changeType != null && !isDirectory ? (
                 <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
-              ) : null}
-              {showLineCount ? (
-                <span className={styles.lineCount}>{lineCount.toLocaleString()}</span>
               ) : null}
             </>
           )}

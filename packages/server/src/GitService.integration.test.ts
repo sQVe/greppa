@@ -251,14 +251,11 @@ describe('GitService', () => {
       }
     });
 
-    it('should carry numeric lineCount and valid sizeTier on every entry', async () => {
+    it('should carry valid sizeTier on every entry', async () => {
       const result = (await runGitService((git) => git.listFiles(oldRef, newRef))) as FileEntry[];
 
       expect(result.length).toBeGreaterThan(0);
       for (const entry of result) {
-        expect(typeof entry.lineCount).toBe('number');
-        expect(Number.isFinite(entry.lineCount)).toBe(true);
-        expect(entry.lineCount).toBeGreaterThanOrEqual(0);
         expect(['small', 'medium', 'large']).toContain(entry.sizeTier);
       }
     });
@@ -379,13 +376,10 @@ describe('GitService', () => {
       }
     });
 
-    it('should carry numeric lineCount and valid sizeTier on every entry', async () => {
+    it('should carry valid sizeTier on every entry', async () => {
       const result = (await runGitService((git) => git.listWorkingTreeFiles())) as FileEntry[];
 
       for (const entry of result) {
-        expect(typeof entry.lineCount).toBe('number');
-        expect(Number.isFinite(entry.lineCount)).toBe(true);
-        expect(entry.lineCount).toBeGreaterThanOrEqual(0);
         expect(['small', 'medium', 'large']).toContain(entry.sizeTier);
       }
     });

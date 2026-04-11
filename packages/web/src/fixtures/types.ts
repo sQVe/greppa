@@ -1,6 +1,6 @@
-export type ChangeType = 'added' | 'modified' | 'deleted' | 'renamed';
+import type { SizeTier } from '@greppa/core';
 
-export type SizeTier = 'small' | 'medium' | 'large';
+export type ChangeType = 'added' | 'modified' | 'deleted' | 'renamed';
 
 export interface FileNode {
   path: string;

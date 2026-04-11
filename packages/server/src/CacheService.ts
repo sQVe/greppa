@@ -47,13 +47,24 @@ export const CacheServiceLive = (config: CacheConfig) =>
         Effect.sync(() => {
           // Refreshing an existing key must not count toward capacity.
           store.delete(key);
+          // Reclaim slots held by expired entries before treating capacity as
+          // full — otherwise stale entries can push out valid ones despite
+          // being ineligible for return via `get`.
+          const now = Date.now();
+          if (store.size >= max) {
+            for (const [existingKey, entry] of store) {
+              if (now - entry.timestamp >= ttlMs) {
+                store.delete(existingKey);
+              }
+            }
+          }
           if (store.size >= max) {
             const oldest = store.keys().next().value;
             if (oldest != null) {
               store.delete(oldest);
             }
           }
-          store.set(key, { value, timestamp: Date.now() });
+          store.set(key, { value, timestamp: now });
         }),
       invalidate: (key: string) =>
         Effect.sync(() => {

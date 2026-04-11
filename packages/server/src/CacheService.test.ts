@@ -87,6 +87,48 @@ describe('CacheService', () => {
       expect(result.c).toBe('C');
     });
 
+    it('purges expired entries before evicting at capacity so fresh entries survive', async () => {
+      // Reproduce the hidden bug: when a stale entry sits later in insertion
+      // order than a fresh one, LRU-by-insertion evicts the fresh entry even
+      // though the stale one already holds a dead slot. A pre-eviction purge
+      // must reclaim the stale slot first.
+      vi.useFakeTimers();
+      try {
+        const result = await run(
+          { ttlMs: 1_000, max: 2 },
+          Effect.gen(function* () {
+            const cache = yield* CacheService;
+            // t=0: stale seeded with its final timestamp.
+            yield* cache.set('stale', 'STALE');
+            // t=100: fresh inserted after stale. Order: [stale@0, fresh@100].
+            vi.advanceTimersByTime(100);
+            yield* cache.set('fresh', 'FRESH');
+            // t=200: touch stale. get() re-inserts without refreshing its
+            // timestamp, so order becomes [fresh@100, stale@0]. Stale is now
+            // at the *end* of insertion order but will expire sooner.
+            vi.advanceTimersByTime(100);
+            yield* cache.get('stale');
+            // t=1001: stale (age 1001) expired, fresh (age 901) valid. Insert
+            // a new key — oldest-by-insertion is 'fresh', so without a prior
+            // purge the valid entry would be evicted instead of the stale one.
+            vi.advanceTimersByTime(801);
+            yield* cache.set('new', 'NEW');
+            return {
+              stale: yield* cache.get('stale'),
+              fresh: yield* cache.get('fresh'),
+              new: yield* cache.get('new'),
+            };
+          }),
+        );
+
+        expect(result.stale).toBeNull();
+        expect(result.fresh).toBe('FRESH');
+        expect(result.new).toBe('NEW');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('refreshing an existing key at capacity does not evict a sibling', async () => {
       const result = await run(
         { ttlMs: 60_000, max: 2 },

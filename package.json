@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "vp run -r build",
+    "changeset": "changeset",
+    "changeset:check": "changeset status --since=origin/main",
     "check": "vp check",
     "ci:publish": "pnpm publish -r --access public --no-git-checks",
     "dev": "pnpm run env:check && (pnpm run dev:caddy & pnpm -r --parallel run dev)",

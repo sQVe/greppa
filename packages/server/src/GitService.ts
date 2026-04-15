@@ -143,25 +143,31 @@ export const parseNumstat = (output: string): Map<string, number> => {
 
 const COMMIT_FIELD_SEP = '\x1f';
 
-export const parseCommitLog = (output: string): CommitEntry[] =>
-  output
-    .split('\n')
-    .filter((line) => line.trim() !== '')
-    .flatMap((line): CommitEntry[] => {
-      const parts = line.split(COMMIT_FIELD_SEP);
-      if (parts.length !== 5) {
-        return [];
-      }
-      return [
-        {
-          sha: parts[0] ?? '',
-          abbrevSha: parts[1] ?? '',
-          subject: parts[2] ?? '',
-          author: parts[3] ?? '',
-          date: parts[4] ?? '',
-        },
-      ];
-    });
+export const parseCommitLog = (output: string): CommitEntry[] => {
+  const commits: (CommitEntry & { files: string[] })[] = [];
+  let current: (CommitEntry & { files: string[] }) | null = null;
+
+  for (const line of output.split('\n')) {
+    if (line === '') {
+      continue;
+    }
+    const parts = line.split(COMMIT_FIELD_SEP);
+    if (parts.length === 5) {
+      current = {
+        sha: parts[0] ?? '',
+        abbrevSha: parts[1] ?? '',
+        subject: parts[2] ?? '',
+        author: parts[3] ?? '',
+        date: parts[4] ?? '',
+        files: [],
+      };
+      commits.push(current);
+    } else if (parts.length === 1 && current != null) {
+      current.files.push(line);
+    }
+  }
+  return commits;
+};
 
 const collectString = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.runCollect(stream).pipe(
@@ -347,6 +353,7 @@ export const GitServiceLive = Layer.succeed(
           runGit([
             'log',
             '--format=%H\x1f%h\x1f%s\x1f%an\x1f%aI',
+            '--name-only',
             `${oldRef}..${newRef}`,
           ]),
         ),

@@ -197,7 +197,7 @@ describe('GitService', () => {
   });
 
   describe('parseCommitLog', () => {
-    it('should parse a single commit', () => {
+    it('should parse a single commit with no files', () => {
       const output = 'abc123full\x1fabc123\x1ffix: some bug\x1fAlice\x1f2026-04-03T10:00:00+00:00';
       expect(parseCommitLog(output)).toEqual([
         {
@@ -206,32 +206,58 @@ describe('GitService', () => {
           subject: 'fix: some bug',
           author: 'Alice',
           date: '2026-04-03T10:00:00+00:00',
+          files: [],
         },
       ]);
     });
 
-    it('should parse multiple commits', () => {
+    it('should attach file list following a commit header', () => {
       const output = [
-        'sha1\x1fab1\x1ffeat: first\x1fAlice\x1f2026-04-03T10:00:00+00:00',
-        'sha2\x1fab2\x1ffix: second\x1fBob\x1f2026-04-02T09:00:00+00:00',
+        'sha1\x1fab1\x1ffeat\x1fAlice\x1f2026-04-03T10:00:00+00:00',
+        'src/a.ts',
+        'src/b.ts',
       ].join('\n');
 
       expect(parseCommitLog(output)).toEqual([
-        { sha: 'sha1', abbrevSha: 'ab1', subject: 'feat: first', author: 'Alice', date: '2026-04-03T10:00:00+00:00' },
-        { sha: 'sha2', abbrevSha: 'ab2', subject: 'fix: second', author: 'Bob', date: '2026-04-02T09:00:00+00:00' },
+        {
+          sha: 'sha1',
+          abbrevSha: 'ab1',
+          subject: 'feat',
+          author: 'Alice',
+          date: '2026-04-03T10:00:00+00:00',
+          files: ['src/a.ts', 'src/b.ts'],
+        },
       ]);
     });
 
-    it('should skip empty lines', () => {
-      const output = 'sha1\x1fab1\x1ffeat: first\x1fAlice\x1f2026-04-03T10:00:00+00:00\n\n';
-      expect(parseCommitLog(output)).toHaveLength(1);
+    it('should parse multiple commits separated by blank lines, each with its own files', () => {
+      const output = [
+        'sha1\x1fab1\x1ffeat: first\x1fAlice\x1f2026-04-03T10:00:00+00:00',
+        'src/a.ts',
+        '',
+        'sha2\x1fab2\x1ffix: second\x1fBob\x1f2026-04-02T09:00:00+00:00',
+        'src/b.ts',
+        'src/c.ts',
+      ].join('\n');
+
+      expect(parseCommitLog(output)).toEqual([
+        { sha: 'sha1', abbrevSha: 'ab1', subject: 'feat: first', author: 'Alice', date: '2026-04-03T10:00:00+00:00', files: ['src/a.ts'] },
+        { sha: 'sha2', abbrevSha: 'ab2', subject: 'fix: second', author: 'Bob', date: '2026-04-02T09:00:00+00:00', files: ['src/b.ts', 'src/c.ts'] },
+      ]);
     });
 
     it('should return empty array for empty input', () => {
       expect(parseCommitLog('')).toEqual([]);
     });
 
-    it('should skip malformed lines with wrong field count', () => {
+    it('should skip trailing blank lines', () => {
+      const output = 'sha1\x1fab1\x1ffeat: first\x1fAlice\x1f2026-04-03T10:00:00+00:00\n\n';
+      expect(parseCommitLog(output)).toEqual([
+        { sha: 'sha1', abbrevSha: 'ab1', subject: 'feat: first', author: 'Alice', date: '2026-04-03T10:00:00+00:00', files: [] },
+      ]);
+    });
+
+    it('should skip malformed header lines with wrong field count', () => {
       const output = 'sha1\x1fab1\x1fincomplete';
       expect(parseCommitLog(output)).toEqual([]);
     });
@@ -396,7 +422,9 @@ describe('GitService', () => {
         expect(entry.subject.length).toBeGreaterThan(0);
         expect(entry.author.length).toBeGreaterThan(0);
         expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+        expect(Array.isArray(entry.files)).toBe(true);
       }
+      expect(result.some((entry) => entry.files.length > 0)).toBe(true);
     });
 
     it('should return empty array when refs are identical', async () => {

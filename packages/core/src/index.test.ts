@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { ChangeType, DiffResponse, FileEntry } from './index';
+import { ChangeType, CommitEntry, DiffResponse, FileEntry } from './index';
 
 describe('ChangeType', () => {
   it('decodes valid change types', () => {
@@ -44,6 +44,30 @@ describe('FileEntry', () => {
       oldPath: 'a.ts',
       sizeTier: 'small',
     });
+  });
+});
+
+describe('CommitEntry', () => {
+  const base = {
+    sha: 'abc123',
+    abbrevSha: 'abc123',
+    subject: 'feat: add thing',
+    author: 'Author',
+    date: '2026-04-15T00:00:00Z',
+  };
+
+  it('decodes entry with files list', () => {
+    const result = Schema.decodeUnknownSync(CommitEntry)({ ...base, files: ['a.ts', 'b.ts'] });
+    expect(result.files).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('decodes entry with empty files list', () => {
+    const result = Schema.decodeUnknownSync(CommitEntry)({ ...base, files: [] });
+    expect(result.files).toEqual([]);
+  });
+
+  it('rejects entry missing files', () => {
+    expect(() => Schema.decodeUnknownSync(CommitEntry)(base)).toThrow();
   });
 });
 

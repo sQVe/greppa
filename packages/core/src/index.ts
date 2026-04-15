@@ -65,5 +65,6 @@ export const CommitEntry = Schema.Struct({
   subject: Schema.String,
   author: Schema.String,
   date: Schema.String,
+  files: Schema.Array(Schema.String),
 });
 export type CommitEntry = typeof CommitEntry.Type;

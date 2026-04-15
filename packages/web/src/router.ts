@@ -20,6 +20,7 @@ const worktreeSearch = z.object({
 const commitsSearch = z.object({
   s: fallback(z.string(), '').default(''),
   commits: fallback(z.array(z.string()), []).default([]),
+  commitFile: fallback(z.array(z.string()), []).default([]),
 });
 
 const reviewSearch = z.object({

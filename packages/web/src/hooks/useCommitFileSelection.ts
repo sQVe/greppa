@@ -1,7 +1,6 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 
-import { getOrCreateStateId } from '../stateCache';
 import { toStringArray } from '../toStringArray';
 
 export interface CommitFileEntry {
@@ -22,14 +21,11 @@ const decode = (raw: string): CommitFileEntry | null => {
 };
 
 const selectParams = (s: { location: { search: Record<string, unknown> } }) => ({
-  file: toStringArray(s.location.search.file),
-  wt: toStringArray(s.location.search.wt),
-  commits: toStringArray(s.location.search.commits),
   commitFile: toStringArray(s.location.search.commitFile),
 });
 
 export const useCommitFileSelection = () => {
-  const { file, wt, commits, commitFile } = useRouterState({ select: selectParams });
+  const { commitFile } = useRouterState({ select: selectParams });
   const navigate = useNavigate();
 
   const entries = useMemo<readonly CommitFileEntry[]>(
@@ -49,22 +45,13 @@ export const useCommitFileSelection = () => {
       const next = commitFile.includes(key)
         ? commitFile.filter((v) => v !== key)
         : [...commitFile, key];
-      if (file.length === 0 && wt.length === 0 && commits.length === 0) {
-        void navigate({
-          to: '/commits',
-          search: { s: '', commits: [], commitFile: next },
-          replace: true,
-        });
-        return;
-      }
-      const id = getOrCreateStateId({ file, wt, commits, commitFile: next });
       void navigate({
         to: '/commits',
-        search: { s: id, commits, commitFile: next },
+        search: (prev) => ({ ...prev, commitFile: next }),
         replace: true,
       });
     },
-    [file, wt, commits, commitFile, navigate],
+    [commitFile, navigate],
   );
 
   return { entries, isSelected, toggle };

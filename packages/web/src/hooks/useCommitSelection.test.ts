@@ -16,7 +16,7 @@ import { z } from 'zod';
 import type { CommitEntry } from '@greppa/core';
 
 import { parseSearch, stringifySearch } from '../router';
-import { cacheState, clearAllStateCaches, stateCache } from '../stateCache';
+import { cacheState, clearAllStateCaches } from '../stateCache';
 import { useCommitSelection } from './useCommitSelection';
 
 vi.mock('nanoid', () => {
@@ -44,11 +44,10 @@ type HookResult = ReturnType<typeof useCommitSelection>;
 const commitsSearch = z.object({
   s: fallback(z.string(), '').default(''),
   commits: fallback(z.array(z.string()), []).default([]),
-  commitFile: fallback(z.array(z.string()), []).default([]),
 });
 
 const commitsUrl = (shas: string[]) => {
-  const full = { file: [], wt: [], commits: shas, commitFile: [] };
+  const full = { file: [], wt: [], commits: shas };
   const id = `test-${Math.random().toString(36).slice(2, 6)}`;
   cacheState(id, full);
   return `/commits?s=${id}`;
@@ -181,26 +180,6 @@ describe('useCommitSelection', () => {
       expect(result.current.isActive).toBe(false);
       expect(result.current.diffRange).toBeNull();
     });
-  });
-
-  it('should carry forward commitFile into the new state', async () => {
-    const seededId = 'seed-1';
-    cacheState(seededId, { file: [], wt: [], commits: ['aaa'], commitFile: ['aaa:src/a.ts'] });
-    const { result, router } = await renderCommitSelection(`/commits?s=${seededId}`);
-
-    act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: false }); });
-
-    await waitFor(() => {
-      expect(result.current.selectedShas).toEqual(new Set(['bbb']));
-    });
-
-    const newId = (router.state.location.search as { s: string }).s;
-    expect(newId).toBeTruthy();
-    expect(newId).not.toBe(seededId);
-    const payload = stateCache.get(newId);
-    expect(payload).toBeDefined();
-    expect(payload?.commits).toEqual(['bbb']);
-    expect(payload?.commitFile).toEqual(['aaa:src/a.ts']);
   });
 
   it('should navigate to /commits route', async () => {

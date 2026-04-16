@@ -27,8 +27,8 @@ const resolveParams = (params: string[], allPaths: string[]): Set<string> => {
 
 const buildState = (paths: string[], source: FileSource): StatePayload =>
   source === 'committed'
-    ? { file: paths, wt: [], commits: [], commitFile: [] }
-    : { file: [], wt: paths, commits: [], commitFile: [] };
+    ? { file: paths, wt: [], commits: [] }
+    : { file: [], wt: paths, commits: [] };
 
 const selectFileParams = (s: { location: { search: Record<string, unknown> } }) =>
   toStringArray(s.location.search.file);

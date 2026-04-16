@@ -30,7 +30,6 @@ interface StoredState {
   file: string[];
   wt: string[];
   commits: string[];
-  commitFile: string[];
 }
 
 const isDiffContent = (value: unknown): value is DiffContent =>
@@ -270,12 +269,7 @@ const StateHandlers = HttpApiBuilder.group(Api, 'state', (handlers) =>
             stateStore.delete(firstKey);
           }
         }
-        stateStore.set(payload.id, {
-          file: [...payload.file],
-          wt: [...payload.wt],
-          commits: [...payload.commits],
-          commitFile: [...payload.commitFile],
-        });
+        stateStore.set(payload.id, { file: [...payload.file], wt: [...payload.wt], commits: [...payload.commits] });
         return Effect.succeed({ id: payload.id });
       })
       .handle('getState', ({ params }) => {

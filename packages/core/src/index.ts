@@ -45,7 +45,6 @@ export const StateData = Schema.Struct({
   file: Schema.Array(Schema.String),
   wt: Schema.Array(Schema.String),
   commits: Schema.Array(Schema.String),
-  commitFile: Schema.Array(Schema.String),
 });
 export type StateData = typeof StateData.Type;
 

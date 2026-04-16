@@ -7,17 +7,22 @@ import type { StatePayload } from '../stateCache';
 import { getOrCreateStateId } from '../stateCache';
 import { toStringArray } from '../toStringArray';
 
-const buildState = (shas: string[]): StatePayload => ({
+const buildState = (shas: string[], commitFile: string[]): StatePayload => ({
   file: [],
   wt: [],
   commits: shas,
+  commitFile,
 });
 
 const selectCommitParams = (s: { location: { search: Record<string, unknown> } }) =>
   toStringArray(s.location.search.commits);
 
+const selectCommitFileParams = (s: { location: { search: Record<string, unknown> } }) =>
+  toStringArray(s.location.search.commitFile);
+
 export const useCommitSelection = (commits: CommitEntry[]) => {
   const commitParams = useRouterState({ select: selectCommitParams });
+  const commitFileParams = useRouterState({ select: selectCommitFileParams });
   const navigate = useNavigate();
   const anchorRef = useRef<string | null>(null);
 
@@ -29,14 +34,22 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
   const navigateWithState = useCallback(
     (state: StatePayload, replace?: boolean) => {
       const id = getOrCreateStateId(state);
-      void navigate({ to: '/commits', search: { s: id, commits: state.commits }, replace });
+      void navigate({
+        to: '/commits',
+        search: { s: id, commits: state.commits, commitFile: state.commitFile },
+        replace,
+      });
     },
     [navigate],
   );
 
   const clear = useCallback(() => {
     anchorRef.current = null;
-    void navigate({ to: '/commits', search: { s: '', commits: [] }, replace: true });
+    void navigate({
+      to: '/commits',
+      search: { s: '', commits: [], commitFile: [] },
+      replace: true,
+    });
   }, [navigate]);
 
   const selectCommit = useCallback(
@@ -53,7 +66,7 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
           clear();
           return;
         }
-        navigateWithState(buildState([...next]), true);
+        navigateWithState(buildState([...next], commitFileParams), true);
         return;
       }
 
@@ -61,7 +74,7 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
         const anchor = anchorRef.current;
         if (anchor == null) {
           anchorRef.current = sha;
-          navigateWithState(buildState([sha]), true);
+          navigateWithState(buildState([sha], commitFileParams), true);
           return;
         }
 
@@ -69,21 +82,21 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
         const targetIndex = commits.findIndex((commit) => commit.sha === sha);
         if (anchorIndex === -1 || targetIndex === -1) {
           anchorRef.current = sha;
-          navigateWithState(buildState([sha]), true);
+          navigateWithState(buildState([sha], commitFileParams), true);
           return;
         }
 
         const start = Math.min(anchorIndex, targetIndex);
         const end = Math.max(anchorIndex, targetIndex);
         const rangeShas = commits.slice(start, end + 1).map((commit) => commit.sha);
-        navigateWithState(buildState(rangeShas), true);
+        navigateWithState(buildState(rangeShas, commitFileParams), true);
         return;
       }
 
       anchorRef.current = sha;
-      navigateWithState(buildState([sha]));
+      navigateWithState(buildState([sha], commitFileParams));
     },
-    [commits, selectedShas, navigateWithState, clear],
+    [commits, selectedShas, commitFileParams, navigateWithState, clear],
   );
 
   const diffRange = useMemo(() => {

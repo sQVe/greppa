@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { parseSearch, stringifySearch } from '../router';
-import { clearAllStateCaches } from '../stateCache';
+import { cacheState, clearAllStateCaches, stateCache } from '../stateCache';
 import { useCommitFileSelection } from './useCommitFileSelection';
 
 type HookResult = ReturnType<typeof useCommitFileSelection>;
@@ -113,6 +113,51 @@ describe('useCommitFileSelection', () => {
         { sha: 'sha2', path: 'src/a.ts' },
       ]);
     });
+  });
+
+  it('toggle survives a state-id URL by minting a new state id', async () => {
+    const seededId = 'seed-cf';
+    cacheState(seededId, {
+      file: ['src/x.ts'],
+      wt: ['src/y.ts'],
+      commits: ['aaa'],
+      commitFile: [],
+    });
+    const { result, router } = await renderHook(`/commits?s=${seededId}`);
+
+    await act(async () => {
+      result.current.toggle('aaa', 'src/a.ts');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSelected('aaa', 'src/a.ts')).toBe(true);
+    });
+
+    const newId = (router.state.location.search as { s: string }).s;
+    expect(newId).toBeTruthy();
+    expect(newId).not.toBe(seededId);
+    const payload = stateCache.get(newId);
+    expect(payload).toBeDefined();
+    expect(payload?.file).toEqual(['src/x.ts']);
+    expect(payload?.wt).toEqual(['src/y.ts']);
+    expect(payload?.commits).toEqual(['aaa']);
+    expect(payload?.commitFile).toEqual(['aaa:src/a.ts']);
+  });
+
+  it('toggle with no other selection writes plain commitFile params, not a state id', async () => {
+    const { result, router } = await renderHook();
+
+    await act(async () => {
+      result.current.toggle('sha1', 'src/a.ts');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSelected('sha1', 'src/a.ts')).toBe(true);
+    });
+
+    const search = router.state.location.search as { s?: string; commitFile?: string[] };
+    expect(search.s ?? '').toBe('');
+    expect(search.commitFile).toEqual(['sha1:src/a.ts']);
   });
 
   it('toggle does not modify commits param', async () => {

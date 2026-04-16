@@ -4,6 +4,7 @@ export interface StatePayload {
   file: string[];
   wt: string[];
   commits: string[];
+  commitFile: string[];
 }
 
 export const stateCache = new Map<string, StatePayload>();
@@ -15,7 +16,7 @@ export const clearAllStateCaches = () => {
 };
 
 const stateKey = (state: StatePayload) =>
-  JSON.stringify([state.file, state.wt, state.commits]);
+  JSON.stringify([state.file, state.wt, state.commits, state.commitFile]);
 
 export const findExistingId = (state: StatePayload): string | null =>
   reverseCache.get(stateKey(state)) ?? null;

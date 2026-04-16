@@ -41,6 +41,23 @@ vi.mock('./useComputedDiffs', () => ({
   useComputedDiffs: () => ({ diffs: [], failedPaths: [] }),
 }));
 
+const useCommitFileDiffsSpy: ReturnType<typeof vi.fn> = vi.fn();
+useCommitFileDiffsSpy.mockReturnValue({ diffs: [], failedPaths: [] });
+vi.mock('./useCommitFileDiffs', () => ({
+  useCommitFileDiffs: (entries: unknown) => useCommitFileDiffsSpy(entries),
+}));
+
+vi.mock('./useCommitFileSelection', () => ({
+  useCommitFileSelection: () => ({
+    entries: [
+      { sha: 'aaa111', path: 'src/a.ts' },
+      { sha: 'bbb222', path: 'src/a.ts' },
+    ],
+    isSelected: () => false,
+    toggle: vi.fn(),
+  }),
+}));
+
 vi.mock('./useFileList', () => ({
   useFileList: () => ({ files: null, isLoading: false, isError: false }),
 }));
@@ -89,6 +106,28 @@ describe('useSelectionCoordinator', () => {
     expect(queryKeys).toEqual([
       ['diff', 'HEAD~1', 'HEAD', 'src/b.ts'],
       ['diff', 'HEAD~1', 'HEAD', 'src/c.ts'],
+    ]);
+  });
+
+  it('passes commitFile entries to useCommitFileDiffs so same path across two SHAs yields two requests', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    renderHook(
+      () => {
+        useSelectionCoordinator({
+          files: [],
+          worktreeFiles: [],
+          oldRef: 'HEAD~1',
+          newRef: 'HEAD',
+        });
+      },
+      { wrapper: createWrapper(queryClient) },
+    );
+
+    const lastCall = useCommitFileDiffsSpy.mock.calls.at(-1);
+    expect(lastCall?.[0]).toEqual([
+      { sha: 'aaa111', path: 'src/a.ts' },
+      { sha: 'bbb222', path: 'src/a.ts' },
     ]);
   });
 

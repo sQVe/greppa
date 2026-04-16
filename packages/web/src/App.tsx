@@ -322,6 +322,8 @@ export const App = () => {
     commits,
     commitSelection,
     commitDiffs,
+    commitFileSelection,
+    commitFileDiffs,
     committedFilePaths,
     worktreeFilePaths,
     handleSelectCommit,
@@ -348,8 +350,11 @@ export const App = () => {
   });
 
   const selectedDiffs = useMemo(
-    () => (commitSelection.isActive ? commitDiffs.diffs : fileDiffs),
-    [commitSelection.isActive, commitDiffs.diffs, fileDiffs],
+    () => {
+      const base = commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
+      return commitFileDiffs.diffs.length > 0 ? [...base, ...commitFileDiffs.diffs] : base;
+    },
+    [commitSelection.isActive, commitDiffs.diffs, commitFileDiffs.diffs, fileDiffs],
   );
 
   const hash = useRouterState({ select: (s: { location: { hash: string } }) => s.location.hash });
@@ -430,6 +435,7 @@ export const App = () => {
               onSelectCommittedDirectory={handleSelectCommittedDirectory}
               onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
               onSelectCommit={handleSelectCommit}
+              onSelectCommitFile={(sha, path) => { commitFileSelection.toggle(sha, path); }}
               onCommittedExpandedKeysChange={handleExpandedKeysChange}
               onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
             />

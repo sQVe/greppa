@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 
 import type { FileNode } from '../fixtures/types';
 import { collectFiles } from '../useFileSelection';
+import { useCommitFileDiffs } from './useCommitFileDiffs';
+import { useCommitFileSelection } from './useCommitFileSelection';
 import { useCommitList } from './useCommitList';
 import { useCommitSelection } from './useCommitSelection';
 import { useComputedDiffs } from './useComputedDiffs';
@@ -89,11 +91,16 @@ export const useSelectionCoordinator = ({
     commitDiffRange?.newRef ?? '',
   );
 
+  const commitFileSelection = useCommitFileSelection();
+  const commitFileDiffs = useCommitFileDiffs(commitFileSelection.entries);
+
   return {
     multiSelect,
     commits,
     commitSelection,
     commitDiffs,
+    commitFileSelection,
+    commitFileDiffs,
     committedFilePaths,
     worktreeFilePaths,
     handleSelectCommit,

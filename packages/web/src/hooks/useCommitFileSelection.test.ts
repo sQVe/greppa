@@ -77,7 +77,7 @@ describe('useCommitFileSelection', () => {
 
   it('toggle adds an entry', async () => {
     const { result, router } = await renderHook();
-    await act(async () => {
+    act(() => {
       result.current.toggle('sha1', 'src/a.ts');
     });
     await waitFor(() => {
@@ -90,7 +90,7 @@ describe('useCommitFileSelection', () => {
 
   it('toggle removes an existing entry', async () => {
     const { result } = await renderHook('/commits?commitFile=sha1:src/a.ts');
-    await act(async () => {
+    act(() => {
       result.current.toggle('sha1', 'src/a.ts');
     });
     await waitFor(() => {
@@ -101,10 +101,10 @@ describe('useCommitFileSelection', () => {
 
   it('same path under two different shas produces two entries', async () => {
     const { result } = await renderHook();
-    await act(async () => {
+    act(() => {
       result.current.toggle('sha1', 'src/a.ts');
     });
-    await act(async () => {
+    act(() => {
       result.current.toggle('sha2', 'src/a.ts');
     });
     await waitFor(() => {
@@ -118,7 +118,7 @@ describe('useCommitFileSelection', () => {
   it('toggle with no other selection writes plain commitFile params, not a state id', async () => {
     const { result, router } = await renderHook();
 
-    await act(async () => {
+    act(() => {
       result.current.toggle('sha1', 'src/a.ts');
     });
 
@@ -141,7 +141,7 @@ describe('useCommitFileSelection', () => {
     });
     const { result, router } = await renderHook(`/commits?s=${seededId}`);
 
-    await act(async () => {
+    act(() => {
       result.current.toggle('aaa', 'src/a.ts');
     });
 
@@ -160,9 +160,75 @@ describe('useCommitFileSelection', () => {
     expect(payload?.commitFile).toEqual(['aaa:src/a.ts']);
   });
 
+  it('selectCommitFile with plain click replaces the selection', async () => {
+    const { result } = await renderHook(
+      '/commits?commitFile=sha1:src/a.ts&commitFile=sha1:src/b.ts',
+    );
+
+    act(() => {
+      result.current.selectCommitFile(
+        'sha1',
+        'src/c.ts',
+        ['src/a.ts', 'src/b.ts', 'src/c.ts'],
+        { shiftKey: false, metaKey: false },
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([{ sha: 'sha1', path: 'src/c.ts' }]);
+    });
+  });
+
+  it('selectCommitFile with meta+click toggles additively', async () => {
+    const { result } = await renderHook('/commits?commitFile=sha1:src/a.ts');
+
+    act(() => {
+      result.current.selectCommitFile(
+        'sha1',
+        'src/b.ts',
+        ['src/a.ts', 'src/b.ts'],
+        { shiftKey: false, metaKey: true },
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([
+        { sha: 'sha1', path: 'src/a.ts' },
+        { sha: 'sha1', path: 'src/b.ts' },
+      ]);
+    });
+  });
+
+  it('selectCommitFile with shift+click selects a range within the commit', async () => {
+    const { result } = await renderHook();
+    const files = ['src/a.ts', 'src/b.ts', 'src/c.ts', 'src/d.ts'];
+
+    act(() => {
+      result.current.selectCommitFile('sha1', 'src/a.ts', files, {
+        shiftKey: false,
+        metaKey: false,
+      });
+    });
+
+    act(() => {
+      result.current.selectCommitFile('sha1', 'src/c.ts', files, {
+        shiftKey: true,
+        metaKey: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([
+        { sha: 'sha1', path: 'src/a.ts' },
+        { sha: 'sha1', path: 'src/b.ts' },
+        { sha: 'sha1', path: 'src/c.ts' },
+      ]);
+    });
+  });
+
   it('toggle does not modify commits param', async () => {
     const { result, router } = await renderHook('/commits?commits=aaa&commits=bbb');
-    await act(async () => {
+    act(() => {
       result.current.toggle('aaa', 'src/a.ts');
     });
     await waitFor(() => {

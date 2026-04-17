@@ -113,7 +113,12 @@ describe('CommitList', () => {
     onSelectCommit.mockClear();
     await user.click(screen.getByText('src/a.ts'));
 
-    expect(onSelectCommitFile).toHaveBeenCalledWith('aaa111', 'src/a.ts');
+    expect(onSelectCommitFile).toHaveBeenCalledWith(
+      'aaa111',
+      'src/a.ts',
+      ['src/a.ts'],
+      { shiftKey: false, metaKey: false },
+    );
     expect(onSelectCommit).not.toHaveBeenCalled();
   });
 });

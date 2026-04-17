@@ -94,6 +94,13 @@ export const useSelectionCoordinator = ({
   const commitFileSelection = useCommitFileSelection();
   const commitFileDiffs = useCommitFileDiffs(commitFileSelection.entries);
 
+  const selectedCommitFileKeys = useMemo(
+    () => new Set(commitFileSelection.entries.map((e) => `${e.sha}:${e.path}`)),
+    [commitFileSelection.entries],
+  );
+
+  const handleSelectCommitFile = commitFileSelection.selectCommitFile;
+
   return {
     multiSelect,
     commits,
@@ -101,6 +108,7 @@ export const useSelectionCoordinator = ({
     commitDiffs,
     commitFileSelection,
     commitFileDiffs,
+    selectedCommitFileKeys,
     committedFilePaths,
     worktreeFilePaths,
     handleSelectCommit,
@@ -108,5 +116,6 @@ export const useSelectionCoordinator = ({
     handleSelectWorktreeFile,
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
+    handleSelectCommitFile,
   };
 };

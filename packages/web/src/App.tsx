@@ -322,8 +322,8 @@ export const App = () => {
     commits,
     commitSelection,
     commitDiffs,
-    commitFileSelection,
     commitFileDiffs,
+    selectedCommitFileKeys,
     committedFilePaths,
     worktreeFilePaths,
     handleSelectCommit,
@@ -331,6 +331,7 @@ export const App = () => {
     handleSelectWorktreeFile,
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
+    handleSelectCommitFile,
   } = useSelectionCoordinator({
     files,
     worktreeFiles: worktreeFiles ?? EMPTY_FILES,
@@ -351,8 +352,10 @@ export const App = () => {
 
   const selectedDiffs = useMemo(
     () => {
-      const base = commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
-      return commitFileDiffs.diffs.length > 0 ? [...base, ...commitFileDiffs.diffs] : base;
+      if (commitFileDiffs.diffs.length > 0) {
+        return commitFileDiffs.diffs;
+      }
+      return commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
     },
     [commitSelection.isActive, commitDiffs.diffs, commitFileDiffs.diffs, fileDiffs],
   );
@@ -427,6 +430,7 @@ export const App = () => {
               selectedPaths={treeSelectedPaths}
               selectedSource={treeSelectedSource}
               selectedCommitShas={commitSelection.selectedShas}
+              selectedCommitFiles={selectedCommitFileKeys}
               committedExpandedKeys={expandedKeys}
               worktreeExpandedKeys={worktreeExpandedKeys}
               onToggleSection={handleToggleSection}
@@ -435,7 +439,7 @@ export const App = () => {
               onSelectCommittedDirectory={handleSelectCommittedDirectory}
               onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
               onSelectCommit={handleSelectCommit}
-              onSelectCommitFile={(sha, path) => { commitFileSelection.toggle(sha, path); }}
+              onSelectCommitFile={handleSelectCommitFile}
               onCommittedExpandedKeysChange={handleExpandedKeysChange}
               onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
             />

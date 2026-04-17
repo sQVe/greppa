@@ -55,6 +55,7 @@ vi.mock('./useCommitFileSelection', () => ({
     ],
     isSelected: () => false,
     toggle: vi.fn(),
+    selectCommitFile: vi.fn(),
   }),
 }));
 

@@ -1,5 +1,5 @@
 import { Tree } from '@greppa/ui';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CommitEntry } from '@greppa/core';
 
 import styles from './CommitList.module.css';
@@ -7,8 +7,14 @@ import styles from './CommitList.module.css';
 interface CommitListProps {
   commits: CommitEntry[];
   selectedShas: Set<string>;
+  selectedCommitFiles?: ReadonlySet<string>;
   onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
-  onSelectCommitFile?: (sha: string, path: string) => void;
+  onSelectCommitFile?: (
+    sha: string,
+    path: string,
+    filesInCommit: readonly string[],
+    modifiers: { shiftKey: boolean; metaKey: boolean },
+  ) => void;
 }
 
 const formatRelativeTime = (iso: string): string => {
@@ -37,14 +43,25 @@ const formatRelativeTime = (iso: string): string => {
   return `${months}mo ago`;
 };
 
-export const CommitList = ({ commits, selectedShas, onSelectCommit, onSelectCommitFile }: CommitListProps) => {
+export const CommitList = ({
+  commits,
+  selectedShas,
+  selectedCommitFiles,
+  onSelectCommit,
+  onSelectCommitFile,
+}: CommitListProps) => {
   const [expandedKeys, setExpandedKeys] = useState<Set<string | number>>(new Set());
+
+  const selectedKeys = useMemo(
+    () => new Set<string>([...selectedShas, ...(selectedCommitFiles ?? [])]),
+    [selectedShas, selectedCommitFiles],
+  );
 
   return (
     <Tree.Root
       aria-label="Commits"
       selectionMode="multiple"
-      selectedKeys={selectedShas}
+      selectedKeys={selectedKeys}
       expandedKeys={expandedKeys}
       onExpandedChange={setExpandedKeys}
       onSelectionChange={() => { /* managed via onPointerDown */ }}
@@ -82,7 +99,10 @@ export const CommitList = ({ commits, selectedShas, onSelectCommit, onSelectComm
                   textValue={child.path}
                   onPointerDown={(event) => {
                     event.stopPropagation();
-                    onSelectCommitFile?.(commit.sha, child.path);
+                    onSelectCommitFile?.(commit.sha, child.path, commit.files, {
+                      shiftKey: event.shiftKey,
+                      metaKey: event.metaKey || event.ctrlKey,
+                    });
                   }}
                 >
                   <Tree.ItemContent>

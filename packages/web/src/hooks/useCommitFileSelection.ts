@@ -35,6 +35,8 @@ export const useCommitFileSelection = () => {
   const stateRef = useRef({ file, wt, commits, commitFile });
   stateRef.current = { file, wt, commits, commitFile };
 
+  const anchorRef = useRef<CommitFileEntry | null>(null);
+
   const entries = useMemo<readonly CommitFileEntry[]>(
     () => commitFile.map(decode).filter((e): e is CommitFileEntry => e != null),
     [commitFile],
@@ -46,13 +48,9 @@ export const useCommitFileSelection = () => {
     [entries],
   );
 
-  const toggle = useCallback(
-    (sha: string, path: string) => {
+  const writeCommitFile = useCallback(
+    (next: string[]) => {
       const current = stateRef.current;
-      const key = encode({ sha, path });
-      const next = current.commitFile.includes(key)
-        ? current.commitFile.filter((v) => v !== key)
-        : [...current.commitFile, key];
       if (current.file.length === 0 && current.wt.length === 0 && current.commits.length === 0) {
         void navigate({
           to: '/commits',
@@ -76,5 +74,59 @@ export const useCommitFileSelection = () => {
     [navigate],
   );
 
-  return { entries, isSelected, toggle };
+  const toggle = useCallback(
+    (sha: string, path: string) => {
+      const current = stateRef.current;
+      const key = encode({ sha, path });
+      const next = current.commitFile.includes(key)
+        ? current.commitFile.filter((v) => v !== key)
+        : [...current.commitFile, key];
+      writeCommitFile(next);
+    },
+    [writeCommitFile],
+  );
+
+  const selectCommitFile = useCallback(
+    (
+      sha: string,
+      path: string,
+      filesInCommit: readonly string[],
+      modifiers: { shiftKey: boolean; metaKey: boolean },
+    ) => {
+      if (modifiers.metaKey) {
+        anchorRef.current = { sha, path };
+        toggle(sha, path);
+        return;
+      }
+
+      if (modifiers.shiftKey) {
+        const anchor = anchorRef.current;
+        if (anchor == null || anchor.sha !== sha) {
+          anchorRef.current = { sha, path };
+          writeCommitFile([encode({ sha, path })]);
+          return;
+        }
+        const anchorIndex = filesInCommit.indexOf(anchor.path);
+        const targetIndex = filesInCommit.indexOf(path);
+        if (anchorIndex === -1 || targetIndex === -1) {
+          anchorRef.current = { sha, path };
+          writeCommitFile([encode({ sha, path })]);
+          return;
+        }
+        const start = Math.min(anchorIndex, targetIndex);
+        const end = Math.max(anchorIndex, targetIndex);
+        const rangeKeys = filesInCommit
+          .slice(start, end + 1)
+          .map((p) => encode({ sha, path: p }));
+        writeCommitFile(rangeKeys);
+        return;
+      }
+
+      anchorRef.current = { sha, path };
+      writeCommitFile([encode({ sha, path })]);
+    },
+    [toggle, writeCommitFile],
+  );
+
+  return { entries, isSelected, toggle, selectCommitFile };
 };

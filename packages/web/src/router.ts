@@ -139,6 +139,12 @@ const worktreeRoute = createRoute({
   },
 });
 
+export const buildCommitsRedirectSearch = (s: string, state: StatePayload) => ({
+  s,
+  commits: state.commits,
+  commitFile: state.commitFile,
+});
+
 const commitsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/commits',
@@ -155,7 +161,7 @@ const commitsRoute = createRoute({
     if (target !== '/commits') {
       throw redirect({ to: target, search: { s: search.s, ...state } });
     }
-    throw redirect({ to: '/commits', search: { s: search.s, commits: state.commits } });
+    throw redirect({ to: '/commits', search: buildCommitsRedirectSearch(search.s, state) });
   },
 });
 

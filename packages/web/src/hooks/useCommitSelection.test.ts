@@ -47,7 +47,7 @@ const commitsSearch = z.object({
 });
 
 const commitsUrl = (shas: string[]) => {
-  const full = { file: [], wt: [], commits: shas };
+  const full = { file: [], wt: [], commits: shas, commitFile: [] };
   const id = `test-${Math.random().toString(36).slice(2, 6)}`;
   cacheState(id, full);
   return `/commits?s=${id}`;

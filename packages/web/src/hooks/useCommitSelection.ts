@@ -11,6 +11,7 @@ const buildState = (shas: string[]): StatePayload => ({
   file: [],
   wt: [],
   commits: shas,
+  commitFile: [],
 });
 
 const selectCommitParams = (s: { location: { search: Record<string, unknown> } }) =>

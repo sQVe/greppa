@@ -94,19 +94,16 @@ export const CommitList = ({
               if (target instanceof Element && target.closest('[slot="chevron"]') != null) {
                 return;
               }
-              const hasModifier = event.shiftKey || event.metaKey || event.ctrlKey;
-              const isExpanded = expandedKeysRef.current.has(commit.sha);
-              if (isExpanded && hasModifier && onSelectAllFilesInCommit != null) {
-                onSelectAllFilesInCommit(commit.sha, commit.files, {
-                  shiftKey: event.shiftKey,
-                  metaKey: event.metaKey || event.ctrlKey,
-                });
-                return;
-              }
-              onSelectCommit(commit.sha, {
+              const modifiers = {
                 shiftKey: event.shiftKey,
                 metaKey: event.metaKey || event.ctrlKey,
-              });
+              };
+              const isExpanded = expandedKeysRef.current.has(commit.sha);
+              if (isExpanded && onSelectAllFilesInCommit != null) {
+                onSelectAllFilesInCommit(commit.sha, commit.files, modifiers);
+                return;
+              }
+              onSelectCommit(commit.sha, modifiers);
             }}
           >
             <Tree.ItemContent>

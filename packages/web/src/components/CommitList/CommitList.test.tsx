@@ -167,7 +167,33 @@ describe('CommitList', () => {
     expect(secondCommitRow?.getAttribute('aria-selected')).toBe('true');
   });
 
-  it('should call onSelectAllFilesInCommit when a modifier is held and the commit is expanded', async () => {
+  it('should call onSelectAllFilesInCommit on plain click when the commit is expanded', async () => {
+    const user = userEvent.setup();
+    const onSelectCommit = vi.fn();
+    const onSelectAllFilesInCommit = vi.fn();
+    render(
+      <CommitList
+        {...defaultProps}
+        onSelectCommit={onSelectCommit}
+        onSelectAllFilesInCommit={onSelectAllFilesInCommit}
+      />,
+    );
+
+    const row = screen.getByRole('row', { name: /feat: first commit/i });
+    await user.click(within(row).getByRole('button'));
+
+    onSelectCommit.mockClear();
+    await user.click(screen.getByText('feat: first commit'));
+
+    expect(onSelectAllFilesInCommit).toHaveBeenCalledWith(
+      'aaa111',
+      ['src/a.ts'],
+      { shiftKey: false, metaKey: false },
+    );
+    expect(onSelectCommit).not.toHaveBeenCalled();
+  });
+
+  it('should call onSelectAllFilesInCommit with modifier state when the commit is expanded', async () => {
     const user = userEvent.setup();
     const onSelectCommit = vi.fn();
     const onSelectAllFilesInCommit = vi.fn();

@@ -1,5 +1,5 @@
 import { Tree } from '@greppa/ui';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { CommitEntry } from '@greppa/core';
 
 import styles from './CommitList.module.css';
@@ -12,6 +12,11 @@ interface CommitListProps {
   onSelectCommitFile?: (
     sha: string,
     path: string,
+    filesInCommit: readonly string[],
+    modifiers: { shiftKey: boolean; metaKey: boolean },
+  ) => void;
+  onSelectAllFilesInCommit?: (
+    sha: string,
     filesInCommit: readonly string[],
     modifiers: { shiftKey: boolean; metaKey: boolean },
   ) => void;
@@ -49,13 +54,25 @@ export const CommitList = ({
   selectedCommitFiles,
   onSelectCommit,
   onSelectCommitFile,
+  onSelectAllFilesInCommit,
 }: CommitListProps) => {
   const [expandedKeys, setExpandedKeys] = useState<Set<string | number>>(new Set());
+  const expandedKeysRef = useRef(expandedKeys);
+  expandedKeysRef.current = expandedKeys;
 
-  const selectedKeys = useMemo(
-    () => new Set<string>([...selectedShas, ...(selectedCommitFiles ?? [])]),
-    [selectedShas, selectedCommitFiles],
-  );
+  const selectedKeys = useMemo(() => {
+    const shasWithFileSelection = new Set<string>();
+    if (selectedCommitFiles != null) {
+      for (const key of selectedCommitFiles) {
+        const idx = key.indexOf(':');
+        if (idx > 0) {
+          shasWithFileSelection.add(key.slice(0, idx));
+        }
+      }
+    }
+    const visibleShas = [...selectedShas].filter((s) => !shasWithFileSelection.has(s));
+    return new Set<string>([...visibleShas, ...(selectedCommitFiles ?? [])]);
+  }, [selectedShas, selectedCommitFiles]);
 
   return (
     <Tree.Root
@@ -75,6 +92,15 @@ export const CommitList = ({
             onPointerDown={(event) => {
               const target = event.target;
               if (target instanceof Element && target.closest('[slot="chevron"]') != null) {
+                return;
+              }
+              const hasModifier = event.shiftKey || event.metaKey || event.ctrlKey;
+              const isExpanded = expandedKeysRef.current.has(commit.sha);
+              if (isExpanded && hasModifier && onSelectAllFilesInCommit != null) {
+                onSelectAllFilesInCommit(commit.sha, commit.files, {
+                  shiftKey: event.shiftKey,
+                  metaKey: event.metaKey || event.ctrlKey,
+                });
                 return;
               }
               onSelectCommit(commit.sha, {

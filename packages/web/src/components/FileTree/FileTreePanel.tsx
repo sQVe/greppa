@@ -35,6 +35,11 @@ interface FileTreePanelProps {
     filesInCommit: readonly string[],
     modifiers: { shiftKey: boolean; metaKey: boolean },
   ) => void;
+  onSelectAllFilesInCommit?: (
+    sha: string,
+    filesInCommit: readonly string[],
+    modifiers: { shiftKey: boolean; metaKey: boolean },
+  ) => void;
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
   onCollapseCommittedDirectory?: (path: string) => void;
@@ -76,6 +81,7 @@ export const FileTreePanel = ({
   onSelectWorktreeDirectory,
   onSelectCommit,
   onSelectCommitFile,
+  onSelectAllFilesInCommit,
   onCommittedExpandedKeysChange,
   onWorktreeExpandedKeysChange,
   onCollapseCommittedDirectory,
@@ -245,6 +251,7 @@ export const FileTreePanel = ({
             selectedCommitFiles={selectedCommitFiles}
             onSelectCommit={onSelectCommit}
             onSelectCommitFile={onSelectCommitFile}
+            onSelectAllFilesInCommit={onSelectAllFilesInCommit}
           />
         </motion.div>
       </div>

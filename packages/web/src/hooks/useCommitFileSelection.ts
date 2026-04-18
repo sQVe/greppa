@@ -128,5 +128,38 @@ export const useCommitFileSelection = () => {
     [toggle, writeCommitFile],
   );
 
-  return { entries, isSelected, toggle, selectCommitFile };
+  const selectAllFilesInCommit = useCallback(
+    (
+      sha: string,
+      filesInCommit: readonly string[],
+      modifiers: { shiftKey: boolean; metaKey: boolean },
+    ) => {
+      if (filesInCommit.length === 0) {
+        return;
+      }
+      const current = stateRef.current;
+      const commitKeys = filesInCommit.map((p) => encode({ sha, path: p }));
+      const last = filesInCommit.at(-1);
+      if (last != null) {
+        anchorRef.current = { sha, path: last };
+      }
+
+      if (modifiers.metaKey || modifiers.shiftKey) {
+        const merged = [...current.commitFile];
+        const existing = new Set(merged);
+        for (const key of commitKeys) {
+          if (!existing.has(key)) {
+            merged.push(key);
+            existing.add(key);
+          }
+        }
+        writeCommitFile(merged);
+        return;
+      }
+      writeCommitFile(commitKeys);
+    },
+    [writeCommitFile],
+  );
+
+  return { entries, isSelected, toggle, selectCommitFile, selectAllFilesInCommit };
 };

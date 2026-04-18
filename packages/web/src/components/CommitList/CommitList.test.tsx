@@ -121,4 +121,68 @@ describe('CommitList', () => {
     );
     expect(onSelectCommit).not.toHaveBeenCalled();
   });
+
+  it('should drop the commit highlight when any of its files is selected', () => {
+    render(
+      <CommitList
+        {...defaultProps}
+        selectedShas={new Set(['aaa111', 'bbb222'])}
+        selectedCommitFiles={new Set(['aaa111:src/a.ts'])}
+      />,
+    );
+    const rows = screen.getAllByRole('row');
+    const firstCommitRow = rows.find((row) => row.textContent.includes('feat: first commit'));
+    const secondCommitRow = rows.find((row) => row.textContent.includes('fix: second commit'));
+
+    expect(firstCommitRow?.getAttribute('aria-selected')).toBe('false');
+    expect(secondCommitRow?.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('should call onSelectAllFilesInCommit when a modifier is held and the commit is expanded', async () => {
+    const user = userEvent.setup();
+    const onSelectCommit = vi.fn();
+    const onSelectAllFilesInCommit = vi.fn();
+    render(
+      <CommitList
+        {...defaultProps}
+        onSelectCommit={onSelectCommit}
+        onSelectAllFilesInCommit={onSelectAllFilesInCommit}
+      />,
+    );
+
+    const row = screen.getByRole('row', { name: /feat: first commit/i });
+    await user.click(within(row).getByRole('button'));
+
+    onSelectCommit.mockClear();
+    await user.keyboard('{Shift>}');
+    await user.click(screen.getByText('feat: first commit'));
+    await user.keyboard('{/Shift}');
+
+    expect(onSelectAllFilesInCommit).toHaveBeenCalledWith(
+      'aaa111',
+      ['src/a.ts'],
+      { shiftKey: true, metaKey: false },
+    );
+    expect(onSelectCommit).not.toHaveBeenCalled();
+  });
+
+  it('should still call onSelectCommit when a modifier is held but the commit is collapsed', async () => {
+    const user = userEvent.setup();
+    const onSelectCommit = vi.fn();
+    const onSelectAllFilesInCommit = vi.fn();
+    render(
+      <CommitList
+        {...defaultProps}
+        onSelectCommit={onSelectCommit}
+        onSelectAllFilesInCommit={onSelectAllFilesInCommit}
+      />,
+    );
+
+    await user.keyboard('{Shift>}');
+    await user.click(screen.getByText('feat: first commit'));
+    await user.keyboard('{/Shift}');
+
+    expect(onSelectCommit).toHaveBeenCalledWith('aaa111', { shiftKey: true, metaKey: false });
+    expect(onSelectAllFilesInCommit).not.toHaveBeenCalled();
+  });
 });

@@ -25,9 +25,27 @@ vi.mock('./useMultiSelect', () => ({
   }),
 }));
 
+interface MockedCommit {
+  sha: string;
+  abbrevSha: string;
+  subject: string;
+  author: string;
+  date: string;
+  files: readonly string[];
+}
+let mockedCommits: MockedCommit[] = [];
 vi.mock('./useCommitList', () => ({
-  useCommitList: () => ({ commits: [] }),
+  useCommitList: () => ({ commits: mockedCommits }),
 }));
+
+interface MockedCommitFileEntry {
+  sha: string;
+  path: string;
+}
+let mockedCommitFileEntries: MockedCommitFileEntry[] = [
+  { sha: 'aaa111', path: 'src/a.ts' },
+  { sha: 'bbb222', path: 'src/a.ts' },
+];
 
 vi.mock('./useCommitSelection', () => ({
   useCommitSelection: () => ({
@@ -49,13 +67,11 @@ vi.mock('./useCommitFileDiffs', () => ({
 
 vi.mock('./useCommitFileSelection', () => ({
   useCommitFileSelection: () => ({
-    entries: [
-      { sha: 'aaa111', path: 'src/a.ts' },
-      { sha: 'bbb222', path: 'src/a.ts' },
-    ],
+    entries: mockedCommitFileEntries,
     isSelected: () => false,
     toggle: vi.fn(),
     selectCommitFile: vi.fn(),
+    selectAllFilesInCommit: vi.fn(),
   }),
 }));
 
@@ -84,6 +100,11 @@ describe('useSelectionCoordinator', () => {
       ok: true,
       json: () => Promise.resolve({ path: 'stub', changeType: 'modified' }),
     } as Response);
+    mockedCommits = [];
+    mockedCommitFileEntries = [
+      { sha: 'aaa111', path: 'src/a.ts' },
+      { sha: 'bbb222', path: 'src/a.ts' },
+    ];
   });
 
   it('prefetches the two committed files following the selection at depth 2', () => {
@@ -128,6 +149,38 @@ describe('useSelectionCoordinator', () => {
     const lastCall = useCommitFileDiffsSpy.mock.calls.at(-1);
     expect(lastCall?.[0]).toEqual([
       { sha: 'aaa111', path: 'src/a.ts' },
+      { sha: 'bbb222', path: 'src/a.ts' },
+    ]);
+  });
+
+  it('sorts commitFile entries by commit order (newest first) before passing them to useCommitFileDiffs', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mockedCommits = [
+      { sha: 'aaa111', abbrevSha: 'aaa', subject: 'newer', author: 'A', date: '2026-04-03T10:00:00+00:00', files: ['src/a.ts', 'src/b.ts'] },
+      { sha: 'bbb222', abbrevSha: 'bbb', subject: 'older', author: 'B', date: '2026-04-01T09:00:00+00:00', files: ['src/a.ts'] },
+    ];
+    mockedCommitFileEntries = [
+      { sha: 'bbb222', path: 'src/a.ts' },
+      { sha: 'aaa111', path: 'src/b.ts' },
+      { sha: 'aaa111', path: 'src/a.ts' },
+    ];
+
+    renderHook(
+      () => {
+        useSelectionCoordinator({
+          files: [],
+          worktreeFiles: [],
+          oldRef: 'HEAD~1',
+          newRef: 'HEAD',
+        });
+      },
+      { wrapper: createWrapper(queryClient) },
+    );
+
+    const lastCall = useCommitFileDiffsSpy.mock.calls.at(-1);
+    expect(lastCall?.[0]).toEqual([
+      { sha: 'aaa111', path: 'src/a.ts' },
+      { sha: 'aaa111', path: 'src/b.ts' },
       { sha: 'bbb222', path: 'src/a.ts' },
     ]);
   });

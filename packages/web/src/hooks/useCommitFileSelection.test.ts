@@ -239,4 +239,54 @@ describe('useCommitFileSelection', () => {
       commitFile: ['aaa:src/a.ts'],
     });
   });
+
+  it('selectAllFilesInCommit without modifiers replaces the selection with every file in that commit', async () => {
+    const { result } = await renderHook();
+    act(() => {
+      result.current.selectAllFilesInCommit('sha1', ['src/a.ts', 'src/b.ts', 'src/c.ts'], {
+        shiftKey: false,
+        metaKey: false,
+      });
+    });
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([
+        { sha: 'sha1', path: 'src/a.ts' },
+        { sha: 'sha1', path: 'src/b.ts' },
+        { sha: 'sha1', path: 'src/c.ts' },
+      ]);
+    });
+  });
+
+  it('selectAllFilesInCommit with modifier adds every file in that commit to the existing selection', async () => {
+    const { result } = await renderHook('/commits?commitFile=shaA:src/x.ts');
+    act(() => {
+      result.current.selectAllFilesInCommit('sha1', ['src/a.ts', 'src/b.ts'], {
+        shiftKey: false,
+        metaKey: true,
+      });
+    });
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([
+        { sha: 'shaA', path: 'src/x.ts' },
+        { sha: 'sha1', path: 'src/a.ts' },
+        { sha: 'sha1', path: 'src/b.ts' },
+      ]);
+    });
+  });
+
+  it('selectAllFilesInCommit deduplicates when some files are already selected', async () => {
+    const { result } = await renderHook('/commits?commitFile=sha1:src/a.ts');
+    act(() => {
+      result.current.selectAllFilesInCommit('sha1', ['src/a.ts', 'src/b.ts'], {
+        shiftKey: true,
+        metaKey: false,
+      });
+    });
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([
+        { sha: 'sha1', path: 'src/a.ts' },
+        { sha: 'sha1', path: 'src/b.ts' },
+      ]);
+    });
+  });
 });

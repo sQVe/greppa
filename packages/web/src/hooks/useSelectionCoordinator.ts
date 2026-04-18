@@ -92,7 +92,29 @@ export const useSelectionCoordinator = ({
   );
 
   const commitFileSelection = useCommitFileSelection();
-  const commitFileDiffs = useCommitFileDiffs(commitFileSelection.entries);
+
+  const sortedCommitFileEntries = useMemo(() => {
+    if (commitFileSelection.entries.length === 0 || commits.length === 0) {
+      return commitFileSelection.entries;
+    }
+    const commitIndex = new Map(commits.map((c, i) => [c.sha, i]));
+    const fileIndex = new Map<string, Map<string, number>>();
+    for (const commit of commits) {
+      const m = new Map<string, number>();
+      commit.files.forEach((f, i) => m.set(f, i));
+      fileIndex.set(commit.sha, m);
+    }
+    return commitFileSelection.entries.toSorted((a, b) => {
+      const ai = commitIndex.get(a.sha) ?? Infinity;
+      const bi = commitIndex.get(b.sha) ?? Infinity;
+      if (ai !== bi) return ai - bi;
+      const afi = fileIndex.get(a.sha)?.get(a.path) ?? Infinity;
+      const bfi = fileIndex.get(b.sha)?.get(b.path) ?? Infinity;
+      return afi - bfi;
+    });
+  }, [commits, commitFileSelection.entries]);
+
+  const commitFileDiffs = useCommitFileDiffs(sortedCommitFileEntries);
 
   const selectedCommitFileKeys = useMemo(
     () => new Set(commitFileSelection.entries.map((e) => `${e.sha}:${e.path}`)),
@@ -100,6 +122,7 @@ export const useSelectionCoordinator = ({
   );
 
   const handleSelectCommitFile = commitFileSelection.selectCommitFile;
+  const handleSelectAllFilesInCommit = commitFileSelection.selectAllFilesInCommit;
 
   return {
     multiSelect,
@@ -117,5 +140,6 @@ export const useSelectionCoordinator = ({
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
     handleSelectCommitFile,
+    handleSelectAllFilesInCommit,
   };
 };

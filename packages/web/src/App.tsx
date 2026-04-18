@@ -332,6 +332,7 @@ export const App = () => {
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
     handleSelectCommitFile,
+    handleSelectAllFilesInCommit,
   } = useSelectionCoordinator({
     files,
     worktreeFiles: worktreeFiles ?? EMPTY_FILES,
@@ -440,6 +441,7 @@ export const App = () => {
               onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
               onSelectCommit={handleSelectCommit}
               onSelectCommitFile={handleSelectCommitFile}
+              onSelectAllFilesInCommit={handleSelectAllFilesInCommit}
               onCommittedExpandedKeysChange={handleExpandedKeysChange}
               onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
             />

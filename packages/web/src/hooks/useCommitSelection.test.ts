@@ -30,6 +30,7 @@ const makeCommit = (sha: string, abbrev: string): CommitEntry => ({
   subject: `commit ${abbrev}`,
   author: 'Test',
   date: '2026-04-03T10:00:00+00:00',
+  files: [],
 });
 
 const commits = [

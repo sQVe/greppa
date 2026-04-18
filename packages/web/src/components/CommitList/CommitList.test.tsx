@@ -122,6 +122,35 @@ describe('CommitList', () => {
     expect(onSelectCommit).not.toHaveBeenCalled();
   });
 
+  it('should mark the matching child file row as aria-selected when it appears in selectedCommitFiles', async () => {
+    const user = userEvent.setup();
+    const commitsWithMultipleFiles: CommitEntry[] = [
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'feat: first commit',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/a.ts', 'src/b.ts'],
+      },
+    ];
+    render(
+      <CommitList
+        {...defaultProps}
+        commits={commitsWithMultipleFiles}
+        selectedCommitFiles={new Set(['aaa111:src/a.ts'])}
+      />,
+    );
+
+    const commitRow = screen.getByRole('row', { name: /feat: first commit/i });
+    await user.click(within(commitRow).getByRole('button'));
+
+    const selectedChild = screen.getByRole('row', { name: /src\/a\.ts/ });
+    const unselectedChild = screen.getByRole('row', { name: /src\/b\.ts/ });
+    expect(selectedChild.getAttribute('aria-selected')).toBe('true');
+    expect(unselectedChild.getAttribute('aria-selected')).toBe('false');
+  });
+
   it('should drop the commit highlight when any of its files is selected', () => {
     render(
       <CommitList

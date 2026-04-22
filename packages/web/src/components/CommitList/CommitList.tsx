@@ -61,18 +61,53 @@ export const CommitList = ({
   expandedKeysRef.current = expandedKeys;
 
   const selectedKeys = useMemo(() => {
-    const shasWithFileSelection = new Set<string>();
+    const result = new Set<string>();
+
+    const filesPerSha = new Map<string, Set<string>>();
     if (selectedCommitFiles != null) {
       for (const key of selectedCommitFiles) {
+        result.add(key);
         const idx = key.indexOf(':');
         if (idx > 0) {
-          shasWithFileSelection.add(key.slice(0, idx));
+          const sha = key.slice(0, idx);
+          const path = key.slice(idx + 1);
+          const paths = filesPerSha.get(sha) ?? new Set<string>();
+          paths.add(path);
+          filesPerSha.set(sha, paths);
         }
       }
     }
-    const visibleShas = [...selectedShas].filter((s) => !shasWithFileSelection.has(s));
-    return new Set<string>([...visibleShas, ...(selectedCommitFiles ?? [])]);
-  }, [selectedShas, selectedCommitFiles]);
+
+    const hasFileSelection = (selectedCommitFiles?.size ?? 0) > 0;
+
+    for (const commit of commits) {
+      const selectedFiles = filesPerSha.get(commit.sha);
+      const allFilesSelected =
+        selectedFiles != null &&
+        commit.files.length > 0 &&
+        commit.files.every((path) => selectedFiles.has(path));
+
+      // A commit is implicitly selected when every file under it is selected,
+      // or when it sits in selectedShas with no file-level selection active
+      // anywhere to demote it.
+      const isSelected =
+        allFilesSelected || (selectedShas.has(commit.sha) && !hasFileSelection);
+
+      if (!isSelected) continue;
+
+      if (expandedKeys.has(commit.sha)) {
+        // Expanded commit rows are never highlighted; highlight all files
+        // under the commit instead.
+        for (const path of commit.files) {
+          result.add(`${commit.sha}:${path}`);
+        }
+      } else {
+        result.add(commit.sha);
+      }
+    }
+
+    return result;
+  }, [commits, selectedShas, selectedCommitFiles, expandedKeys]);
 
   return (
     <Tree.Root

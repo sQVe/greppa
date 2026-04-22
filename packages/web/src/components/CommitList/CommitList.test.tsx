@@ -151,10 +151,29 @@ describe('CommitList', () => {
     expect(unselectedChild.getAttribute('aria-selected')).toBe('false');
   });
 
-  it('should drop the commit highlight when any of its files is selected', () => {
+  it('should drop commit highlights when only some of a commit\'s files are selected', () => {
+    const commitsWithMultipleFiles: CommitEntry[] = [
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'feat: first commit',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/a.ts', 'src/a2.ts'],
+      },
+      {
+        sha: 'bbb222',
+        abbrevSha: 'bbb',
+        subject: 'fix: second commit',
+        author: 'Bob',
+        date: '2026-04-02T09:00:00+00:00',
+        files: ['src/b.ts'],
+      },
+    ];
     render(
       <CommitList
         {...defaultProps}
+        commits={commitsWithMultipleFiles}
         selectedShas={new Set(['aaa111', 'bbb222'])}
         selectedCommitFiles={new Set(['aaa111:src/a.ts'])}
       />,
@@ -164,7 +183,30 @@ describe('CommitList', () => {
     const secondCommitRow = rows.find((row) => row.textContent.includes('fix: second commit'));
 
     expect(firstCommitRow?.getAttribute('aria-selected')).toBe('false');
-    expect(secondCommitRow?.getAttribute('aria-selected')).toBe('true');
+    expect(secondCommitRow?.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('should highlight a collapsed commit when all of its files are in selectedCommitFiles', () => {
+    const commitsWithMultipleFiles: CommitEntry[] = [
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'feat: first commit',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/a.ts', 'src/a2.ts'],
+      },
+    ];
+    render(
+      <CommitList
+        {...defaultProps}
+        commits={commitsWithMultipleFiles}
+        selectedCommitFiles={new Set(['aaa111:src/a.ts', 'aaa111:src/a2.ts'])}
+      />,
+    );
+
+    const row = screen.getByRole('row', { name: /feat: first commit/i });
+    expect(row.getAttribute('aria-selected')).toBe('true');
   });
 
   it('should call onSelectAllFilesInCommit on plain click when the commit is expanded', async () => {
@@ -219,6 +261,55 @@ describe('CommitList', () => {
       { shiftKey: true, metaKey: false },
     );
     expect(onSelectCommit).not.toHaveBeenCalled();
+  });
+
+  it('should not highlight an expanded commit and should highlight all its files instead', async () => {
+    const user = userEvent.setup();
+    const commitsWithMultipleFiles: CommitEntry[] = [
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'feat: first commit',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/a.ts', 'src/b.ts'],
+      },
+    ];
+    render(
+      <CommitList
+        {...defaultProps}
+        commits={commitsWithMultipleFiles}
+        selectedShas={new Set(['aaa111'])}
+      />,
+    );
+
+    const commitRow = screen.getByRole('row', { name: /feat: first commit/i });
+    await user.click(within(commitRow).getByRole('button'));
+
+    expect(commitRow.getAttribute('aria-selected')).toBe('false');
+    expect(screen.getByRole('row', { name: /src\/a\.ts/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('row', { name: /src\/b\.ts/ }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('should not highlight an expanded commit when file selection moved to another commit', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommitList
+        {...defaultProps}
+        selectedShas={new Set(['aaa111'])}
+        selectedCommitFiles={new Set(['bbb222:src/b.ts'])}
+      />,
+    );
+
+    const firstRow = screen.getByRole('row', { name: /feat: first commit/i });
+    const secondRow = screen.getByRole('row', { name: /fix: second commit/i });
+    await user.click(within(firstRow).getByRole('button'));
+    await user.click(within(secondRow).getByRole('button'));
+
+    expect(firstRow.getAttribute('aria-selected')).toBe('false');
+    expect(secondRow.getAttribute('aria-selected')).toBe('false');
+    expect(screen.getByRole('row', { name: /src\/a\.ts/ }).getAttribute('aria-selected')).toBe('false');
+    expect(screen.getByRole('row', { name: /src\/b\.ts/ }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('should still call onSelectCommit when a modifier is held but the commit is collapsed', async () => {

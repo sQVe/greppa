@@ -2,6 +2,9 @@ import { FileIcon, Tree } from '@greppa/ui';
 import { useMemo, useRef, useState } from 'react';
 import type { CommitEntry } from '@greppa/core';
 
+import type { CommitFileEntry } from '../../commitFileKey';
+import { decodeCommitFileKey, encodeCommitFileKey } from '../../commitFileKey';
+import { formatRelativeTime } from '../../formatRelativeTime';
 import styles from './CommitList.module.css';
 
 interface CommitListProps {
@@ -12,7 +15,7 @@ interface CommitListProps {
   onSelectCommitFile?: (
     sha: string,
     path: string,
-    orderedFileEntries: readonly { sha: string; path: string }[],
+    orderedFileEntries: readonly CommitFileEntry[],
     modifiers: { shiftKey: boolean; metaKey: boolean },
   ) => void;
   onSelectAllFilesInCommit?: (
@@ -21,26 +24,6 @@ interface CommitListProps {
     modifiers: { shiftKey: boolean; metaKey: boolean },
   ) => void;
 }
-
-const formatRelativeTime = (iso: string): string => {
-  const minutes = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (minutes < 60) return `${minutes}m`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w`;
-
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo`;
-
-  const years = Math.floor(days / 365);
-  return `${years}y`;
-};
 
 export const CommitList = ({
   commits,
@@ -61,13 +44,11 @@ export const CommitList = ({
     if (selectedCommitFiles != null) {
       for (const key of selectedCommitFiles) {
         result.add(key);
-        const idx = key.indexOf(':');
-        if (idx > 0) {
-          const sha = key.slice(0, idx);
-          const path = key.slice(idx + 1);
-          const paths = filesPerSha.get(sha) ?? new Set<string>();
-          paths.add(path);
-          filesPerSha.set(sha, paths);
+        const decoded = decodeCommitFileKey(key);
+        if (decoded != null) {
+          const paths = filesPerSha.get(decoded.sha) ?? new Set<string>();
+          paths.add(decoded.path);
+          filesPerSha.set(decoded.sha, paths);
         }
       }
     }
@@ -87,13 +68,15 @@ export const CommitList = ({
       const isSelected =
         allFilesSelected || (selectedShas.has(commit.sha) && !hasFileSelection);
 
-      if (!isSelected) continue;
+      if (!isSelected) {
+        continue;
+      }
 
       if (expandedKeys.has(commit.sha)) {
         // Expanded commit rows are never highlighted; highlight all files
         // under the commit instead.
         for (const path of commit.files) {
-          result.add(`${commit.sha}:${path}`);
+          result.add(encodeCommitFileKey({ sha: commit.sha, path }));
         }
       } else {
         result.add(commit.sha);
@@ -106,11 +89,22 @@ export const CommitList = ({
   const commitsRef = useRef(commits);
   commitsRef.current = commits;
 
+  const fileChildrenByCommit = useMemo(() => {
+    const map = new Map<string, { id: string; path: string }[]>();
+    for (const commit of commits) {
+      map.set(
+        commit.sha,
+        commit.files.map((path) => ({ id: encodeCommitFileKey({ sha: commit.sha, path }), path })),
+      );
+    }
+    return map;
+  }, [commits]);
+
   // All commit files, ordered by commit then by file — shift-range slices this
   // list, so collapsed commits between the endpoints still contribute their
   // files to the selection.
-  const computeOrderedFileEntries = (): { sha: string; path: string }[] => {
-    const entries: { sha: string; path: string }[] = [];
+  const computeOrderedFileEntries = (): CommitFileEntry[] => {
+    const entries: CommitFileEntry[] = [];
     for (const c of commitsRef.current) {
       for (const p of c.files) {
         entries.push({ sha: c.sha, path: p });
@@ -135,6 +129,9 @@ export const CommitList = ({
             id={commit.sha}
             textValue={commit.subject}
             onPointerDown={(event) => {
+              if (event.button !== 0) {
+                return;
+              }
               const target = event.target;
               if (target instanceof Element && target.closest('[slot="chevron"]') != null) {
                 return;
@@ -156,13 +153,16 @@ export const CommitList = ({
               <span className={styles.subject}>{commit.subject}</span>
               <span className={styles.meta}>{formatRelativeTime(commit.date)}</span>
             </Tree.ItemContent>
-            <Tree.Collection items={commit.files.map((path) => ({ id: `${commit.sha}:${path}`, path }))}>
+            <Tree.Collection items={fileChildrenByCommit.get(commit.sha) ?? []}>
               {(child: { id: string; path: string }) => (
                 <Tree.Item
                   key={child.id}
                   id={child.id}
                   textValue={child.path}
                   onPointerDown={(event) => {
+                    if (event.button !== 0) {
+                      return;
+                    }
                     event.stopPropagation();
                     onSelectCommitFile?.(commit.sha, child.path, computeOrderedFileEntries(), {
                       shiftKey: event.shiftKey,

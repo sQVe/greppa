@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { encodeCommitFileKey } from '../commitFileKey';
 import type { FileNode } from '../fixtures/types';
 import { collectFiles } from '../useFileSelection';
 import { useCommitFileDiffs } from './useCommitFileDiffs';
@@ -97,27 +98,29 @@ export const useSelectionCoordinator = ({
     if (commitFileSelection.entries.length === 0 || commits.length === 0) {
       return commitFileSelection.entries;
     }
-    const commitIndex = new Map(commits.map((c, i) => [c.sha, i]));
+    const commitIndex = new Map(commits.map((commit, index) => [commit.sha, index]));
     const fileIndex = new Map<string, Map<string, number>>();
     for (const commit of commits) {
-      const m = new Map<string, number>();
-      commit.files.forEach((f, i) => m.set(f, i));
-      fileIndex.set(commit.sha, m);
+      const pathToIndex = new Map<string, number>();
+      commit.files.forEach((path, index) => pathToIndex.set(path, index));
+      fileIndex.set(commit.sha, pathToIndex);
     }
     return commitFileSelection.entries.toSorted((a, b) => {
-      const ai = commitIndex.get(a.sha) ?? Infinity;
-      const bi = commitIndex.get(b.sha) ?? Infinity;
-      if (ai !== bi) return ai - bi;
-      const afi = fileIndex.get(a.sha)?.get(a.path) ?? Infinity;
-      const bfi = fileIndex.get(b.sha)?.get(b.path) ?? Infinity;
-      return afi - bfi;
+      const aCommitIndex = commitIndex.get(a.sha) ?? Infinity;
+      const bCommitIndex = commitIndex.get(b.sha) ?? Infinity;
+      if (aCommitIndex !== bCommitIndex) {
+        return aCommitIndex - bCommitIndex;
+      }
+      const aFileIndex = fileIndex.get(a.sha)?.get(a.path) ?? Infinity;
+      const bFileIndex = fileIndex.get(b.sha)?.get(b.path) ?? Infinity;
+      return aFileIndex - bFileIndex;
     });
   }, [commits, commitFileSelection.entries]);
 
   const commitFileDiffs = useCommitFileDiffs(sortedCommitFileEntries);
 
   const selectedCommitFileKeys = useMemo(
-    () => new Set(commitFileSelection.entries.map((e) => `${e.sha}:${e.path}`)),
+    () => new Set(commitFileSelection.entries.map(encodeCommitFileKey)),
     [commitFileSelection.entries],
   );
 

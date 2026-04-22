@@ -1,7 +1,8 @@
 import { useQueries } from '@tanstack/react-query';
 
+import type { CommitFileEntry } from '../commitFileKey';
+import { encodeCommitFileKey } from '../commitFileKey';
 import type { DiffFile } from '../fixtures/types';
-import type { CommitFileEntry } from './useCommitFileSelection';
 import { fetchAndComputeDiff } from './useComputedDiffs';
 
 export interface CommitFileDiffsResult {
@@ -32,7 +33,7 @@ export const useCommitFileDiffs = (
           diffs.push(result.data);
         } else if (result.isError) {
           const entry = entries[i];
-          failedPaths.push(entry != null ? `${entry.sha}:${entry.path}` : '');
+          failedPaths.push(entry != null ? encodeCommitFileKey(entry) : '');
         }
       }
 

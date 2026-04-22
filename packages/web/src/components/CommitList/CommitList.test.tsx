@@ -203,6 +203,7 @@ describe('CommitList', () => {
         selectedCommitFiles={new Set(['aaa111:src/a.ts'])}
       />,
     );
+
     const rows = screen.getAllByRole('row');
     const firstCommitRow = rows.find((row) => row.textContent.includes('feat: first commit'));
     const secondCommitRow = rows.find((row) => row.textContent.includes('fix: second commit'));

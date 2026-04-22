@@ -1,25 +1,10 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useMemo, useRef } from 'react';
 
+import type { CommitFileEntry } from '../commitFileKey';
+import { decodeCommitFileKey, encodeCommitFileKey } from '../commitFileKey';
 import { getOrCreateStateId } from '../stateCache';
 import { toStringArray } from '../toStringArray';
-
-export interface CommitFileEntry {
-  sha: string;
-  path: string;
-}
-
-const SEP = ':';
-
-const encode = (entry: CommitFileEntry) => `${entry.sha}${SEP}${entry.path}`;
-
-const decode = (raw: string): CommitFileEntry | null => {
-  const idx = raw.indexOf(SEP);
-  if (idx <= 0 || idx === raw.length - 1) {
-    return null;
-  }
-  return { sha: raw.slice(0, idx), path: raw.slice(idx + 1) };
-};
 
 const selectParams = (s: { location: { search: Record<string, unknown> } }) => ({
   file: toStringArray(s.location.search.file),
@@ -38,7 +23,7 @@ export const useCommitFileSelection = () => {
   const anchorRef = useRef<CommitFileEntry | null>(null);
 
   const entries = useMemo<readonly CommitFileEntry[]>(
-    () => commitFile.map(decode).filter((e): e is CommitFileEntry => e != null),
+    () => commitFile.map(decodeCommitFileKey).filter((e): e is CommitFileEntry => e != null),
     [commitFile],
   );
 
@@ -77,7 +62,7 @@ export const useCommitFileSelection = () => {
   const toggle = useCallback(
     (sha: string, path: string) => {
       const current = stateRef.current;
-      const key = encode({ sha, path });
+      const key = encodeCommitFileKey({ sha, path });
       const next = current.commitFile.includes(key)
         ? current.commitFile.filter((v) => v !== key)
         : [...current.commitFile, key];
@@ -112,20 +97,20 @@ export const useCommitFileSelection = () => {
             : -1;
         if (anchorIndex === -1 || targetIndex === -1) {
           anchorRef.current = { sha, path };
-          writeCommitFile([encode({ sha, path })]);
+          writeCommitFile([encodeCommitFileKey({ sha, path })]);
           return;
         }
         const start = Math.min(anchorIndex, targetIndex);
         const end = Math.max(anchorIndex, targetIndex);
         const rangeKeys = orderedFileEntries
           .slice(start, end + 1)
-          .map((e) => encode(e));
+          .map((e) => encodeCommitFileKey(e));
         writeCommitFile(rangeKeys);
         return;
       }
 
       anchorRef.current = { sha, path };
-      writeCommitFile([encode({ sha, path })]);
+      writeCommitFile([encodeCommitFileKey({ sha, path })]);
     },
     [toggle, writeCommitFile],
   );
@@ -140,7 +125,7 @@ export const useCommitFileSelection = () => {
         return;
       }
       const current = stateRef.current;
-      const commitKeys = filesInCommit.map((p) => encode({ sha, path: p }));
+      const commitKeys = filesInCommit.map((p) => encodeCommitFileKey({ sha, path: p }));
       const last = filesInCommit.at(-1);
       if (last != null) {
         anchorRef.current = { sha, path: last };

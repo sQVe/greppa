@@ -77,9 +77,11 @@ describe('useCommitFileSelection', () => {
 
   it('toggle adds an entry', async () => {
     const { result, router } = await renderHook();
+
     act(() => {
       result.current.toggle('sha1', 'src/a.ts');
     });
+
     await waitFor(() => {
       expect(result.current.isSelected('sha1', 'src/a.ts')).toBe(true);
     });
@@ -90,9 +92,11 @@ describe('useCommitFileSelection', () => {
 
   it('toggle removes an existing entry', async () => {
     const { result } = await renderHook('/commits?commitFile=sha1:src/a.ts');
+
     act(() => {
       result.current.toggle('sha1', 'src/a.ts');
     });
+
     await waitFor(() => {
       expect(result.current.isSelected('sha1', 'src/a.ts')).toBe(false);
     });
@@ -101,12 +105,14 @@ describe('useCommitFileSelection', () => {
 
   it('same path under two different shas produces two entries', async () => {
     const { result } = await renderHook();
+
     act(() => {
       result.current.toggle('sha1', 'src/a.ts');
     });
     act(() => {
       result.current.toggle('sha2', 'src/a.ts');
     });
+
     await waitFor(() => {
       expect(result.current.entries).toEqual([
         { sha: 'sha1', path: 'src/a.ts' },
@@ -304,9 +310,11 @@ describe('useCommitFileSelection', () => {
 
   it('toggle does not modify commits param', async () => {
     const { result, router } = await renderHook('/commits?commits=aaa&commits=bbb');
+
     act(() => {
       result.current.toggle('aaa', 'src/a.ts');
     });
+
     await waitFor(() => {
       expect(result.current.isSelected('aaa', 'src/a.ts')).toBe(true);
     });
@@ -318,12 +326,14 @@ describe('useCommitFileSelection', () => {
 
   it('selectAllFilesInCommit without modifiers replaces the selection with every file in that commit', async () => {
     const { result } = await renderHook();
+
     act(() => {
       result.current.selectAllFilesInCommit('sha1', ['src/a.ts', 'src/b.ts', 'src/c.ts'], {
         shiftKey: false,
         metaKey: false,
       });
     });
+
     await waitFor(() => {
       expect(result.current.entries).toEqual([
         { sha: 'sha1', path: 'src/a.ts' },
@@ -335,12 +345,14 @@ describe('useCommitFileSelection', () => {
 
   it('selectAllFilesInCommit with modifier adds every file in that commit to the existing selection', async () => {
     const { result } = await renderHook('/commits?commitFile=shaA:src/x.ts');
+
     act(() => {
       result.current.selectAllFilesInCommit('sha1', ['src/a.ts', 'src/b.ts'], {
         shiftKey: false,
         metaKey: true,
       });
     });
+
     await waitFor(() => {
       expect(result.current.entries).toEqual([
         { sha: 'shaA', path: 'src/x.ts' },
@@ -352,12 +364,14 @@ describe('useCommitFileSelection', () => {
 
   it('selectAllFilesInCommit deduplicates when some files are already selected', async () => {
     const { result } = await renderHook('/commits?commitFile=sha1:src/a.ts');
+
     act(() => {
       result.current.selectAllFilesInCommit('sha1', ['src/a.ts', 'src/b.ts'], {
         shiftKey: true,
         metaKey: false,
       });
     });
+
     await waitFor(() => {
       expect(result.current.entries).toEqual([
         { sha: 'sha1', path: 'src/a.ts' },

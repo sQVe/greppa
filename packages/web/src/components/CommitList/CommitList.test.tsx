@@ -25,12 +25,10 @@ afterEach(() => {
 });
 
 describe('CommitList', () => {
-  it('should render commit items with hash and subject', () => {
+  it('should render commit subjects', () => {
     render(<CommitList {...defaultProps} />);
 
-    screen.getByText('aaa');
     screen.getByText('feat: first commit');
-    screen.getByText('bbb');
     screen.getByText('fix: second commit');
   });
 
@@ -95,6 +93,29 @@ describe('CommitList', () => {
     expect(screen.getByText('src/a.ts')).toBeDefined();
   });
 
+  it('should render a file icon on each expanded commit file row', async () => {
+    const user = userEvent.setup();
+    const commitsWithMultipleFiles: CommitEntry[] = [
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'feat: first commit',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/a.ts', 'src/b.ts'],
+      },
+    ];
+    render(<CommitList {...defaultProps} commits={commitsWithMultipleFiles} />);
+
+    const row = screen.getByRole('row', { name: /feat: first commit/i });
+    await user.click(within(row).getByRole('button'));
+
+    const firstFileRow = screen.getByRole('row', { name: /src\/a\.ts/ });
+    const secondFileRow = screen.getByRole('row', { name: /src\/b\.ts/ });
+    expect(firstFileRow.querySelector('img')).not.toBeNull();
+    expect(secondFileRow.querySelector('img')).not.toBeNull();
+  });
+
   it('should call onSelectCommitFile and not onSelectCommit when a file child is clicked', async () => {
     const user = userEvent.setup();
     const onSelectCommit = vi.fn();
@@ -116,7 +137,11 @@ describe('CommitList', () => {
     expect(onSelectCommitFile).toHaveBeenCalledWith(
       'aaa111',
       'src/a.ts',
-      ['src/a.ts'],
+      [
+        { sha: 'aaa111', path: 'src/a.ts' },
+        { sha: 'bbb222', path: 'src/b.ts' },
+        { sha: 'ccc333', path: 'src/c.ts' },
+      ],
       { shiftKey: false, metaKey: false },
     );
     expect(onSelectCommit).not.toHaveBeenCalled();

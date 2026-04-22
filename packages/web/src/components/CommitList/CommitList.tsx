@@ -1,4 +1,4 @@
-import { Tree } from '@greppa/ui';
+import { FileIcon, Tree } from '@greppa/ui';
 import { useMemo, useRef, useState } from 'react';
 import type { CommitEntry } from '@greppa/core';
 
@@ -12,7 +12,7 @@ interface CommitListProps {
   onSelectCommitFile?: (
     sha: string,
     path: string,
-    filesInCommit: readonly string[],
+    orderedFileEntries: readonly { sha: string; path: string }[],
     modifiers: { shiftKey: boolean; metaKey: boolean },
   ) => void;
   onSelectAllFilesInCommit?: (
@@ -23,29 +23,23 @@ interface CommitListProps {
 }
 
 const formatRelativeTime = (iso: string): string => {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-
-  if (seconds < 60) {
-    return 'just now';
-  }
-
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    return `${minutes}m ago`;
-  }
+  const minutes = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    return `${hours}h ago`;
-  }
+  if (hours < 24) return `${hours}h`;
 
   const days = Math.floor(hours / 24);
-  if (days < 30) {
-    return `${days}d ago`;
-  }
+  if (days < 7) return `${days}d`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w`;
 
   const months = Math.floor(days / 30);
-  return `${months}mo ago`;
+  if (months < 12) return `${months}mo`;
+
+  const years = Math.floor(days / 365);
+  return `${years}y`;
 };
 
 export const CommitList = ({
@@ -109,6 +103,22 @@ export const CommitList = ({
     return result;
   }, [commits, selectedShas, selectedCommitFiles, expandedKeys]);
 
+  const commitsRef = useRef(commits);
+  commitsRef.current = commits;
+
+  // All commit files, ordered by commit then by file — shift-range slices this
+  // list, so collapsed commits between the endpoints still contribute their
+  // files to the selection.
+  const computeOrderedFileEntries = (): { sha: string; path: string }[] => {
+    const entries: { sha: string; path: string }[] = [];
+    for (const c of commitsRef.current) {
+      for (const p of c.files) {
+        entries.push({ sha: c.sha, path: p });
+      }
+    }
+    return entries;
+  };
+
   return (
     <Tree.Root
       aria-label="Commits"
@@ -144,10 +154,7 @@ export const CommitList = ({
             <Tree.ItemContent>
               <Tree.Chevron />
               <span className={styles.subject}>{commit.subject}</span>
-              <span className={styles.meta}>
-                <span className={styles.hash}>{commit.abbrevSha}</span>
-                <span className={styles.time}>{formatRelativeTime(commit.date)}</span>
-              </span>
+              <span className={styles.meta}>{formatRelativeTime(commit.date)}</span>
             </Tree.ItemContent>
             <Tree.Collection items={commit.files.map((path) => ({ id: `${commit.sha}:${path}`, path }))}>
               {(child: { id: string; path: string }) => (
@@ -157,7 +164,7 @@ export const CommitList = ({
                   textValue={child.path}
                   onPointerDown={(event) => {
                     event.stopPropagation();
-                    onSelectCommitFile?.(commit.sha, child.path, commit.files, {
+                    onSelectCommitFile?.(commit.sha, child.path, computeOrderedFileEntries(), {
                       shiftKey: event.shiftKey,
                       metaKey: event.metaKey || event.ctrlKey,
                     });
@@ -165,6 +172,10 @@ export const CommitList = ({
                 >
                   <Tree.ItemContent>
                     <Tree.Indent />
+                    <FileIcon
+                      name={child.path.split('/').pop() ?? child.path}
+                      baseUrl="/material-icons"
+                    />
                     <Tree.Label>{child.path}</Tree.Label>
                   </Tree.ItemContent>
                 </Tree.Item>

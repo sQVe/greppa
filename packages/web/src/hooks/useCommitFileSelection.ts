@@ -90,7 +90,7 @@ export const useCommitFileSelection = () => {
     (
       sha: string,
       path: string,
-      filesInCommit: readonly string[],
+      orderedFileEntries: readonly CommitFileEntry[],
       modifiers: { shiftKey: boolean; metaKey: boolean },
     ) => {
       if (modifiers.metaKey) {
@@ -101,13 +101,15 @@ export const useCommitFileSelection = () => {
 
       if (modifiers.shiftKey) {
         const anchor = anchorRef.current;
-        if (anchor == null || anchor.sha !== sha) {
-          anchorRef.current = { sha, path };
-          writeCommitFile([encode({ sha, path })]);
-          return;
-        }
-        const anchorIndex = filesInCommit.indexOf(anchor.path);
-        const targetIndex = filesInCommit.indexOf(path);
+        const targetIndex = orderedFileEntries.findIndex(
+          (e) => e.sha === sha && e.path === path,
+        );
+        const anchorIndex =
+          anchor != null
+            ? orderedFileEntries.findIndex(
+                (e) => e.sha === anchor.sha && e.path === anchor.path,
+              )
+            : -1;
         if (anchorIndex === -1 || targetIndex === -1) {
           anchorRef.current = { sha, path };
           writeCommitFile([encode({ sha, path })]);
@@ -115,9 +117,9 @@ export const useCommitFileSelection = () => {
         }
         const start = Math.min(anchorIndex, targetIndex);
         const end = Math.max(anchorIndex, targetIndex);
-        const rangeKeys = filesInCommit
+        const rangeKeys = orderedFileEntries
           .slice(start, end + 1)
-          .map((p) => encode({ sha, path: p }));
+          .map((e) => encode(e));
         writeCommitFile(rangeKeys);
         return;
       }

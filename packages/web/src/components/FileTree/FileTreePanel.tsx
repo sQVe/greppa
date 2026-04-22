@@ -32,7 +32,7 @@ interface FileTreePanelProps {
   onSelectCommitFile?: (
     sha: string,
     path: string,
-    filesInCommit: readonly string[],
+    orderedFileEntries: readonly { sha: string; path: string }[],
     modifiers: { shiftKey: boolean; metaKey: boolean },
   ) => void;
   onSelectAllFilesInCommit?: (

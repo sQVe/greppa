@@ -23,7 +23,7 @@
   content: '';
   position: absolute;
   top: 0;
-  left: var(--gr-space-md);
+  left: calc(var(--gr-space-md) + 8px);
   bottom: 0;
   width: calc((var(--tree-item-level, 1) - 1) * var(--gr-tree-indent));
   background: repeating-linear-gradient(
@@ -75,10 +75,13 @@
   color: var(--gr-color-text-muted);
   font-size: 10px;
   cursor: pointer;
+}
+
+.chevron svg {
   transition: transform 150ms;
 }
 
-[data-expanded] > [role='row'] .chevron {
+[data-expanded] .chevron svg {
   transform: rotate(90deg);
 }
 

@@ -169,7 +169,11 @@ describe('useCommitFileSelection', () => {
       result.current.selectCommitFile(
         'sha1',
         'src/c.ts',
-        ['src/a.ts', 'src/b.ts', 'src/c.ts'],
+        [
+          { sha: 'sha1', path: 'src/a.ts' },
+          { sha: 'sha1', path: 'src/b.ts' },
+          { sha: 'sha1', path: 'src/c.ts' },
+        ],
         { shiftKey: false, metaKey: false },
       );
     });
@@ -186,7 +190,10 @@ describe('useCommitFileSelection', () => {
       result.current.selectCommitFile(
         'sha1',
         'src/b.ts',
-        ['src/a.ts', 'src/b.ts'],
+        [
+          { sha: 'sha1', path: 'src/a.ts' },
+          { sha: 'sha1', path: 'src/b.ts' },
+        ],
         { shiftKey: false, metaKey: true },
       );
     });
@@ -201,17 +208,22 @@ describe('useCommitFileSelection', () => {
 
   it('selectCommitFile with shift+click selects a range within the commit', async () => {
     const { result } = await renderHook();
-    const files = ['src/a.ts', 'src/b.ts', 'src/c.ts', 'src/d.ts'];
+    const entries = [
+      { sha: 'sha1', path: 'src/a.ts' },
+      { sha: 'sha1', path: 'src/b.ts' },
+      { sha: 'sha1', path: 'src/c.ts' },
+      { sha: 'sha1', path: 'src/d.ts' },
+    ];
 
     act(() => {
-      result.current.selectCommitFile('sha1', 'src/a.ts', files, {
+      result.current.selectCommitFile('sha1', 'src/a.ts', entries, {
         shiftKey: false,
         metaKey: false,
       });
     });
 
     act(() => {
-      result.current.selectCommitFile('sha1', 'src/c.ts', files, {
+      result.current.selectCommitFile('sha1', 'src/c.ts', entries, {
         shiftKey: true,
         metaKey: false,
       });
@@ -222,6 +234,70 @@ describe('useCommitFileSelection', () => {
         { sha: 'sha1', path: 'src/a.ts' },
         { sha: 'sha1', path: 'src/b.ts' },
         { sha: 'sha1', path: 'src/c.ts' },
+      ]);
+    });
+  });
+
+  it('selectCommitFile with shift+click selects a range spanning two expanded commits', async () => {
+    const { result } = await renderHook();
+    const entries = [
+      { sha: 'sha1', path: 'src/a.ts' },
+      { sha: 'sha1', path: 'src/b.ts' },
+      { sha: 'sha2', path: 'src/c.ts' },
+      { sha: 'sha2', path: 'src/d.ts' },
+    ];
+
+    act(() => {
+      result.current.selectCommitFile('sha1', 'src/b.ts', entries, {
+        shiftKey: false,
+        metaKey: false,
+      });
+    });
+
+    act(() => {
+      result.current.selectCommitFile('sha2', 'src/c.ts', entries, {
+        shiftKey: true,
+        metaKey: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([
+        { sha: 'sha1', path: 'src/b.ts' },
+        { sha: 'sha2', path: 'src/c.ts' },
+      ]);
+    });
+  });
+
+  it('selectCommitFile with shift+click fills files of a collapsed commit lying between the endpoints', async () => {
+    const { result } = await renderHook();
+    const entries = [
+      { sha: 'shaA', path: 'src/a.ts' },
+      { sha: 'shaB', path: 'src/b1.ts' },
+      { sha: 'shaB', path: 'src/b2.ts' },
+      { sha: 'shaC', path: 'src/c.ts' },
+    ];
+
+    act(() => {
+      result.current.selectCommitFile('shaA', 'src/a.ts', entries, {
+        shiftKey: false,
+        metaKey: false,
+      });
+    });
+
+    act(() => {
+      result.current.selectCommitFile('shaC', 'src/c.ts', entries, {
+        shiftKey: true,
+        metaKey: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([
+        { sha: 'shaA', path: 'src/a.ts' },
+        { sha: 'shaB', path: 'src/b1.ts' },
+        { sha: 'shaB', path: 'src/b2.ts' },
+        { sha: 'shaC', path: 'src/c.ts' },
       ]);
     });
   });

@@ -261,6 +261,26 @@ describe('GitService', () => {
       const output = 'sha1\x1fab1\x1fincomplete';
       expect(parseCommitLog(output)).toEqual([]);
     });
+
+    it('does not attach file lines following a malformed header to the previous commit', () => {
+      const output = [
+        'sha1\x1fab1\x1ffeat: first\x1fAlice\x1f2026-04-03T10:00:00+00:00',
+        'src/a.ts',
+        'sha-garbage\x1fab\x1fpartial',
+        'src/should-not-attach.ts',
+      ].join('\n');
+
+      expect(parseCommitLog(output)).toEqual([
+        {
+          sha: 'sha1',
+          abbrevSha: 'ab1',
+          subject: 'feat: first',
+          author: 'Alice',
+          date: '2026-04-03T10:00:00+00:00',
+          files: ['src/a.ts'],
+        },
+      ]);
+    });
   });
 
   describe.runIf(parentSha != null && headSha != null)('listFiles', () => {

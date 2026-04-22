@@ -164,6 +164,10 @@ export const parseCommitLog = (output: string): CommitEntry[] => {
       commits.push(current);
     } else if (parts.length === 1 && current != null) {
       current.files.push(line);
+    } else {
+      // Line has the separator but isn't a valid header — avoid attaching
+      // subsequent file lines to the previous commit.
+      current = null;
     }
   }
   return commits;

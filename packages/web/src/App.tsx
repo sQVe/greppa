@@ -353,12 +353,12 @@ export const App = () => {
 
   const selectedDiffs = useMemo(
     () => {
-      if (commitFileDiffs.diffs.length > 0) {
+      if (selectedCommitFileKeys.size > 0) {
         return commitFileDiffs.diffs;
       }
       return commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
     },
-    [commitSelection.isActive, commitDiffs.diffs, commitFileDiffs.diffs, fileDiffs],
+    [selectedCommitFileKeys, commitSelection.isActive, commitDiffs.diffs, commitFileDiffs.diffs, fileDiffs],
   );
 
   const hash = useRouterState({ select: (s: { location: { hash: string } }) => s.location.hash });

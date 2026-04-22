@@ -8,7 +8,7 @@ pnpm run env:setup
 ```
 
 `env:setup` generates `.env.local` with deterministic ports per worktree and writes a Caddy reverse
-proxy snippet to `~/.config/caddy/greppa/`.
+proxy snippet to `~/.config/caddy/dev/`.
 
 ## Development
 
@@ -20,8 +20,9 @@ Runs all packages in parallel. Each worktree gets stable ports derived from its 
 
 ## Caddy reverse proxy
 
-Caddy gives each worktree predictable `*.greppa.localhost` domains with automatic HTTPS. It starts
-automatically with `pnpm dev`.
+Caddy gives each worktree predictable `*.greppa.localhost` domains with automatic HTTPS. Caddy runs
+as a shared `systemctl --user` service that serves snippets dropped in `~/.config/caddy/dev/`.
+`pnpm run env:setup` writes this worktree's snippet and reloads the service.
 
 One-time setup to trust Caddy's local CA in your browser:
 

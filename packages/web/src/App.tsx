@@ -388,7 +388,8 @@ export const App = () => {
   const statusBarProps = useStatusBarProps({
     activeSection,
     selectedCommitShas: commitSelection.selectedShas,
-    commitDiffCount: commitDiffs.diffs.length,
+    commitDiffCount:
+      selectedCommitFileKeys.size > 0 ? commitFileDiffs.diffs.length : commitDiffs.diffs.length,
     worktreeFileCount,
     committedReviewedCount,
     committedFileCount,

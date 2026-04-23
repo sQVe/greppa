@@ -24,9 +24,11 @@ Caddy gives each worktree predictable `*.greppa.localhost` domains with automati
 as a shared `systemctl --user` service that serves snippets dropped in `~/.config/caddy/dev/`.
 `pnpm run env:setup` writes this worktree's snippet and reloads the service.
 
-One-time setup to trust Caddy's local CA in your browser:
+One-time setup to install and start the shared Caddy user service (point it at
+`~/.config/caddy/dev/Caddyfile`), then trust Caddy's local CA:
 
 ```sh
+systemctl --user enable --now caddy
 caddy trust
 ```
 

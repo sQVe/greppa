@@ -3,6 +3,7 @@ import { IconChevronRight, IconFileDiff, IconGitBranch, IconGitCommit } from '@t
 import { motion } from 'motion/react';
 import { useMemo, useRef } from 'react';
 
+import type { CommitFileEntry } from '../../commitFileKey';
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
 import { CommitList } from '../CommitList/CommitList';
@@ -32,7 +33,7 @@ interface FileTreePanelProps {
   onSelectCommitFile?: (
     sha: string,
     path: string,
-    orderedFileEntries: readonly { sha: string; path: string }[],
+    orderedFileEntries: readonly CommitFileEntry[],
     modifiers: { shiftKey: boolean; metaKey: boolean },
   ) => void;
   onSelectAllFilesInCommit?: (

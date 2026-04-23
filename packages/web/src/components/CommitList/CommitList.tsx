@@ -103,15 +103,21 @@ export const CommitList = ({
   // All commit files, ordered by commit then by file — shift-range slices this
   // list, so collapsed commits between the endpoints still contribute their
   // files to the selection.
-  const computeOrderedFileEntries = (): CommitFileEntry[] => {
+  const orderedFileEntries = useMemo<CommitFileEntry[]>(() => {
     const entries: CommitFileEntry[] = [];
-    for (const c of commitsRef.current) {
+    for (const c of commits) {
       for (const p of c.files) {
         entries.push({ sha: c.sha, path: p });
       }
     }
     return entries;
-  };
+  }, [commits]);
+
+  // Pointer handlers invoke onPointerDown (with modifier support) and RAC then
+  // fires onSelectionChange for the same interaction. We want onSelectionChange
+  // only for keyboard-driven selection, so ignore it briefly after any pointer.
+  const pointerTimestampRef = useRef(0);
+  const POINTER_SUPPRESS_WINDOW_MS = 100;
 
   return (
     <Tree.Root
@@ -120,7 +126,45 @@ export const CommitList = ({
       selectedKeys={selectedKeys}
       expandedKeys={expandedKeys}
       onExpandedChange={setExpandedKeys}
-      onSelectionChange={() => { /* managed via onPointerDown */ }}
+      onSelectionChange={(keys) => {
+        if (performance.now() - pointerTimestampRef.current < POINTER_SUPPRESS_WINDOW_MS) {
+          return;
+        }
+        const nextKeys = keys === 'all' ? new Set<string>() : new Set<string>([...keys].map(String));
+        let toggled: string | null = null;
+        for (const k of nextKeys) {
+          if (!selectedKeys.has(k)) {
+            toggled = k;
+            break;
+          }
+        }
+        if (toggled == null) {
+          for (const k of selectedKeys) {
+            if (!nextKeys.has(k)) {
+              toggled = k;
+              break;
+            }
+          }
+        }
+        if (toggled == null) {
+          return;
+        }
+        const modifiers = { shiftKey: false, metaKey: false };
+        const decoded = decodeCommitFileKey(toggled);
+        if (decoded != null) {
+          onSelectCommitFile?.(decoded.sha, decoded.path, orderedFileEntries, modifiers);
+          return;
+        }
+        const isExpanded = expandedKeysRef.current.has(toggled);
+        if (isExpanded && onSelectAllFilesInCommit != null) {
+          const commit = commitsRef.current.find((c) => c.sha === toggled);
+          if (commit != null) {
+            onSelectAllFilesInCommit(toggled, commit.files, modifiers);
+            return;
+          }
+        }
+        onSelectCommit(toggled, modifiers);
+      }}
     >
       <Tree.Collection items={commits}>
         {(commit: CommitEntry) => (
@@ -136,6 +180,7 @@ export const CommitList = ({
               if (target instanceof Element && target.closest('[slot="chevron"]') != null) {
                 return;
               }
+              pointerTimestampRef.current = performance.now();
               const modifiers = {
                 shiftKey: event.shiftKey,
                 metaKey: event.metaKey || event.ctrlKey,
@@ -164,7 +209,8 @@ export const CommitList = ({
                       return;
                     }
                     event.stopPropagation();
-                    onSelectCommitFile?.(commit.sha, child.path, computeOrderedFileEntries(), {
+                    pointerTimestampRef.current = performance.now();
+                    onSelectCommitFile?.(commit.sha, child.path, orderedFileEntries, {
                       shiftKey: event.shiftKey,
                       metaKey: event.metaKey || event.ctrlKey,
                     });

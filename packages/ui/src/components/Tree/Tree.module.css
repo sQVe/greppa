@@ -81,7 +81,7 @@
   transition: transform 150ms;
 }
 
-[data-expanded] .chevron svg {
+[data-expanded] > [role='row'] .chevron svg {
   transform: rotate(90deg);
 }
 

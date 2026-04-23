@@ -88,7 +88,7 @@ export const writeCaddySnippet = ({ name, apiPort, devPort, playgroundPort, cadd
   mkdirSync(caddyDir, { recursive: true });
   const snippet = buildCaddySnippet({ name, apiPort, devPort, playgroundPort });
   const finalPath = join(caddyDir, `${name}.caddy`);
-  const tmpPath = `${finalPath}.tmp`;
+  const tmpPath = join(caddyDir, `.${name}.${process.pid}.caddy.tmp`);
   writeFileSync(tmpPath, snippet);
   renameSync(tmpPath, finalPath);
 };

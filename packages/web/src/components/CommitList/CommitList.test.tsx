@@ -205,8 +205,8 @@ describe('CommitList', () => {
     );
 
     const rows = screen.getAllByRole('row');
-    const firstCommitRow = rows.find((row) => row.textContent.includes('feat: first commit'));
-    const secondCommitRow = rows.find((row) => row.textContent.includes('fix: second commit'));
+    const firstCommitRow = rows.find((row) => row.textContent?.includes('feat: first commit'));
+    const secondCommitRow = rows.find((row) => row.textContent?.includes('fix: second commit'));
 
     expect(firstCommitRow?.getAttribute('aria-selected')).toBe('false');
     expect(secondCommitRow?.getAttribute('aria-selected')).toBe('false');

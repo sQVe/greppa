@@ -74,6 +74,23 @@ const sortNodes = (nodes: FileNode[]): FileNode[] =>
       return a.name.localeCompare(b.name);
     });
 
+const flattenTreePaths = (nodes: FileNode[]): string[] =>
+  nodes.flatMap((node) =>
+    node.type === 'file' ? [node.path] : flattenTreePaths(node.children ?? []),
+  );
+
+export const sortPathsTreeOrder = (paths: readonly string[]): string[] => {
+  if (paths.length === 0) {
+    return [];
+  }
+  const entries: FileEntry[] = paths.map((path) => ({
+    path,
+    changeType: 'modified',
+    sizeTier: 'small',
+  }));
+  return flattenTreePaths(buildFileTree(entries));
+};
+
 export const buildFileTree = (entries: FileEntry[]): FileNode[] => {
   const dirs = new Map<string, FileNode>();
   const topFiles = new Map<string, FileNode>();

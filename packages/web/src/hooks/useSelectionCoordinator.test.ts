@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { FileNode } from '../fixtures/types';
+import type * as UseFileListModule from './useFileList';
 import { useSelectionCoordinator } from './useSelectionCoordinator';
 
 vi.mock('./useMultiSelect', () => ({
@@ -77,9 +78,13 @@ vi.mock('./useCommitFileSelection', () => ({
   }),
 }));
 
-vi.mock('./useFileList', () => ({
-  useFileList: () => ({ files: null, isLoading: false, isError: false }),
-}));
+vi.mock('./useFileList', async (importOriginal) => {
+  const actual = await importOriginal<typeof UseFileListModule>();
+  return {
+    ...actual,
+    useFileList: () => ({ files: null, isLoading: false, isError: false }),
+  };
+});
 
 vi.mock('./useFileSelectionHandlers', () => ({
   useFileSelectionHandlers: () => ({
@@ -156,7 +161,7 @@ describe('useSelectionCoordinator', () => {
     ]);
   });
 
-  it('sorts commitFile entries by commit order (newest first) before passing them to useCommitFileDiffs', () => {
+  it('sorts commitFile entries by tree-DFS path order with commit order as tiebreaker', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     mockedCommits = [
       { sha: 'aaa111', abbrevSha: 'aaa', subject: 'newer', author: 'A', date: '2026-04-03T10:00:00+00:00', files: ['src/a.ts', 'src/b.ts'] },
@@ -183,8 +188,8 @@ describe('useSelectionCoordinator', () => {
     const lastCall = useCommitFileDiffsSpy.mock.calls.at(-1);
     expect(lastCall?.[0]).toEqual([
       { sha: 'aaa111', path: 'src/a.ts' },
-      { sha: 'aaa111', path: 'src/b.ts' },
       { sha: 'bbb222', path: 'src/a.ts' },
+      { sha: 'aaa111', path: 'src/b.ts' },
     ]);
   });
 

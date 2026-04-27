@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FileNode } from '../fixtures/types';
-import { buildFileTree, compactTree, propagateChangeType } from './useFileList';
+import { buildFileTree, compactTree, propagateChangeType, sortPathsTreeOrder } from './useFileList';
 
 describe('buildFileTree', () => {
   it('builds nested tree from flat entries', () => {
@@ -307,5 +307,62 @@ describe('compactTree', () => {
     const result = compactTree(nodes);
 
     expect(result[0]?.changeType).toBe('added');
+  });
+});
+
+describe('sortPathsTreeOrder', () => {
+  it('returns an empty array for empty input', () => {
+    expect(sortPathsTreeOrder([])).toEqual([]);
+  });
+
+  it('groups directories before top-level files', () => {
+    const result = sortPathsTreeOrder(['beads.jsonl', 'packages/web/src/App.tsx']);
+
+    expect(result).toEqual(['packages/web/src/App.tsx', 'beads.jsonl']);
+  });
+
+  it('orders sibling directories alphabetically', () => {
+    const result = sortPathsTreeOrder([
+      'src/components/StackedDiffViewer/FileHeader.tsx',
+      'src/components/CommitList/CommitList.tsx',
+      'src/components/FileTree/FileTree.tsx',
+    ]);
+
+    expect(result).toEqual([
+      'src/components/CommitList/CommitList.tsx',
+      'src/components/FileTree/FileTree.tsx',
+      'src/components/StackedDiffViewer/FileHeader.tsx',
+    ]);
+  });
+
+  it('places files inside a directory before sibling files at the same level', () => {
+    const result = sortPathsTreeOrder([
+      'src/z.ts',
+      'src/a/b.ts',
+    ]);
+
+    expect(result).toEqual(['src/a/b.ts', 'src/z.ts']);
+  });
+
+  it('reorders git-log emit order into tree-DFS layout', () => {
+    const gitLogOrder = [
+      'beads.jsonl',
+      'packages/web/src/App.tsx',
+      'packages/web/src/components/CommitList/CommitList.tsx',
+      'packages/web/src/components/FileTree/FileTree.tsx',
+      'packages/web/src/fixtures/types.ts',
+      'packages/web/src/hooks/useReviewState.ts',
+    ];
+
+    const result = sortPathsTreeOrder(gitLogOrder);
+
+    expect(result).toEqual([
+      'packages/web/src/components/CommitList/CommitList.tsx',
+      'packages/web/src/components/FileTree/FileTree.tsx',
+      'packages/web/src/fixtures/types.ts',
+      'packages/web/src/hooks/useReviewState.ts',
+      'packages/web/src/App.tsx',
+      'beads.jsonl',
+    ]);
   });
 });

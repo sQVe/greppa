@@ -38,7 +38,7 @@ const worktreeSearch = z.object({
 });
 
 const sectionUrl = (state: { file?: string[]; wt?: string[] }) => {
-  const full = { file: state.file ?? [], wt: state.wt ?? [], commits: [] };
+  const full = { file: state.file ?? [], wt: state.wt ?? [], commits: [], commitFile: [] };
   const id = `test-${Math.random().toString(36).slice(2, 6)}`;
   cacheState(id, full);
   if (full.wt.length > 0) {

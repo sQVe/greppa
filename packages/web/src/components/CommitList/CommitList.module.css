@@ -47,6 +47,8 @@
 }
 
 .subject {
+  flex: 1;
+  min-width: 0;
   font-size: var(--gr-text-sm);
   color: var(--gr-color-text-primary);
   line-height: var(--gr-leading-tight);
@@ -56,17 +58,9 @@
 }
 
 .meta {
-  display: flex;
-  align-items: center;
+  flex-shrink: 0;
   font-size: var(--gr-text-xs);
   color: var(--gr-color-text-muted);
   line-height: 1;
-}
-
-.hash {
-  font-family: var(--gr-font-mono);
-}
-
-.time {
-  margin-left: auto;
+  white-space: nowrap;
 }

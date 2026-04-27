@@ -30,6 +30,7 @@ const makeCommit = (sha: string, abbrev: string): CommitEntry => ({
   subject: `commit ${abbrev}`,
   author: 'Test',
   date: '2026-04-03T10:00:00+00:00',
+  files: [],
 });
 
 const commits = [
@@ -47,7 +48,7 @@ const commitsSearch = z.object({
 });
 
 const commitsUrl = (shas: string[]) => {
-  const full = { file: [], wt: [], commits: shas };
+  const full = { file: [], wt: [], commits: shas, commitFile: [] };
   const id = `test-${Math.random().toString(36).slice(2, 6)}`;
   cacheState(id, full);
   return `/commits?s=${id}`;

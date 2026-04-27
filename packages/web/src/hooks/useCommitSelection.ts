@@ -11,6 +11,7 @@ const buildState = (shas: string[]): StatePayload => ({
   file: [],
   wt: [],
   commits: shas,
+  commitFile: [],
 });
 
 const selectCommitParams = (s: { location: { search: Record<string, unknown> } }) =>
@@ -25,6 +26,11 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
     () => new Set(commitParams),
     [commitParams],
   );
+
+  const commitsRef = useRef(commits);
+  commitsRef.current = commits;
+  const selectedShasRef = useRef(selectedShas);
+  selectedShasRef.current = selectedShas;
 
   const navigateWithState = useCallback(
     (state: StatePayload, replace?: boolean) => {
@@ -41,9 +47,12 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
 
   const selectCommit = useCallback(
     (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => {
+      const currentCommits = commitsRef.current;
+      const currentSelected = selectedShasRef.current;
+
       if (modifiers.metaKey) {
         anchorRef.current = sha;
-        const next = new Set(selectedShas);
+        const next = new Set(currentSelected);
         if (next.has(sha)) {
           next.delete(sha);
         } else {
@@ -65,8 +74,8 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
           return;
         }
 
-        const anchorIndex = commits.findIndex((commit) => commit.sha === anchor);
-        const targetIndex = commits.findIndex((commit) => commit.sha === sha);
+        const anchorIndex = currentCommits.findIndex((commit) => commit.sha === anchor);
+        const targetIndex = currentCommits.findIndex((commit) => commit.sha === sha);
         if (anchorIndex === -1 || targetIndex === -1) {
           anchorRef.current = sha;
           navigateWithState(buildState([sha]), true);
@@ -75,7 +84,7 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
 
         const start = Math.min(anchorIndex, targetIndex);
         const end = Math.max(anchorIndex, targetIndex);
-        const rangeShas = commits.slice(start, end + 1).map((commit) => commit.sha);
+        const rangeShas = currentCommits.slice(start, end + 1).map((commit) => commit.sha);
         navigateWithState(buildState(rangeShas), true);
         return;
       }
@@ -83,7 +92,7 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
       anchorRef.current = sha;
       navigateWithState(buildState([sha]));
     },
-    [commits, selectedShas, navigateWithState, clear],
+    [navigateWithState, clear],
   );
 
   const diffRange = useMemo(() => {

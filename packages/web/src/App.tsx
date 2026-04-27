@@ -322,6 +322,8 @@ export const App = () => {
     commits,
     commitSelection,
     commitDiffs,
+    commitFileDiffs,
+    selectedCommitFileKeys,
     committedFilePaths,
     worktreeFilePaths,
     handleSelectCommit,
@@ -329,6 +331,8 @@ export const App = () => {
     handleSelectWorktreeFile,
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
+    handleSelectCommitFile,
+    handleSelectAllFilesInCommit,
   } = useSelectionCoordinator({
     files,
     worktreeFiles: worktreeFiles ?? EMPTY_FILES,
@@ -348,8 +352,13 @@ export const App = () => {
   });
 
   const selectedDiffs = useMemo(
-    () => (commitSelection.isActive ? commitDiffs.diffs : fileDiffs),
-    [commitSelection.isActive, commitDiffs.diffs, fileDiffs],
+    () => {
+      if (selectedCommitFileKeys.size > 0) {
+        return commitFileDiffs.diffs;
+      }
+      return commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
+    },
+    [selectedCommitFileKeys, commitSelection.isActive, commitDiffs.diffs, commitFileDiffs.diffs, fileDiffs],
   );
 
   const hash = useRouterState({ select: (s: { location: { hash: string } }) => s.location.hash });
@@ -379,7 +388,8 @@ export const App = () => {
   const statusBarProps = useStatusBarProps({
     activeSection,
     selectedCommitShas: commitSelection.selectedShas,
-    commitDiffCount: commitDiffs.diffs.length,
+    commitDiffCount:
+      selectedCommitFileKeys.size > 0 ? commitFileDiffs.diffs.length : commitDiffs.diffs.length,
     worktreeFileCount,
     committedReviewedCount,
     committedFileCount,
@@ -422,6 +432,7 @@ export const App = () => {
               selectedPaths={treeSelectedPaths}
               selectedSource={treeSelectedSource}
               selectedCommitShas={commitSelection.selectedShas}
+              selectedCommitFiles={selectedCommitFileKeys}
               committedExpandedKeys={expandedKeys}
               worktreeExpandedKeys={worktreeExpandedKeys}
               onToggleSection={handleToggleSection}
@@ -430,6 +441,8 @@ export const App = () => {
               onSelectCommittedDirectory={handleSelectCommittedDirectory}
               onSelectWorktreeDirectory={handleSelectWorktreeDirectory}
               onSelectCommit={handleSelectCommit}
+              onSelectCommitFile={handleSelectCommitFile}
+              onSelectAllFilesInCommit={handleSelectAllFilesInCommit}
               onCommittedExpandedKeysChange={handleExpandedKeysChange}
               onWorktreeExpandedKeysChange={handleWorktreeExpandedKeysChange}
             />

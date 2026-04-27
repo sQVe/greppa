@@ -1,5 +1,5 @@
 import { execFileSync, execSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -87,7 +87,10 @@ interface WriteCaddySnippetConfig {
 export const writeCaddySnippet = ({ name, apiPort, devPort, playgroundPort, caddyDir }: WriteCaddySnippetConfig) => {
   mkdirSync(caddyDir, { recursive: true });
   const snippet = buildCaddySnippet({ name, apiPort, devPort, playgroundPort });
-  writeFileSync(join(caddyDir, `${name}.caddy`), snippet);
+  const finalPath = join(caddyDir, `${name}.caddy`);
+  const tmpPath = join(caddyDir, `.${name}.${process.pid}.caddy.tmp`);
+  writeFileSync(tmpPath, snippet);
+  renameSync(tmpPath, finalPath);
 };
 
 export const reloadCaddy = (caddyfilePath: string) => {
@@ -130,7 +133,7 @@ const main = () => {
   const envPath = join(worktreeRoot, '.env.local');
   writeFileSync(envPath, content);
 
-  const caddyDir = join(homedir(), '.config', 'caddy', 'greppa');
+  const caddyDir = join(homedir(), '.config', 'caddy', 'dev');
   writeCaddySnippet({ name, apiPort, devPort, playgroundPort, caddyDir });
   writeCaddyfile(caddyDir);
   reloadCaddy(join(caddyDir, 'Caddyfile'));

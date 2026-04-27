@@ -50,7 +50,7 @@ const computeChangesViaWorker = (
     worker.postMessage({ type: 'diff', requestId, filePath, oldContent, newContent });
   });
 
-const fetchAndComputeDiff = async (
+export const fetchAndComputeDiff = async (
   path: string,
   source: FileSource,
   oldRef: string,

@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { ChangeType, DiffResponse, FileEntry } from './index';
+import { ChangeType, CommitEntry, DiffResponse, FileEntry, StateData } from './index';
 
 describe('ChangeType', () => {
   it('decodes valid change types', () => {
@@ -44,6 +44,52 @@ describe('FileEntry', () => {
       oldPath: 'a.ts',
       sizeTier: 'small',
     });
+  });
+});
+
+describe('CommitEntry', () => {
+  const base = {
+    sha: 'abc123',
+    abbrevSha: 'abc123',
+    subject: 'feat: add thing',
+    author: 'Author',
+    date: '2026-04-15T00:00:00Z',
+  };
+
+  it('decodes entry with files list', () => {
+    const result = Schema.decodeUnknownSync(CommitEntry)({ ...base, files: ['a.ts', 'b.ts'] });
+    expect(result.files).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('decodes entry with empty files list', () => {
+    const result = Schema.decodeUnknownSync(CommitEntry)({ ...base, files: [] });
+    expect(result.files).toEqual([]);
+  });
+
+  it('rejects entry missing files', () => {
+    expect(() => Schema.decodeUnknownSync(CommitEntry)(base)).toThrow();
+  });
+});
+
+describe('StateData', () => {
+  const base = {
+    file: ['a.ts'],
+    wt: ['b.ts'],
+    commits: ['abc'],
+  };
+
+  it('decodes entry with commitFile list', () => {
+    const result = Schema.decodeUnknownSync(StateData)({ ...base, commitFile: ['abc:a.ts'] });
+    expect(result.commitFile).toEqual(['abc:a.ts']);
+  });
+
+  it('decodes entry with empty commitFile list', () => {
+    const result = Schema.decodeUnknownSync(StateData)({ ...base, commitFile: [] });
+    expect(result.commitFile).toEqual([]);
+  });
+
+  it('rejects entry missing commitFile', () => {
+    expect(() => Schema.decodeUnknownSync(StateData)(base)).toThrow();
   });
 });
 

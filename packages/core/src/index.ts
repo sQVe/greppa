@@ -45,6 +45,7 @@ export const StateData = Schema.Struct({
   file: Schema.Array(Schema.String),
   wt: Schema.Array(Schema.String),
   commits: Schema.Array(Schema.String),
+  commitFile: Schema.Array(Schema.String),
 });
 export type StateData = typeof StateData.Type;
 
@@ -65,5 +66,6 @@ export const CommitEntry = Schema.Struct({
   subject: Schema.String,
   author: Schema.String,
   date: Schema.String,
+  files: Schema.Array(Schema.String),
 });
 export type CommitEntry = typeof CommitEntry.Type;

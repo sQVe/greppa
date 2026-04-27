@@ -3,6 +3,7 @@ import { IconChevronRight, IconFileDiff, IconGitBranch, IconGitCommit } from '@t
 import { motion } from 'motion/react';
 import { useMemo, useRef } from 'react';
 
+import type { CommitFileEntry } from '../../commitFileKey';
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
 import { CommitList } from '../CommitList/CommitList';
@@ -20,6 +21,7 @@ interface FileTreePanelProps {
   selectedPaths: Set<string>;
   selectedSource: 'committed' | 'worktree' | null;
   selectedCommitShas: Set<string>;
+  selectedCommitFiles?: ReadonlySet<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
   onToggleSection: (section: FileTreeSection) => void;
@@ -28,6 +30,17 @@ interface FileTreePanelProps {
   onSelectCommittedDirectory: (path: string) => void;
   onSelectWorktreeDirectory: (path: string) => void;
   onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
+  onSelectCommitFile?: (
+    sha: string,
+    path: string,
+    orderedFileEntries: readonly CommitFileEntry[],
+    modifiers: { shiftKey: boolean; metaKey: boolean },
+  ) => void;
+  onSelectAllFilesInCommit?: (
+    sha: string,
+    filesInCommit: readonly string[],
+    modifiers: { shiftKey: boolean; metaKey: boolean },
+  ) => void;
   onCommittedExpandedKeysChange: (keys: Set<string | number>) => void;
   onWorktreeExpandedKeysChange: (keys: Set<string | number>) => void;
   onCollapseCommittedDirectory?: (path: string) => void;
@@ -59,6 +72,7 @@ export const FileTreePanel = ({
   selectedPaths,
   selectedSource,
   selectedCommitShas,
+  selectedCommitFiles,
   committedExpandedKeys,
   worktreeExpandedKeys,
   onToggleSection,
@@ -67,6 +81,8 @@ export const FileTreePanel = ({
   onSelectCommittedDirectory,
   onSelectWorktreeDirectory,
   onSelectCommit,
+  onSelectCommitFile,
+  onSelectAllFilesInCommit,
   onCommittedExpandedKeysChange,
   onWorktreeExpandedKeysChange,
   onCollapseCommittedDirectory,
@@ -233,7 +249,10 @@ export const FileTreePanel = ({
           <CommitList
             commits={commits}
             selectedShas={selectedCommitShas}
+            selectedCommitFiles={selectedCommitFiles}
             onSelectCommit={onSelectCommit}
+            onSelectCommitFile={onSelectCommitFile}
+            onSelectAllFilesInCommit={onSelectAllFilesInCommit}
           />
         </motion.div>
       </div>

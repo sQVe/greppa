@@ -83,7 +83,7 @@ const changesSearch = z.object({
 });
 
 const changesUrl = (files: string[]) => {
-  const full = { file: files, wt: [], commits: [] };
+  const full = { file: files, wt: [], commits: [], commitFile: [] };
   const id = `test-${Math.random().toString(36).slice(2, 6)}`;
   cacheState(id, full);
   return `/changes?s=${id}`;

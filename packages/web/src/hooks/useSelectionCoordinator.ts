@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 
+import { encodeCommitFileKey } from '../commitFileKey';
 import type { FileNode } from '../fixtures/types';
 import { collectFiles } from '../useFileSelection';
+import { useCommitFileDiffs } from './useCommitFileDiffs';
+import { useCommitFileSelection } from './useCommitFileSelection';
 import { useCommitList } from './useCommitList';
 import { useCommitSelection } from './useCommitSelection';
 import { useComputedDiffs } from './useComputedDiffs';
@@ -89,11 +92,49 @@ export const useSelectionCoordinator = ({
     commitDiffRange?.newRef ?? '',
   );
 
+  const commitFileSelection = useCommitFileSelection();
+
+  const sortedCommitFileEntries = useMemo(() => {
+    if (commitFileSelection.entries.length === 0 || commits.length === 0) {
+      return commitFileSelection.entries;
+    }
+    const commitIndex = new Map(commits.map((commit, index) => [commit.sha, index]));
+    const fileIndex = new Map<string, Map<string, number>>();
+    for (const commit of commits) {
+      const pathToIndex = new Map<string, number>();
+      commit.files.forEach((path, index) => pathToIndex.set(path, index));
+      fileIndex.set(commit.sha, pathToIndex);
+    }
+    return commitFileSelection.entries.toSorted((a, b) => {
+      const aCommitIndex = commitIndex.get(a.sha) ?? Infinity;
+      const bCommitIndex = commitIndex.get(b.sha) ?? Infinity;
+      if (aCommitIndex !== bCommitIndex) {
+        return aCommitIndex - bCommitIndex;
+      }
+      const aFileIndex = fileIndex.get(a.sha)?.get(a.path) ?? Infinity;
+      const bFileIndex = fileIndex.get(b.sha)?.get(b.path) ?? Infinity;
+      return aFileIndex - bFileIndex;
+    });
+  }, [commits, commitFileSelection.entries]);
+
+  const commitFileDiffs = useCommitFileDiffs(sortedCommitFileEntries);
+
+  const selectedCommitFileKeys = useMemo(
+    () => new Set(commitFileSelection.entries.map(encodeCommitFileKey)),
+    [commitFileSelection.entries],
+  );
+
+  const handleSelectCommitFile = commitFileSelection.selectCommitFile;
+  const handleSelectAllFilesInCommit = commitFileSelection.selectAllFilesInCommit;
+
   return {
     multiSelect,
     commits,
     commitSelection,
     commitDiffs,
+    commitFileSelection,
+    commitFileDiffs,
+    selectedCommitFileKeys,
     committedFilePaths,
     worktreeFilePaths,
     handleSelectCommit,
@@ -101,5 +142,7 @@ export const useSelectionCoordinator = ({
     handleSelectWorktreeFile,
     handleSelectCommittedDirectory,
     handleSelectWorktreeDirectory,
+    handleSelectCommitFile,
+    handleSelectAllFilesInCommit,
   };
 };

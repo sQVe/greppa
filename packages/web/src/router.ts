@@ -20,6 +20,7 @@ const worktreeSearch = z.object({
 const commitsSearch = z.object({
   s: fallback(z.string(), '').default(''),
   commits: fallback(z.array(z.string()), []).default([]),
+  commitFile: fallback(z.array(z.string()), []).default([]),
 });
 
 const reviewSearch = z.object({
@@ -87,7 +88,7 @@ const resolveState = async (s: string): Promise<StatePayload | null> => {
 };
 
 const sectionForState = (state: StatePayload): '/changes' | '/worktree' | '/commits' => {
-  if (state.commits.length > 0) {
+  if (state.commits.length > 0 || state.commitFile.length > 0) {
     return '/commits';
   }
   if (state.wt.length > 0) {
@@ -138,12 +139,18 @@ const worktreeRoute = createRoute({
   },
 });
 
+export const buildCommitsRedirectSearch = (s: string, state: StatePayload) => ({
+  s,
+  commits: state.commits,
+  commitFile: state.commitFile,
+});
+
 const commitsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/commits',
   validateSearch: zodValidator(commitsSearch),
   beforeLoad: async ({ search }) => {
-    if (!search.s || search.commits.length > 0) {
+    if (!search.s || search.commits.length > 0 || search.commitFile.length > 0) {
       return;
     }
     const state = await resolveState(search.s);
@@ -154,7 +161,7 @@ const commitsRoute = createRoute({
     if (target !== '/commits') {
       throw redirect({ to: target, search: { s: search.s, ...state } });
     }
-    throw redirect({ to: '/commits', search: { s: search.s, commits: state.commits } });
+    throw redirect({ to: '/commits', search: buildCommitsRedirectSearch(search.s, state) });
   },
 });
 

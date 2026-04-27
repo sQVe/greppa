@@ -52,10 +52,13 @@ interface SelectedDiffsInput {
 
 interface ActiveTreeStateInput {
   activeSource: FileSource | null;
+  isCommits: boolean;
   committedReviewedPaths: Set<string>;
   worktreeReviewedPaths: Set<string>;
+  reviewedCommitFiles: Set<string>;
   toggleCommittedReviewed: (path: string) => void;
   toggleWorktreeReviewed: (path: string) => void;
+  toggleReviewedCommitFile: (key: string) => void;
 }
 
 interface StatusBarPropsInput {
@@ -94,6 +97,11 @@ const useTreeState = (files: FileNode[], sessionId: string) => {
     [reviewState.reviewedPaths],
   );
 
+  const reviewedCommitFiles = useMemo(
+    () => new Set(reviewState.reviewedCommitFiles),
+    [reviewState.reviewedCommitFiles],
+  );
+
   const toggleReviewed = useCallback(
     (path: string) => {
       const current = reviewState.reviewedPaths;
@@ -105,7 +113,25 @@ const useTreeState = (files: FileNode[], sessionId: string) => {
     [reviewState.reviewedPaths, setReviewState],
   );
 
-  return { expandedKeys, handleExpandedKeysChange, reviewedPaths, toggleReviewed };
+  const toggleReviewedCommitFile = useCallback(
+    (key: string) => {
+      const current = reviewState.reviewedCommitFiles;
+      const next = current.includes(key)
+        ? current.filter((k) => k !== key)
+        : [...current, key];
+      setReviewState({ reviewedCommitFiles: next });
+    },
+    [reviewState.reviewedCommitFiles, setReviewState],
+  );
+
+  return {
+    expandedKeys,
+    handleExpandedKeysChange,
+    reviewedPaths,
+    toggleReviewed,
+    reviewedCommitFiles,
+    toggleReviewedCommitFile,
+  };
 };
 
 const useComputedDiff = ({
@@ -195,11 +221,20 @@ const resolveActiveSection = (pathname: string) => {
 
 const useActiveTreeState = ({
   activeSource,
+  isCommits,
   committedReviewedPaths,
   worktreeReviewedPaths,
+  reviewedCommitFiles,
   toggleCommittedReviewed,
   toggleWorktreeReviewed,
+  toggleReviewedCommitFile,
 }: ActiveTreeStateInput) => {
+  if (isCommits) {
+    return {
+      activeReviewedPaths: reviewedCommitFiles,
+      activeToggleReviewed: toggleReviewedCommitFile,
+    };
+  }
   const isWorktree = activeSource === 'worktree';
   return {
     activeReviewedPaths: isWorktree ? worktreeReviewedPaths : committedReviewedPaths,
@@ -301,7 +336,14 @@ export const App = () => {
 
   const { files: worktreeFiles } = useWorktreeFiles();
 
-  const { expandedKeys, handleExpandedKeysChange, reviewedPaths, toggleReviewed } = useTreeState(files, 'committed');
+  const {
+    expandedKeys,
+    handleExpandedKeysChange,
+    reviewedPaths,
+    toggleReviewed,
+    reviewedCommitFiles,
+    toggleReviewedCommitFile,
+  } = useTreeState(files, 'committed');
   const {
     expandedKeys: worktreeExpandedKeys,
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
@@ -373,10 +415,13 @@ export const App = () => {
 
   const { activeReviewedPaths, activeToggleReviewed } = useActiveTreeState({
     activeSource: multiSelect.activeSource,
+    isCommits: selectedCommitFileKeys.size > 0,
     committedReviewedPaths: reviewedPaths,
     worktreeReviewedPaths,
+    reviewedCommitFiles,
     toggleCommittedReviewed: toggleReviewed,
     toggleWorktreeReviewed,
+    toggleReviewedCommitFile,
   });
 
   const { treeSelectedPaths, treeSelectedSource } = useTreeSelection(
@@ -433,6 +478,9 @@ export const App = () => {
               selectedSource={treeSelectedSource}
               selectedCommitShas={commitSelection.selectedShas}
               selectedCommitFiles={selectedCommitFileKeys}
+              committedReviewedPaths={reviewedPaths}
+              worktreeReviewedPaths={worktreeReviewedPaths}
+              reviewedCommitFiles={reviewedCommitFiles}
               committedExpandedKeys={expandedKeys}
               worktreeExpandedKeys={worktreeExpandedKeys}
               onToggleSection={handleToggleSection}

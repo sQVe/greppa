@@ -77,6 +77,21 @@ describe('FileTree', () => {
     expect(screen.getByText('A')).toBeDefined();
   });
 
+  it('marks rows whose path is in reviewedPaths with the reviewed indicator', () => {
+    render(
+      <FileTree
+        {...defaultProps}
+        reviewedPaths={new Set(['src/auth/validateToken.ts'])}
+      />,
+    );
+
+    const reviewedRow = screen.getByText('validateToken.ts').closest('[role="row"]');
+    const unreviewedRow = screen.getByText('rateLimiter.ts').closest('[role="row"]');
+
+    expect(reviewedRow?.getAttribute('data-reviewed')).toBe('true');
+    expect(unreviewedRow?.getAttribute('data-reviewed')).toBe(null);
+  });
+
   it('should call onSelectFile when a file is clicked', async () => {
     const onSelectFile = vi.fn();
     render(<FileTree {...defaultProps} onSelectFile={onSelectFile} />);

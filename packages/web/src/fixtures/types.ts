@@ -45,6 +45,7 @@ export interface DiffFile {
   hunks: DiffHunk[];
   oldContent?: string;
   newContent?: string;
+  sha?: string;
 }
 
 export interface Comment {

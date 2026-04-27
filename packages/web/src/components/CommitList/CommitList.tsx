@@ -1,4 +1,5 @@
 import { FileIcon, Tree } from '@greppa/ui';
+import { IconCheck } from '@tabler/icons-react';
 import { useMemo, useRef, useState } from 'react';
 import type { CommitEntry } from '@greppa/core';
 
@@ -11,6 +12,7 @@ interface CommitListProps {
   commits: CommitEntry[];
   selectedShas: Set<string>;
   selectedCommitFiles?: ReadonlySet<string>;
+  reviewedCommitFiles?: ReadonlySet<string>;
   onSelectCommit: (sha: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectCommitFile?: (
     sha: string,
@@ -29,6 +31,7 @@ export const CommitList = ({
   commits,
   selectedShas,
   selectedCommitFiles,
+  reviewedCommitFiles,
   onSelectCommit,
   onSelectCommitFile,
   onSelectAllFilesInCommit,
@@ -208,33 +211,43 @@ export const CommitList = ({
               <span className={styles.meta}>{formatRelativeTime(commit.date)}</span>
             </Tree.ItemContent>
             <Tree.Collection items={fileChildrenByCommit.get(commit.sha) ?? []}>
-              {(child: { id: string; path: string }) => (
-                <Tree.Item
-                  key={child.id}
-                  id={child.id}
-                  textValue={child.path}
-                  onPointerDown={(event) => {
-                    if (event.button !== 0) {
-                      return;
-                    }
-                    event.stopPropagation();
-                    armSelectionChangeSuppression();
-                    onSelectCommitFile?.(commit.sha, child.path, orderedFileEntries, {
-                      shiftKey: event.shiftKey,
-                      metaKey: event.metaKey || event.ctrlKey,
-                    });
-                  }}
-                >
-                  <Tree.ItemContent>
-                    <Tree.Indent />
-                    <FileIcon
-                      name={child.path.split('/').pop() ?? child.path}
-                      baseUrl="/material-icons"
-                    />
-                    <Tree.Label>{child.path}</Tree.Label>
-                  </Tree.ItemContent>
-                </Tree.Item>
-              )}
+              {(child: { id: string; path: string }) => {
+                const isReviewed = reviewedCommitFiles?.has(child.id) ?? false;
+                return (
+                  <Tree.Item
+                    key={child.id}
+                    id={child.id}
+                    textValue={child.path}
+                    data-reviewed={isReviewed ? 'true' : undefined}
+                    className={isReviewed ? styles.reviewedFile : undefined}
+                    onPointerDown={(event) => {
+                      if (event.button !== 0) {
+                        return;
+                      }
+                      event.stopPropagation();
+                      armSelectionChangeSuppression();
+                      onSelectCommitFile?.(commit.sha, child.path, orderedFileEntries, {
+                        shiftKey: event.shiftKey,
+                        metaKey: event.metaKey || event.ctrlKey,
+                      });
+                    }}
+                  >
+                    <Tree.ItemContent>
+                      <Tree.Indent />
+                      <FileIcon
+                        name={child.path.split('/').pop() ?? child.path}
+                        baseUrl="/material-icons"
+                      />
+                      <Tree.Label>{child.path}</Tree.Label>
+                      {isReviewed ? (
+                        <span className={styles.reviewedCheck} aria-label="Reviewed">
+                          <IconCheck size={12} stroke={2.5} />
+                        </span>
+                      ) : null}
+                    </Tree.ItemContent>
+                  </Tree.Item>
+                );
+              }}
             </Tree.Collection>
           </Tree.Item>
         )}

@@ -22,6 +22,9 @@ interface FileTreePanelProps {
   selectedSource: 'committed' | 'worktree' | null;
   selectedCommitShas: Set<string>;
   selectedCommitFiles?: ReadonlySet<string>;
+  committedReviewedPaths?: ReadonlySet<string>;
+  worktreeReviewedPaths?: ReadonlySet<string>;
+  reviewedCommitFiles?: ReadonlySet<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
   onToggleSection: (section: FileTreeSection) => void;
@@ -73,6 +76,9 @@ export const FileTreePanel = ({
   selectedSource,
   selectedCommitShas,
   selectedCommitFiles,
+  committedReviewedPaths,
+  worktreeReviewedPaths,
+  reviewedCommitFiles,
   committedExpandedKeys,
   worktreeExpandedKeys,
   onToggleSection,
@@ -164,6 +170,7 @@ export const FileTreePanel = ({
             files={committedFiles}
             selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
             expandedKeys={committedExpandedKeys}
+            reviewedPaths={committedReviewedPaths}
             onSelectFile={onSelectCommittedFile}
             onSelectDirectory={onSelectCommittedDirectory}
             onExpandedKeysChange={onCommittedExpandedKeysChange}
@@ -207,6 +214,7 @@ export const FileTreePanel = ({
             files={worktreeFiles}
             selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
             expandedKeys={worktreeExpandedKeys}
+            reviewedPaths={worktreeReviewedPaths}
             onSelectFile={onSelectWorktreeFile}
             onSelectDirectory={onSelectWorktreeDirectory}
             onExpandedKeysChange={onWorktreeExpandedKeysChange}
@@ -250,6 +258,7 @@ export const FileTreePanel = ({
             commits={commits}
             selectedShas={selectedCommitShas}
             selectedCommitFiles={selectedCommitFiles}
+            reviewedCommitFiles={reviewedCommitFiles}
             onSelectCommit={onSelectCommit}
             onSelectCommitFile={onSelectCommitFile}
             onSelectAllFilesInCommit={onSelectAllFilesInCommit}

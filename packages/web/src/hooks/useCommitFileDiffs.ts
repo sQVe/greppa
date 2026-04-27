@@ -28,10 +28,10 @@ export const useCommitFileDiffs = (
         if (result == null) {
           continue;
         }
+        const entry = entries[i];
         if (result.data != null) {
-          diffs.push(result.data);
+          diffs.push(entry != null ? { ...result.data, sha: entry.sha } : result.data);
         } else if (result.isError) {
-          const entry = entries[i];
           if (entry != null) {
             failedPaths.push(encodeCommitFileKey(entry));
           }

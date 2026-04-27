@@ -93,6 +93,47 @@ describe('CommitList', () => {
     expect(screen.getByText('src/a.ts')).toBeDefined();
   });
 
+  it('marks commit-file rows whose sha:path key is in reviewedCommitFiles', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommitList
+        {...defaultProps}
+        reviewedCommitFiles={new Set(['aaa111:src/a.ts'])}
+      />,
+    );
+
+    const row = screen.getByRole('row', { name: /feat: first commit/i });
+    await user.click(within(row).getByRole('button'));
+
+    const reviewedRow = screen.getByRole('row', { name: /src\/a\.ts/ });
+    expect(reviewedRow.getAttribute('data-reviewed')).toBe('true');
+  });
+
+  it('does not mark commit-file rows for the same path under a different sha', async () => {
+    const user = userEvent.setup();
+    const sharedPathCommits: CommitEntry[] = [
+      { sha: 'aaa111', abbrevSha: 'aaa', subject: 'feat: first commit', author: 'Alice', date: '2026-04-03T10:00:00+00:00', files: ['src/shared.ts'] },
+      { sha: 'bbb222', abbrevSha: 'bbb', subject: 'fix: second commit', author: 'Bob', date: '2026-04-02T09:00:00+00:00', files: ['src/shared.ts'] },
+    ];
+    render(
+      <CommitList
+        {...defaultProps}
+        commits={sharedPathCommits}
+        reviewedCommitFiles={new Set(['aaa111:src/shared.ts'])}
+      />,
+    );
+
+    const firstCommitRow = screen.getByRole('row', { name: /feat: first commit/i });
+    const secondCommitRow = screen.getByRole('row', { name: /fix: second commit/i });
+    await user.click(within(firstCommitRow).getByRole('button'));
+    await user.click(within(secondCommitRow).getByRole('button'));
+
+    const fileRows = screen.getAllByRole('row', { name: /src\/shared\.ts/ });
+    expect(fileRows).toHaveLength(2);
+    const reviewedRows = fileRows.filter((r) => r.getAttribute('data-reviewed') === 'true');
+    expect(reviewedRows).toHaveLength(1);
+  });
+
   it('should render a file icon on each expanded commit file row', async () => {
     const user = userEvent.setup();
     const commitsWithMultipleFiles: CommitEntry[] = [

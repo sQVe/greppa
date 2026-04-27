@@ -64,3 +64,13 @@
   line-height: 1;
   white-space: nowrap;
 }
+
+.reviewedFile {
+  opacity: 0.5;
+}
+
+.reviewedCheck {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}

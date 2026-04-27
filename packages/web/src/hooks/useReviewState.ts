@@ -5,11 +5,16 @@ import { createPersistedStore } from './createPersistedStore';
 const ReviewStateSchema = Schema.Struct({
   collapsedPaths: Schema.Array(Schema.String),
   reviewedPaths: Schema.Array(Schema.String),
+  reviewedCommitFiles: Schema.Array(Schema.String),
 });
 
 type ReviewState = typeof ReviewStateSchema.Type;
 
-const DEFAULTS: ReviewState = { collapsedPaths: [], reviewedPaths: [] };
+const DEFAULTS: ReviewState = {
+  collapsedPaths: [],
+  reviewedPaths: [],
+  reviewedCommitFiles: [],
+};
 
 const stores = new Map<string, ReturnType<typeof createPersistedStore<ReviewState>>>();
 

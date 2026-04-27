@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react';
 
 import { Badge } from '@greppa/ui';
 
+import { encodeCommitFileKey } from '../../commitFileKey';
 import type { ChangeType, DiffFile } from '../../fixtures/types';
 
 import styles from './StackedDiffViewer.module.css';
@@ -104,6 +105,12 @@ const computeDiffSize = (diff: DiffFile) => {
 export const FileHeader = memo(({ diff, reviewedPaths, onToggleReviewed }: FileHeaderProps) => {
   const { additions, deletions } = useMemo(() => computeDiffSize(diff), [diff]);
   const segments = useMemo(() => splitPath(diff.path), [diff.path]);
+  // Commit-source diffs carry sha; key as `sha:path` so the same path tracked
+  // under two commits stays independent. Path-only otherwise.
+  const reviewedKey = diff.sha != null
+    ? encodeCommitFileKey({ sha: diff.sha, path: diff.path })
+    : diff.path;
+  const isReviewed = reviewedPaths?.has(reviewedKey) ?? false;
 
   return (
     <div
@@ -131,11 +138,11 @@ export const FileHeader = memo(({ diff, reviewedPaths, onToggleReviewed }: FileH
       <span className={styles.language}>{formatLanguage(diff.language)}</span>
       <button
         type="button"
-        aria-pressed={reviewedPaths?.has(diff.path) ?? false}
-        className={`${styles.reviewButton} ${reviewedPaths?.has(diff.path) ? styles.reviewed : ''}`}
-        onClick={() => { onToggleReviewed?.(diff.path); }}
+        aria-pressed={isReviewed}
+        className={`${styles.reviewButton} ${isReviewed ? styles.reviewed : ''}`}
+        onClick={() => { onToggleReviewed?.(reviewedKey); }}
       >
-        {reviewedPaths?.has(diff.path) ? '\u2713 Reviewed' : 'Mark reviewed'}
+        {isReviewed ? '\u2713 Reviewed' : 'Mark reviewed'}
       </button>
     </div>
   );

@@ -25,9 +25,25 @@ as a shared `systemctl --user` service that serves snippets dropped in `~/.confi
 `pnpm run env:setup` writes this worktree's snippet and reloads the service.
 
 One-time setup to install and start the shared Caddy user service (point it at
-`~/.config/caddy/dev/Caddyfile`), then trust Caddy's local CA:
+`~/.config/caddy/dev/Caddyfile`), then trust Caddy's local CA. Run `pnpm run env:setup` first so the
+Caddyfile exists before the service starts:
 
 ```sh
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/caddy.service <<'EOF'
+[Unit]
+Description=Caddy (user, dev)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/caddy run --config %h/.config/caddy/dev/Caddyfile
+ExecReload=/usr/bin/caddy reload --config %h/.config/caddy/dev/Caddyfile
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+EOF
+systemctl --user daemon-reload
 systemctl --user enable --now caddy
 caddy trust
 ```

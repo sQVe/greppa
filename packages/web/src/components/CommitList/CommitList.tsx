@@ -72,7 +72,7 @@ export const CommitList = ({
         continue;
       }
 
-      if (expandedKeys.has(commit.sha)) {
+      if (expandedKeys.has(commit.sha) && commit.files.length > 0) {
         // Expanded commit rows are never highlighted; highlight all files
         // under the commit instead.
         for (const path of commit.files) {
@@ -115,9 +115,14 @@ export const CommitList = ({
 
   // Pointer handlers invoke onPointerDown (with modifier support) and RAC then
   // fires onSelectionChange for the same interaction. We want onSelectionChange
-  // only for keyboard-driven selection, so ignore it briefly after any pointer.
-  const pointerTimestampRef = useRef(0);
-  const POINTER_SUPPRESS_WINDOW_MS = 100;
+  // only for keyboard-driven selection, so suppress the next one after a pointer.
+  const suppressNextSelectionChangeRef = useRef(false);
+  const armSelectionChangeSuppression = () => {
+    suppressNextSelectionChangeRef.current = true;
+    queueMicrotask(() => {
+      suppressNextSelectionChangeRef.current = false;
+    });
+  };
 
   return (
     <Tree.Root
@@ -127,7 +132,8 @@ export const CommitList = ({
       expandedKeys={expandedKeys}
       onExpandedChange={setExpandedKeys}
       onSelectionChange={(keys) => {
-        if (performance.now() - pointerTimestampRef.current < POINTER_SUPPRESS_WINDOW_MS) {
+        if (suppressNextSelectionChangeRef.current) {
+          suppressNextSelectionChangeRef.current = false;
           return;
         }
         if (keys === 'all') {
@@ -183,7 +189,7 @@ export const CommitList = ({
               if (target instanceof Element && target.closest('[slot="chevron"]') != null) {
                 return;
               }
-              pointerTimestampRef.current = performance.now();
+              armSelectionChangeSuppression();
               const modifiers = {
                 shiftKey: event.shiftKey,
                 metaKey: event.metaKey || event.ctrlKey,
@@ -212,7 +218,7 @@ export const CommitList = ({
                       return;
                     }
                     event.stopPropagation();
-                    pointerTimestampRef.current = performance.now();
+                    armSelectionChangeSuppression();
                     onSelectCommitFile?.(commit.sha, child.path, orderedFileEntries, {
                       shiftKey: event.shiftKey,
                       metaKey: event.metaKey || event.ctrlKey,

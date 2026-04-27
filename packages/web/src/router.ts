@@ -88,7 +88,7 @@ const resolveState = async (s: string): Promise<StatePayload | null> => {
 };
 
 const sectionForState = (state: StatePayload): '/changes' | '/worktree' | '/commits' => {
-  if (state.commits.length > 0) {
+  if (state.commits.length > 0 || state.commitFile.length > 0) {
     return '/commits';
   }
   if (state.wt.length > 0) {
@@ -150,7 +150,7 @@ const commitsRoute = createRoute({
   path: '/commits',
   validateSearch: zodValidator(commitsSearch),
   beforeLoad: async ({ search }) => {
-    if (!search.s || search.commits.length > 0) {
+    if (!search.s || search.commits.length > 0 || search.commitFile.length > 0) {
       return;
     }
     const state = await resolveState(search.s);

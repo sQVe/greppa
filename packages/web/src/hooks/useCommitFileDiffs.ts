@@ -32,7 +32,9 @@ export const useCommitFileDiffs = (
           diffs.push(result.data);
         } else if (result.isError) {
           const entry = entries[i];
-          failedPaths.push(entry != null ? encodeCommitFileKey(entry) : '');
+          if (entry != null) {
+            failedPaths.push(encodeCommitFileKey(entry));
+          }
         }
       }
 

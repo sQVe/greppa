@@ -130,7 +130,10 @@ export const CommitList = ({
         if (performance.now() - pointerTimestampRef.current < POINTER_SUPPRESS_WINDOW_MS) {
           return;
         }
-        const nextKeys = keys === 'all' ? new Set<string>() : new Set<string>([...keys].map(String));
+        if (keys === 'all') {
+          return;
+        }
+        const nextKeys = new Set<string>([...keys].map(String));
         let toggled: string | null = null;
         for (const k of nextKeys) {
           if (!selectedKeys.has(k)) {

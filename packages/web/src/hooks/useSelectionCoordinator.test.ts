@@ -59,8 +59,10 @@ vi.mock('./useComputedDiffs', () => ({
   useComputedDiffs: () => ({ diffs: [], failedPaths: [] }),
 }));
 
-const useCommitFileDiffsSpy: ReturnType<typeof vi.fn> = vi.fn();
-useCommitFileDiffsSpy.mockReturnValue({ diffs: [], failedPaths: [] });
+const useCommitFileDiffsSpy = vi.fn((_entries: unknown) => ({
+  diffs: [] as never[],
+  failedPaths: [] as never[],
+}));
 vi.mock('./useCommitFileDiffs', () => ({
   useCommitFileDiffs: (entries: unknown) => useCommitFileDiffsSpy(entries),
 }));
@@ -105,6 +107,7 @@ describe('useSelectionCoordinator', () => {
       { sha: 'aaa111', path: 'src/a.ts' },
       { sha: 'bbb222', path: 'src/a.ts' },
     ];
+    useCommitFileDiffsSpy.mockClear();
   });
 
   it('prefetches the two committed files following the selection at depth 2', () => {

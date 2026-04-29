@@ -19,3 +19,7 @@ dist/
 
 # Vite+
 *.tsbuildinfo
+
+# Fallow
+.fallow/*
+!.fallow/baselines/

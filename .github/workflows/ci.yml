@@ -32,6 +32,18 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
 
+  fallow:
+    name: Fallow
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - uses: fallow-rs/fallow@49ddb3a64862b520b0cfc19c2bcd46deb6427b31 # v2.54.3
+        with:
+          command: audit
+
   test:
     name: Test
     runs-on: ubuntu-latest

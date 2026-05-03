@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": ["packages/ui/playground/main.tsx"],
   "dynamicallyLoaded": ["packages/ui/src/**/*.preview.tsx"],
-  "ignoreDependencies": ["@voidzero-dev/vite-plus-test"],
+  "ignoreDependencies": ["@voidzero-dev/vite-plus-test", "@ast-grep/cli"],
   "production": {
     "deadCode": false,
     "health": true,

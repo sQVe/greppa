@@ -6,7 +6,7 @@
     "packages/server/src/GitService.integration.test.ts:290-295|packages/server/src/GitService.integration.test.ts:300-305",
     "packages/server/src/GitService.integration.test.ts:293-301|packages/server/src/GitService.integration.test.ts:418-426",
     "packages/server/src/GitService.ts:277-286|packages/server/src/GitService.ts:328-337",
-    "packages/server/src/Http.integration.test.ts:106-116|packages/server/src/Http.integration.test.ts:295-305",
+    "packages/server/src/Http.integration.test.ts:106-116|packages/server/src/Http.integration.test.ts:309-319",
     "packages/ui/playground/vite.config.ts:14-35|packages/web/vite.config.ts:14-35",
     "packages/web/src/App.test.tsx:64-82|packages/web/src/hooks/useMultiSelect.test.ts:28-48",
     "packages/web/src/App.test.tsx:69-81|packages/web/src/router.ts:10-22",

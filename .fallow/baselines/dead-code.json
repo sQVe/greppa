@@ -1,0 +1,43 @@
+{
+  "unused_files": [],
+  "unused_exports": [
+    "packages/ui/playground/App.module.css:section",
+    "packages/ui/playground/App.module.css:sectionDivider",
+    "packages/ui/playground/App.module.css:sectionLabel",
+    "packages/web/src/App.module.css:panel",
+    "packages/web/src/components/CommitList/CommitList.module.css:item",
+    "packages/web/src/components/CommitList/CommitList.module.css:list",
+    "packages/web/src/stateCache.ts:reverseCache",
+    "packages/web/src/stateCache.ts:findExistingId",
+    "packages/web/src/stateCache.ts:postState"
+  ],
+  "unused_types": [
+    "packages/web/src/components/DiffViewer/extractCharRanges.ts:CharRange",
+    "packages/web/src/components/DiffViewer/getFileSizeTier.ts:FileSizeTier",
+    "packages/web/src/components/DiffViewer/splitTokensWithHighlights.ts:HighlightedToken",
+    "packages/web/src/components/StatusBar/StatusBar.tsx:StatusBarMode",
+    "packages/web/src/hooks/buildDiffFile.ts:BuildDiffFileInput",
+    "packages/web/src/hooks/diffCache.ts:DiffCacheKey",
+    "packages/web/src/hooks/parseHash.ts:HashTarget",
+    "packages/web/src/hooks/useCommitFileDiffs.ts:CommitFileDiffsResult",
+    "packages/web/src/hooks/useComputedDiffs.ts:ComputedDiffsResult",
+    "packages/web/src/hooks/useFileSelectionHandlers.ts:SelectModifiers",
+    "packages/web/src/hooks/usePreferences.ts:Theme",
+    "packages/web/src/workers/diffProtocol.ts:DiffLineRange",
+    "packages/web/src/workers/highlightProtocol.ts:HighlightLine",
+    "packages/web/src/workers/highlightProtocol.ts:WorkerResponse"
+  ],
+  "unused_dependencies": ["packages/web/package.json:vscode-material-icons"],
+  "unused_dev_dependencies": [],
+  "circular_dependencies": [],
+  "unused_optional_dependencies": [],
+  "unused_enum_members": [],
+  "unused_class_members": [],
+  "unresolved_imports": [],
+  "unlisted_dependencies": [],
+  "duplicate_exports": [],
+  "type_only_dependencies": [],
+  "test_only_dependencies": [],
+  "boundary_violations": [],
+  "stale_suppressions": []
+}

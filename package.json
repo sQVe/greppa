@@ -10,6 +10,7 @@
     "ci:publish": "pnpm publish -r --access public --no-git-checks",
     "dev": "pnpm run env:setup && pnpm -r --parallel run dev",
     "env:setup": "tsx scripts/worktreeEnv.ts",
+    "fallow": "fallow",
     "format": "vp fmt && prettier --write .",
     "format:check": "vp fmt --check && prettier --check .",
     "lint": "vp lint",
@@ -23,6 +24,7 @@
     "@changesets/changelog-github": "0.6.0",
     "@changesets/cli": "2.30.0",
     "@types/node": "25.5.0",
+    "fallow": "2.54.3",
     "happy-dom": "20.8.8",
     "oxfmt": "0.42.0",
     "oxlint": "1.57.0",
@@ -33,7 +35,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@ast-grep/cli"
+      "@ast-grep/cli",
+      "fallow"
     ],
     "peerDependencyRules": {
       "allowedVersions": {

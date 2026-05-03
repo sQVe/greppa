@@ -1,0 +1,274 @@
+{
+  "finding_counts": {
+    "packages/server/src/CacheService.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/server/src/GitService.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      }
+    },
+    "packages/server/src/Http.ts": {
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/App.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      }
+    },
+    "packages/web/src/components/CommitList/CommitList.tsx": {
+      "complexity_critical": {
+        "count": 2
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/DiffViewer.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/RowSideCell.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/buildRows.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/extractCharRanges.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "packages/web/src/components/DiffViewer/findNavigationTarget.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/splitTokensWithHighlights.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/useDiffKeyboardNavigation.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/useDiffSelection.ts": {
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/DiffViewer/useSyntaxHighlighting.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/FileTree/FileTree.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/FileTree/FileTreePanel.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/StackedDiffViewer/FileHeader.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/StackedDiffViewer/StackedDiffViewer.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/StackedDiffViewer/VirtualRow.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "packages/web/src/components/StatusBar/StatusBar.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/formatRelativeTime.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/buildDiffFile.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/nextFilesToPrefetch.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/parseHash.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useCommitFileDiffs.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useCommitFileSelection.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useCommitSelection.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useComputedDiffs.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useFileList.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useFileSelectionHandlers.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "packages/web/src/hooks/useHashScroll.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useMultiSelect.ts": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "packages/web/src/hooks/useRefs.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useSelectionCoordinator.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/hooks/useWarmup.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/router.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 5
+      }
+    },
+    "packages/web/src/useFileSelection.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/web/src/workers/highlightEngine.ts": {
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/worktreeEnv.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": [
+    "packages/web/src/hooks/useRefs.ts:untested risk",
+    "packages/server/src/Http.ts:dead code",
+    "packages/web/src/hooks/useFileList.ts:dead code",
+    "packages/web/src/components/DiffViewer/findNavigationTarget.ts:untested risk",
+    "packages/web/src/stateCache.ts:dead code",
+    "packages/web/src/useFileSelection.ts:high impact"
+  ]
+}

@@ -41,8 +41,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: fallow-rs/fallow@49ddb3a64862b520b0cfc19c2bcd46deb6427b31 # v2.54.3
-        with:
-          command: audit
 
   test:
     name: Test

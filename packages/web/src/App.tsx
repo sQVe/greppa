@@ -11,24 +11,17 @@ import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/Sta
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
 import { comments, diffs, fileInfoMap } from './fixtures';
-import type { ChangeType, DiffFile, FileNode } from './fixtures/types';
-import { applyFilter } from './hooks/applyFilter';
+import type { DiffFile, FileNode } from './fixtures/types';
 import { buildDiffFile } from './hooks/buildDiffFile';
-import { buildFilterPredicate } from './hooks/buildFilterPredicate';
-import {
-  collectChangeTypeCounts,
-  collectExtensionCounts,
-  collectStatusCounts,
-} from './hooks/facetCounts';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
-import { useFileFilter } from './hooks/useFileFilter';
 import { useFileList } from './hooks/useFileList';
 import { useHashScroll } from './hooks/useHashScroll';
 import type { useMultiSelect } from './hooks/useMultiSelect';
 import { useRefs } from './hooks/useRefs';
 import { useReviewState } from './hooks/useReviewState';
+import { useSectionFilter } from './hooks/useSectionFilter';
 import { useSelectionCoordinator } from './hooks/useSelectionCoordinator';
 import { useTreeState } from './hooks/useTreeState';
 import { useWarmup } from './hooks/useWarmup';
@@ -299,183 +292,20 @@ export const App = () => {
 
   const { files: worktreeFiles } = useWorktreeFiles();
 
-  const committedFilter = useFileFilter('committed');
   const { state: committedReviewState } = useReviewState('committed');
   const committedReviewedSet = useMemo(
     () => new Set(committedReviewState.reviewedPaths),
     [committedReviewState.reviewedPaths],
   );
-  const committedPredicate = useMemo(
-    () =>
-      buildFilterPredicate(
-        {
-          query: committedFilter.query,
-          extensions: committedFilter.extensions,
-          changeTypes: committedFilter.changeTypes,
-          statuses: committedFilter.statuses,
-        },
-        committedReviewedSet,
-      ),
-    [
-      committedFilter.query,
-      committedFilter.extensions,
-      committedFilter.changeTypes,
-      committedFilter.statuses,
-      committedReviewedSet,
-    ],
-  );
-  const filteredCommitted = useMemo(
-    () => applyFilter(files, committedPredicate),
-    [files, committedPredicate],
-  );
+  const committedSection = useSectionFilter('committed', files, committedReviewedSet);
 
-  const worktreeFilter = useFileFilter('worktree');
   const { state: worktreeReviewState } = useReviewState('worktree');
   const worktreeReviewedSet = useMemo(
     () => new Set(worktreeReviewState.reviewedPaths),
     [worktreeReviewState.reviewedPaths],
   );
-  const worktreePredicate = useMemo(
-    () =>
-      buildFilterPredicate(
-        {
-          query: worktreeFilter.query,
-          extensions: worktreeFilter.extensions,
-          changeTypes: worktreeFilter.changeTypes,
-          statuses: worktreeFilter.statuses,
-        },
-        worktreeReviewedSet,
-      ),
-    [
-      worktreeFilter.query,
-      worktreeFilter.extensions,
-      worktreeFilter.changeTypes,
-      worktreeFilter.statuses,
-      worktreeReviewedSet,
-    ],
-  );
-  const filteredWorktree = useMemo(
-    () => applyFilter(worktreeFiles ?? EMPTY_FILES, worktreePredicate),
-    [worktreeFiles, worktreePredicate],
-  );
-
-  const extensionRows = useMemo(() => collectExtensionCounts(files), [files]);
-  const changeTypeRows = useMemo(() => {
-    const counts = collectChangeTypeCounts(files);
-    return (['added', 'modified', 'deleted', 'renamed'] as ChangeType[]).map((type) => ({
-      type,
-      count: counts[type],
-    }));
-  }, [files]);
-  const statusRows = useMemo(() => {
-    const counts = collectStatusCounts(files, committedReviewedSet);
-    return [
-      { status: 'reviewed' as const, count: counts.reviewed },
-      { status: 'unreviewed' as const, count: counts.unreviewed },
-    ];
-  }, [files, committedReviewedSet]);
-
-  const selectedExtensionsSet = useMemo(
-    () => new Set(committedFilter.extensions),
-    [committedFilter.extensions],
-  );
-  const selectedChangeTypesSet = useMemo(
-    () => new Set(committedFilter.changeTypes),
-    [committedFilter.changeTypes],
-  );
-  const selectedStatusesSet = useMemo(
-    () => new Set(committedFilter.statuses),
-    [committedFilter.statuses],
-  );
-
-  const toggleExtension = useCallback(
-    (extension: string) => {
-      const next = selectedExtensionsSet.has(extension)
-        ? committedFilter.extensions.filter((e) => e !== extension)
-        : [...committedFilter.extensions, extension];
-      committedFilter.setExtensions(next);
-    },
-    [selectedExtensionsSet, committedFilter],
-  );
-  const toggleChangeType = useCallback(
-    (type: ChangeType) => {
-      const next = selectedChangeTypesSet.has(type)
-        ? committedFilter.changeTypes.filter((t) => t !== type)
-        : [...committedFilter.changeTypes, type];
-      committedFilter.setChangeTypes(next);
-    },
-    [selectedChangeTypesSet, committedFilter],
-  );
-  const toggleStatus = useCallback(
-    (status: 'reviewed' | 'unreviewed') => {
-      const next = selectedStatusesSet.has(status)
-        ? committedFilter.statuses.filter((s) => s !== status)
-        : [...committedFilter.statuses, status];
-      committedFilter.setStatuses(next);
-    },
-    [selectedStatusesSet, committedFilter],
-  );
-
   const worktreeFilesSafe = worktreeFiles ?? EMPTY_FILES;
-  const worktreeExtensionRows = useMemo(
-    () => collectExtensionCounts(worktreeFilesSafe),
-    [worktreeFilesSafe],
-  );
-  const worktreeChangeTypeRows = useMemo(() => {
-    const counts = collectChangeTypeCounts(worktreeFilesSafe);
-    return (['added', 'modified', 'deleted', 'renamed'] as ChangeType[]).map((type) => ({
-      type,
-      count: counts[type],
-    }));
-  }, [worktreeFilesSafe]);
-  const worktreeStatusRows = useMemo(() => {
-    const counts = collectStatusCounts(worktreeFilesSafe, worktreeReviewedSet);
-    return [
-      { status: 'reviewed' as const, count: counts.reviewed },
-      { status: 'unreviewed' as const, count: counts.unreviewed },
-    ];
-  }, [worktreeFilesSafe, worktreeReviewedSet]);
-
-  const worktreeSelectedExtensionsSet = useMemo(
-    () => new Set(worktreeFilter.extensions),
-    [worktreeFilter.extensions],
-  );
-  const worktreeSelectedChangeTypesSet = useMemo(
-    () => new Set(worktreeFilter.changeTypes),
-    [worktreeFilter.changeTypes],
-  );
-  const worktreeSelectedStatusesSet = useMemo(
-    () => new Set(worktreeFilter.statuses),
-    [worktreeFilter.statuses],
-  );
-
-  const toggleWorktreeExtension = useCallback(
-    (extension: string) => {
-      const next = worktreeSelectedExtensionsSet.has(extension)
-        ? worktreeFilter.extensions.filter((e) => e !== extension)
-        : [...worktreeFilter.extensions, extension];
-      worktreeFilter.setExtensions(next);
-    },
-    [worktreeSelectedExtensionsSet, worktreeFilter],
-  );
-  const toggleWorktreeChangeType = useCallback(
-    (type: ChangeType) => {
-      const next = worktreeSelectedChangeTypesSet.has(type)
-        ? worktreeFilter.changeTypes.filter((t) => t !== type)
-        : [...worktreeFilter.changeTypes, type];
-      worktreeFilter.setChangeTypes(next);
-    },
-    [worktreeSelectedChangeTypesSet, worktreeFilter],
-  );
-  const toggleWorktreeStatus = useCallback(
-    (status: 'reviewed' | 'unreviewed') => {
-      const next = worktreeSelectedStatusesSet.has(status)
-        ? worktreeFilter.statuses.filter((s) => s !== status)
-        : [...worktreeFilter.statuses, status];
-      worktreeFilter.setStatuses(next);
-    },
-    [worktreeSelectedStatusesSet, worktreeFilter],
-  );
+  const worktreeSection = useSectionFilter('worktree', worktreeFilesSafe, worktreeReviewedSet);
 
   const {
     expandedKeys,
@@ -484,13 +314,13 @@ export const App = () => {
     toggleReviewed,
     reviewedCommitFiles,
     toggleReviewedCommitFile,
-  } = useTreeState(files, 'committed', filteredCommitted.autoExpand);
+  } = useTreeState(files, 'committed', committedSection.filtered.autoExpand);
   const {
     expandedKeys: worktreeExpandedKeys,
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
     reviewedPaths: worktreeReviewedPaths,
     toggleReviewed: toggleWorktreeReviewed,
-  } = useTreeState(worktreeFiles ?? EMPTY_FILES, 'worktree', filteredWorktree.autoExpand);
+  } = useTreeState(worktreeFilesSafe, 'worktree', worktreeSection.filtered.autoExpand);
 
   const {
     selectedFilePath,
@@ -579,26 +409,32 @@ export const App = () => {
 
   const committedVisible = useMemo(
     () =>
-      activeSection === 'committed' && committedFilter.isActive
-        ? { matched: filteredCommitted.visibleCount, total: filteredCommitted.totalCount }
+      activeSection === 'committed' && committedSection.filter.isActive
+        ? {
+            matched: committedSection.filtered.visibleCount,
+            total: committedSection.filtered.totalCount,
+          }
         : null,
     [
       activeSection,
-      committedFilter.isActive,
-      filteredCommitted.visibleCount,
-      filteredCommitted.totalCount,
+      committedSection.filter.isActive,
+      committedSection.filtered.visibleCount,
+      committedSection.filtered.totalCount,
     ],
   );
   const worktreeVisible = useMemo(
     () =>
-      activeSection === 'worktree' && worktreeFilter.isActive
-        ? { matched: filteredWorktree.visibleCount, total: filteredWorktree.totalCount }
+      activeSection === 'worktree' && worktreeSection.filter.isActive
+        ? {
+            matched: worktreeSection.filtered.visibleCount,
+            total: worktreeSection.filtered.totalCount,
+          }
         : null,
     [
       activeSection,
-      worktreeFilter.isActive,
-      filteredWorktree.visibleCount,
-      filteredWorktree.totalCount,
+      worktreeSection.filter.isActive,
+      worktreeSection.filtered.visibleCount,
+      worktreeSection.filtered.totalCount,
     ],
   );
 
@@ -648,8 +484,8 @@ export const App = () => {
           >
             <FileTreePanel
               expandedSection={activeSection}
-              committedFiles={filteredCommitted.files}
-              worktreeFiles={filteredWorktree.files}
+              committedFiles={committedSection.filtered.files}
+              worktreeFiles={worktreeSection.filtered.files}
               commits={commits}
               selectedPaths={treeSelectedPaths}
               selectedSource={treeSelectedSource}
@@ -661,38 +497,38 @@ export const App = () => {
               committedExpandedKeys={expandedKeys}
               worktreeExpandedKeys={worktreeExpandedKeys}
               committedFilter={{
-                query: committedFilter.query,
-                isActive: committedFilter.isActive,
-                setQuery: committedFilter.setQuery,
-                reset: committedFilter.reset,
-                visibleCount: filteredCommitted.visibleCount,
-                totalCount: filteredCommitted.totalCount,
-                extensions: extensionRows,
-                changeTypes: changeTypeRows,
-                statuses: statusRows,
-                selectedExtensions: selectedExtensionsSet,
-                selectedChangeTypes: selectedChangeTypesSet,
-                selectedStatuses: selectedStatusesSet,
-                onToggleExtension: toggleExtension,
-                onToggleChangeType: toggleChangeType,
-                onToggleStatus: toggleStatus,
+                query: committedSection.filter.query,
+                isActive: committedSection.filter.isActive,
+                setQuery: committedSection.filter.setQuery,
+                reset: committedSection.filter.reset,
+                visibleCount: committedSection.filtered.visibleCount,
+                totalCount: committedSection.filtered.totalCount,
+                extensions: committedSection.rows.extensions,
+                changeTypes: committedSection.rows.changeTypes,
+                statuses: committedSection.rows.statuses,
+                selectedExtensions: committedSection.selectedSets.extensions,
+                selectedChangeTypes: committedSection.selectedSets.changeTypes,
+                selectedStatuses: committedSection.selectedSets.statuses,
+                onToggleExtension: committedSection.toggles.toggleExtension,
+                onToggleChangeType: committedSection.toggles.toggleChangeType,
+                onToggleStatus: committedSection.toggles.toggleStatus,
               }}
               worktreeFilter={{
-                query: worktreeFilter.query,
-                isActive: worktreeFilter.isActive,
-                setQuery: worktreeFilter.setQuery,
-                reset: worktreeFilter.reset,
-                visibleCount: filteredWorktree.visibleCount,
-                totalCount: filteredWorktree.totalCount,
-                extensions: worktreeExtensionRows,
-                changeTypes: worktreeChangeTypeRows,
-                statuses: worktreeStatusRows,
-                selectedExtensions: worktreeSelectedExtensionsSet,
-                selectedChangeTypes: worktreeSelectedChangeTypesSet,
-                selectedStatuses: worktreeSelectedStatusesSet,
-                onToggleExtension: toggleWorktreeExtension,
-                onToggleChangeType: toggleWorktreeChangeType,
-                onToggleStatus: toggleWorktreeStatus,
+                query: worktreeSection.filter.query,
+                isActive: worktreeSection.filter.isActive,
+                setQuery: worktreeSection.filter.setQuery,
+                reset: worktreeSection.filter.reset,
+                visibleCount: worktreeSection.filtered.visibleCount,
+                totalCount: worktreeSection.filtered.totalCount,
+                extensions: worktreeSection.rows.extensions,
+                changeTypes: worktreeSection.rows.changeTypes,
+                statuses: worktreeSection.rows.statuses,
+                selectedExtensions: worktreeSection.selectedSets.extensions,
+                selectedChangeTypes: worktreeSection.selectedSets.changeTypes,
+                selectedStatuses: worktreeSection.selectedSets.statuses,
+                onToggleExtension: worktreeSection.toggles.toggleExtension,
+                onToggleChangeType: worktreeSection.toggles.toggleChangeType,
+                onToggleStatus: worktreeSection.toggles.toggleStatus,
               }}
               onToggleSection={handleToggleSection}
               onSelectCommittedFile={handleSelectCommittedFile}

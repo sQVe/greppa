@@ -30,7 +30,7 @@ export const useTreeState = (
         forcedAncestors.some((prefix) => id.startsWith(prefix));
 
       const collapsed = allDirectoryIds.filter((id) => {
-        if (forcedOpenKeys?.has(id) ?? false) return true;
+        if (forcedOpenKeys?.has(id) ?? false) return previouslyCollapsed.has(id);
         if (isUnderForcedOpen(id)) return previouslyCollapsed.has(id);
         return !keys.has(id);
       });

@@ -54,7 +54,7 @@ describe('useTreeState', () => {
     expect(result.current.expandedKeys.has('src')).toBe(true);
   });
 
-  it('handleExpandedKeysChange strips overlay keys before persisting collapsedPaths', () => {
+  it('handleExpandedKeysChange preserves prior collapse state for overlay-forced keys', () => {
     seedReviewState(['src']);
 
     const overlay = new Set(['src']);
@@ -66,6 +66,20 @@ describe('useTreeState', () => {
 
     const stored = JSON.parse(localStorage.getItem('gr-review:committed') ?? '{}');
     expect(stored.collapsedPaths).toEqual(['src']);
+  });
+
+  it('handleExpandedKeysChange does not collapse a previously-expanded overlay-forced key', () => {
+    seedReviewState([]);
+
+    const overlay = new Set(['src']);
+    const { result } = renderHook(() => useTreeState(files, 'committed', overlay));
+
+    act(() => {
+      result.current.handleExpandedKeysChange(new Set<string | number>(['src', 'src/utils']));
+    });
+
+    const stored = JSON.parse(localStorage.getItem('gr-review:committed') ?? '{}');
+    expect(stored.collapsedPaths).not.toContain('src');
   });
 
   it('clearing the overlay restores prior expansion without mutating collapsedPaths', () => {
@@ -103,9 +117,10 @@ describe('useTreeState', () => {
 
     rerender({ forced: undefined });
 
-    expect(result.current.expandedKeys.has('src')).toBe(false);
+    expect(result.current.expandedKeys.has('src')).toBe(true);
     expect(result.current.expandedKeys.has('src/utils')).toBe(false);
     const stored = JSON.parse(localStorage.getItem('gr-review:committed') ?? '{}');
     expect(stored.collapsedPaths).toContain('src/utils');
+    expect(stored.collapsedPaths).not.toContain('src');
   });
 });

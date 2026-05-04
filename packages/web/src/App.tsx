@@ -10,9 +10,11 @@ import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffVie
 import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
+import { decodeCommitFileKey } from './commitFileKey';
 import { comments, diffs, fileInfoMap } from './fixtures';
 import type { DiffFile, FileNode } from './fixtures/types';
 import { buildDiffFile } from './hooks/buildDiffFile';
+import { computeCommitVisibility } from './hooks/commitFileVisibility';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
@@ -71,6 +73,7 @@ interface StatusBarPropsInput {
   committedFileCount: number;
   committedVisible: { matched: number; total: number } | null;
   worktreeVisible: { matched: number; total: number } | null;
+  commitsVisible: { matched: number; total: number } | null;
 }
 
 const EMPTY_FILES: FileNode[] = [];
@@ -214,6 +217,7 @@ const useStatusBarProps = ({
   committedFileCount,
   committedVisible,
   worktreeVisible,
+  commitsVisible,
 }: StatusBarPropsInput): StatusBarProps =>
   useMemo(() => {
     if (activeSection === 'commits') {
@@ -222,6 +226,7 @@ const useStatusBarProps = ({
         commitSha: [...selectedCommitShas][0],
         reviewedCount: 0,
         totalCount: commitDiffCount,
+        ...(commitsVisible != null ? { visible: commitsVisible } : {}),
       };
     }
     if (activeSection === 'worktree') {
@@ -246,6 +251,7 @@ const useStatusBarProps = ({
     committedFileCount,
     committedVisible,
     worktreeVisible,
+    commitsVisible,
   ]);
 
 export const App = () => {
@@ -315,6 +321,14 @@ export const App = () => {
     reviewedCommitFiles,
     toggleReviewedCommitFile,
   } = useTreeState(files, 'committed', committedSection.filtered.autoExpand);
+
+  const fileLookupByPath = useMemo(() => {
+    const map = new Map<string, FileNode>();
+    for (const file of collectFiles(files)) {
+      map.set(file.path, file);
+    }
+    return map;
+  }, [files]);
   const {
     expandedKeys: worktreeExpandedKeys,
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
@@ -352,6 +366,64 @@ export const App = () => {
     oldRef: mergeBaseRef ?? '',
     newRef: newRef ?? '',
   });
+
+  const commitFiles = useMemo(() => {
+    const seen = new Set<string>();
+    const result: FileNode[] = [];
+    for (const commit of commits) {
+      for (const path of commit.files) {
+        if (seen.has(path)) {
+          continue;
+        }
+        seen.add(path);
+        const existing = fileLookupByPath.get(path);
+        if (existing != null) {
+          result.push(existing);
+          continue;
+        }
+        const name = path.split('/').pop() ?? path;
+        result.push({ path, name, type: 'file' });
+      }
+    }
+    return result;
+  }, [commits, fileLookupByPath]);
+
+  const commitsAllReviewedPaths = useMemo(() => {
+    const result = new Set<string>();
+    for (const key of reviewedCommitFiles) {
+      const decoded = decodeCommitFileKey(key);
+      if (decoded != null) {
+        result.add(decoded.path);
+      }
+    }
+    return result;
+  }, [reviewedCommitFiles]);
+
+  const commitsSection = useSectionFilter('commits', commitFiles, commitsAllReviewedPaths);
+
+  const commitVisibility = useMemo(
+    () =>
+      computeCommitVisibility(
+        commits,
+        reviewedCommitFiles,
+        {
+          query: commitsSection.filter.query,
+          extensions: commitsSection.filter.extensions,
+          changeTypes: commitsSection.filter.changeTypes,
+          statuses: commitsSection.filter.statuses,
+        },
+        fileLookupByPath,
+      ),
+    [
+      commits,
+      reviewedCommitFiles,
+      commitsSection.filter.query,
+      commitsSection.filter.extensions,
+      commitsSection.filter.changeTypes,
+      commitsSection.filter.statuses,
+      fileLookupByPath,
+    ],
+  );
 
   const fileDiffs = useSelectedDiffs({
     selectedFilePath,
@@ -437,6 +509,18 @@ export const App = () => {
       worktreeSection.filtered.totalCount,
     ],
   );
+  const commitsVisible = useMemo(
+    () =>
+      activeSection === 'commits' && commitsSection.filter.isActive
+        ? { matched: commitVisibility.totalVisible, total: commitVisibility.totalFiles }
+        : null,
+    [
+      activeSection,
+      commitsSection.filter.isActive,
+      commitVisibility.totalVisible,
+      commitVisibility.totalFiles,
+    ],
+  );
 
   const statusBarProps = useStatusBarProps({
     activeSection,
@@ -448,6 +532,7 @@ export const App = () => {
     committedFileCount,
     committedVisible,
     worktreeVisible,
+    commitsVisible,
   });
 
   if (refsLoading || refsError) {
@@ -530,6 +615,26 @@ export const App = () => {
                 onToggleChangeType: worktreeSection.toggles.toggleChangeType,
                 onToggleStatus: worktreeSection.toggles.toggleStatus,
               }}
+              commitsFilter={{
+                query: commitsSection.filter.query,
+                isActive: commitsSection.filter.isActive,
+                setQuery: commitsSection.filter.setQuery,
+                reset: commitsSection.filter.reset,
+                visibleCount: commitVisibility.totalVisible,
+                totalCount: commitVisibility.totalFiles,
+                extensions: commitsSection.rows.extensions,
+                changeTypes: commitsSection.rows.changeTypes,
+                statuses: commitsSection.rows.statuses,
+                selectedExtensions: commitsSection.selectedSets.extensions,
+                selectedChangeTypes: commitsSection.selectedSets.changeTypes,
+                selectedStatuses: commitsSection.selectedSets.statuses,
+                onToggleExtension: commitsSection.toggles.toggleExtension,
+                onToggleChangeType: commitsSection.toggles.toggleChangeType,
+                onToggleStatus: commitsSection.toggles.toggleStatus,
+              }}
+              commitsVisibleFilesBySha={
+                commitsSection.filter.isActive ? commitVisibility.visibleFilesBySha : undefined
+              }
               onToggleSection={handleToggleSection}
               onSelectCommittedFile={handleSelectCommittedFile}
               onSelectWorktreeFile={handleSelectWorktreeFile}

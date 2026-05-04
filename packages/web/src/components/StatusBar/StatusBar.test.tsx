@@ -91,6 +91,26 @@ describe('StatusBar', () => {
       );
       expect(screen.getByText('0 / 4')).toBeDefined();
     });
+
+    it('renders the X / Y visible segment when filter is active', () => {
+      render(
+        <StatusBar
+          mode="commit-review"
+          commitSha="a3f8e21"
+          reviewedCount={0}
+          totalCount={4}
+          visible={{ matched: 2, total: 4 }}
+        />,
+      );
+      expect(screen.getByText('2 / 4 visible')).toBeDefined();
+    });
+
+    it('omits the visible segment when not supplied', () => {
+      render(
+        <StatusBar mode="commit-review" commitSha="a3f8e21" reviewedCount={0} totalCount={4} />,
+      );
+      expect(screen.queryByText(/visible/i)).toBeNull();
+    });
   });
 
   describe('working-tree mode', () => {

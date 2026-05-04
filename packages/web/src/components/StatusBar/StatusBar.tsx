@@ -20,6 +20,7 @@ interface CommitReviewProps {
   commitSha?: string;
   reviewedCount: number;
   totalCount: number;
+  visible?: VisibleSegment;
 }
 
 interface WorkingTreeProps {
@@ -104,6 +105,7 @@ const renderLeftSegments = (props: StatusBarProps) => {
             <div className={`${styles.segment} ${styles.interactive}`}>{props.commitSha}</div>
           )}
           {renderReviewed(props.reviewedCount, props.totalCount)}
+          {renderVisible(props.visible)}
         </>
       );
     case 'working-tree':

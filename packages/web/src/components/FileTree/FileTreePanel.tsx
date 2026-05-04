@@ -7,6 +7,7 @@ import type { CommitFileEntry } from '../../commitFileKey';
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
 import { CommitList } from '../CommitList/CommitList';
+import { FileTree } from './FileTree';
 import { FilteredTreeSection } from './FilteredTreeSection';
 import type { SectionFilter } from './FilteredTreeSection';
 
@@ -30,6 +31,8 @@ interface FileTreePanelProps {
   worktreeExpandedKeys: Iterable<string>;
   committedFilter?: SectionFilter;
   worktreeFilter?: SectionFilter;
+  commitsFilter?: SectionFilter;
+  commitsVisibleFilesBySha?: ReadonlyMap<string, readonly string[]>;
   onToggleSection: (section: FileTreeSection) => void;
   onSelectCommittedFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectWorktreeFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
@@ -86,6 +89,8 @@ export const FileTreePanel = ({
   worktreeExpandedKeys,
   committedFilter,
   worktreeFilter,
+  commitsFilter,
+  commitsVisibleFilesBySha,
   onToggleSection,
   onSelectCommittedFile,
   onSelectWorktreeFile,
@@ -171,17 +176,18 @@ export const FileTreePanel = ({
           transition={transition}
           onAnimationComplete={() => { handleExpandComplete('committed'); }}
         >
-          <FilteredTreeSection
-            filter={committedFilter}
-            files={committedFiles}
-            selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
-            expandedKeys={committedExpandedKeys}
-            reviewedPaths={committedReviewedPaths}
-            onSelectFile={onSelectCommittedFile}
-            onSelectDirectory={onSelectCommittedDirectory}
-            onExpandedKeysChange={onCommittedExpandedKeysChange}
-            onCollapseDirectory={onCollapseCommittedDirectory}
-          />
+          <FilteredTreeSection filter={committedFilter}>
+            <FileTree
+              files={committedFiles}
+              selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
+              expandedKeys={committedExpandedKeys}
+              reviewedPaths={committedReviewedPaths}
+              onSelectFile={onSelectCommittedFile}
+              onSelectDirectory={onSelectCommittedDirectory}
+              onExpandedKeysChange={onCommittedExpandedKeysChange}
+              onCollapseDirectory={onCollapseCommittedDirectory}
+            />
+          </FilteredTreeSection>
         </motion.div>
       </div>
       <div
@@ -216,17 +222,18 @@ export const FileTreePanel = ({
           transition={transition}
           onAnimationComplete={() => { handleExpandComplete('worktree'); }}
         >
-          <FilteredTreeSection
-            filter={worktreeFilter}
-            files={worktreeFiles}
-            selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
-            expandedKeys={worktreeExpandedKeys}
-            reviewedPaths={worktreeReviewedPaths}
-            onSelectFile={onSelectWorktreeFile}
-            onSelectDirectory={onSelectWorktreeDirectory}
-            onExpandedKeysChange={onWorktreeExpandedKeysChange}
-            onCollapseDirectory={onCollapseWorktreeDirectory}
-          />
+          <FilteredTreeSection filter={worktreeFilter}>
+            <FileTree
+              files={worktreeFiles}
+              selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
+              expandedKeys={worktreeExpandedKeys}
+              reviewedPaths={worktreeReviewedPaths}
+              onSelectFile={onSelectWorktreeFile}
+              onSelectDirectory={onSelectWorktreeDirectory}
+              onExpandedKeysChange={onWorktreeExpandedKeysChange}
+              onCollapseDirectory={onCollapseWorktreeDirectory}
+            />
+          </FilteredTreeSection>
         </motion.div>
       </div>
       <div
@@ -261,15 +268,18 @@ export const FileTreePanel = ({
           transition={transition}
           onAnimationComplete={() => { handleExpandComplete('commits'); }}
         >
-          <CommitList
-            commits={commits}
-            selectedShas={selectedCommitShas}
-            selectedCommitFiles={selectedCommitFiles}
-            reviewedCommitFiles={reviewedCommitFiles}
-            onSelectCommit={onSelectCommit}
-            onSelectCommitFile={onSelectCommitFile}
-            onSelectAllFilesInCommit={onSelectAllFilesInCommit}
-          />
+          <FilteredTreeSection filter={commitsFilter}>
+            <CommitList
+              commits={commits}
+              selectedShas={selectedCommitShas}
+              selectedCommitFiles={selectedCommitFiles}
+              reviewedCommitFiles={reviewedCommitFiles}
+              visibleFilesBySha={commitsVisibleFilesBySha}
+              onSelectCommit={onSelectCommit}
+              onSelectCommitFile={onSelectCommitFile}
+              onSelectAllFilesInCommit={onSelectAllFilesInCommit}
+            />
+          </FilteredTreeSection>
         </motion.div>
       </div>
     </div>

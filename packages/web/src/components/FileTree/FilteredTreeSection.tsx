@@ -1,7 +1,8 @@
-import type { ChangeType, FileNode } from '../../fixtures/types';
+import type { ReactNode } from 'react';
+
+import type { ChangeType } from '../../fixtures/types';
 import type { ReviewedStatus } from '../../hooks/useFileFilter';
 import { FileFilterBar } from './FileFilterBar';
-import { FileTree } from './FileTree';
 
 import styles from './FileTreePanel.module.css';
 
@@ -25,14 +26,7 @@ export interface SectionFilter {
 
 interface FilteredTreeSectionProps {
   filter?: SectionFilter;
-  files: FileNode[];
-  selectedPaths: Set<string>;
-  expandedKeys: Iterable<string>;
-  reviewedPaths?: ReadonlySet<string>;
-  onSelectFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
-  onSelectDirectory: (path: string) => void;
-  onExpandedKeysChange: (keys: Set<string | number>) => void;
-  onCollapseDirectory?: (path: string) => void;
+  children: ReactNode;
 }
 
 const renderBar = (filter: SectionFilter) => {
@@ -72,20 +66,16 @@ const renderEmpty = (reset: () => void) => (
   </div>
 );
 
-export const FilteredTreeSection = (props: FilteredTreeSectionProps) => {
-  const { filter, ...treeProps } = props;
-  const tree = <FileTree {...treeProps} />;
-
+export const FilteredTreeSection = ({ filter, children }: FilteredTreeSectionProps) => {
   if (filter == null) {
-    return tree;
+    return children;
   }
 
-  const body = filter.isActive && filter.visibleCount === 0 ? renderEmpty(filter.reset) : tree;
-
+  const isEmpty = filter.isActive && filter.visibleCount === 0;
   return (
     <>
       {renderBar(filter)}
-      {body}
+      {isEmpty ? renderEmpty(filter.reset) : children}
     </>
   );
 };

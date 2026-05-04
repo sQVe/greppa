@@ -164,4 +164,74 @@ describe('FileTreePanel', () => {
     render(<FileTreePanel {...baseProps} expandedSection="worktree" />);
     expect(screen.queryByRole('searchbox', { name: /filter files/i })).toBeNull();
   });
+
+  it('renders FileFilterBar above the Commits section when a commitsFilter is supplied', () => {
+    render(
+      <FileTreePanel
+        {...baseProps}
+        expandedSection="commits"
+        commits={[
+          {
+            sha: 'aaa111',
+            abbrevSha: 'aaa',
+            subject: 'feat: x',
+            author: 'Alice',
+            date: '2026-04-03T10:00:00+00:00',
+            files: ['src/a.ts'],
+          },
+        ]}
+        commitsFilter={{
+          query: '',
+          isActive: false,
+          setQuery: vi.fn(),
+          reset: vi.fn(),
+          visibleCount: 1,
+          totalCount: 1,
+          ...emptyFacets,
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('searchbox', { name: /filter files/i })).toBeDefined();
+  });
+
+  it('renders the No files match placeholder when commits filter narrows to zero', async () => {
+    const reset = vi.fn();
+    render(
+      <FileTreePanel
+        {...baseProps}
+        expandedSection="commits"
+        commits={[
+          {
+            sha: 'aaa111',
+            abbrevSha: 'aaa',
+            subject: 'feat: x',
+            author: 'Alice',
+            date: '2026-04-03T10:00:00+00:00',
+            files: ['src/a.ts'],
+          },
+        ]}
+        commitsFilter={{
+          query: 'zzz',
+          isActive: true,
+          setQuery: vi.fn(),
+          reset,
+          visibleCount: 0,
+          totalCount: 1,
+          ...emptyFacets,
+        }}
+      />,
+    );
+
+    const placeholder = screen.getByText(/no files match/i).parentElement;
+    expect(placeholder).not.toBeNull();
+    const clearButton = placeholder?.querySelector('button');
+    await userEvent.click(clearButton as HTMLButtonElement);
+    expect(reset).toHaveBeenCalled();
+  });
+
+  it('omits the commits filter bar when no commitsFilter prop is supplied', () => {
+    render(<FileTreePanel {...baseProps} expandedSection="commits" />);
+    expect(screen.queryByRole('searchbox', { name: /filter files/i })).toBeNull();
+  });
 });

@@ -132,12 +132,6 @@
     "node/no-exports-assign": "error",
 
     "eslint/no-console": "warn",
-    "eslint/complexity": [
-      "warn",
-      {
-        "max": 15
-      }
-    ],
     "eslint/max-params": [
       "warn",
       {

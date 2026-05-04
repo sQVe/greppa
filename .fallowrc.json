@@ -1,12 +1,55 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "entry": ["packages/ui/playground/main.tsx"],
-  "dynamicallyLoaded": ["packages/ui/src/**/*.preview.tsx"],
+  "entry": ["packages/ui/playground/main.tsx", "scripts/worktreeEnv.ts"],
+  "dynamicallyLoaded": [
+    "packages/ui/src/**/*.preview.tsx",
+    "packages/web/src/workers/**"
+  ],
   "ignoreDependencies": ["@voidzero-dev/vite-plus-test", "@ast-grep/cli"],
   "production": {
     "deadCode": false,
     "health": true,
     "dupes": false
+  },
+  "rules": {
+    "unused-files": "error",
+    "unused-exports": "error",
+    "unused-types": "error",
+    "unused-dependencies": "error",
+    "unused-dev-dependencies": "error",
+    "unresolved-imports": "error",
+    "circular-dependencies": "error",
+    "boundary-violation": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.{ts,tsx}", "**/*.integration.test.ts"],
+      "rules": {
+        "unused-exports": "off",
+        "unused-types": "off"
+      }
+    }
+  ],
+  "health": {
+    "maxCyclomatic": 10,
+    "maxCognitive": 10,
+    "maxCrap": 30
+  },
+  "boundaries": {
+    "zones": [
+      { "name": "core", "patterns": ["packages/core/**"] },
+      { "name": "server", "patterns": ["packages/server/**"] },
+      { "name": "ui", "patterns": ["packages/ui/**"] },
+      { "name": "web", "patterns": ["packages/web/**"] },
+      { "name": "cli", "patterns": ["packages/cli/**"] }
+    ],
+    "rules": [
+      { "from": "core", "allow": [] },
+      { "from": "ui", "allow": [] },
+      { "from": "server", "allow": ["core"] },
+      { "from": "web", "allow": ["core", "ui"] },
+      { "from": "cli", "allow": ["core", "server"] }
+    ]
   },
   "audit": {
     "deadCodeBaseline": ".fallow/baselines/dead-code.json",

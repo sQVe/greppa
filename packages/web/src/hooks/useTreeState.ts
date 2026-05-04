@@ -24,12 +24,20 @@ export const useTreeState = (
 
   const handleExpandedKeysChange = useCallback(
     (keys: Set<string | number>) => {
-      const collapsed = allDirectoryIds.filter(
-        (id) => !keys.has(id) || (forcedOpenKeys?.has(id) ?? false),
-      );
+      const previouslyCollapsed = new Set(reviewState.collapsedPaths);
+      const forcedAncestors = forcedOpenKeys == null ? [] : [...forcedOpenKeys].map((k) => `${k}/`);
+      const isUnderForcedOpen = (id: string) =>
+        forcedAncestors.some((prefix) => id.startsWith(prefix));
+
+      const collapsed = allDirectoryIds.filter((id) => {
+        if (forcedOpenKeys?.has(id) ?? false) return true;
+        if (isUnderForcedOpen(id)) return previouslyCollapsed.has(id);
+        return !keys.has(id);
+      });
+
       setReviewState({ collapsedPaths: collapsed });
     },
-    [allDirectoryIds, setReviewState, forcedOpenKeys],
+    [allDirectoryIds, setReviewState, forcedOpenKeys, reviewState.collapsedPaths],
   );
 
   const reviewedPaths = useMemo(

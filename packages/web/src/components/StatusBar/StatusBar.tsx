@@ -2,11 +2,17 @@ import styles from './StatusBar.module.css';
 
 type StatusBarMode = 'file-review' | 'commit-review' | 'working-tree' | 'review-complete' | 'composer-open';
 
+interface VisibleSegment {
+  matched: number;
+  total: number;
+}
+
 interface FileReviewProps {
   mode: 'file-review';
   reviewedCount: number;
   totalCount: number;
   commentCount?: number;
+  visible?: VisibleSegment;
 }
 
 interface CommitReviewProps {
@@ -70,6 +76,15 @@ const renderComments = (count: number) => (
   </div>
 );
 
+const renderVisible = (visible: VisibleSegment | undefined) => {
+  if (visible == null) return null;
+  return (
+    <div className={styles.segment}>
+      {visible.matched} / {visible.total} visible
+    </div>
+  );
+};
+
 const renderLeftSegments = (props: StatusBarProps) => {
   switch (props.mode) {
     case 'file-review':
@@ -77,6 +92,7 @@ const renderLeftSegments = (props: StatusBarProps) => {
         <>
           <div className={styles.segment}>{props.totalCount} files</div>
           {renderReviewed(props.reviewedCount, props.totalCount)}
+          {renderVisible(props.visible)}
           {renderComments(props.commentCount ?? 0)}
         </>
       );

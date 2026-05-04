@@ -22,6 +22,20 @@ const files: FileNode[] = [
   },
 ];
 
+const seedReviewState = (collapsedPaths: string[]) => {
+  localStorage.setItem(
+    'gr-review:committed',
+    JSON.stringify({ collapsedPaths, reviewedPaths: [], reviewedCommitFiles: [] }),
+  );
+};
+
+const renderWithOverlay = (initialOverlay: ReadonlySet<string>) =>
+  renderHook(
+    ({ forced }: { forced: ReadonlySet<string> | undefined }) =>
+      useTreeState(files, 'committed', forced),
+    { initialProps: { forced: initialOverlay as ReadonlySet<string> | undefined } },
+  );
+
 describe('useTreeState', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -32,10 +46,7 @@ describe('useTreeState', () => {
   });
 
   it('expandedKeys includes overlay keys even when the same path is in collapsedPaths', () => {
-    localStorage.setItem(
-      'gr-review:committed',
-      JSON.stringify({ collapsedPaths: ['src'], reviewedPaths: [], reviewedCommitFiles: [] }),
-    );
+    seedReviewState(['src']);
 
     const overlay = new Set(['src']);
     const { result } = renderHook(() => useTreeState(files, 'committed', overlay));
@@ -44,10 +55,7 @@ describe('useTreeState', () => {
   });
 
   it('handleExpandedKeysChange strips overlay keys before persisting collapsedPaths', () => {
-    localStorage.setItem(
-      'gr-review:committed',
-      JSON.stringify({ collapsedPaths: ['src'], reviewedPaths: [], reviewedCommitFiles: [] }),
-    );
+    seedReviewState(['src']);
 
     const overlay = new Set(['src']);
     const { result } = renderHook(() => useTreeState(files, 'committed', overlay));
@@ -61,17 +69,9 @@ describe('useTreeState', () => {
   });
 
   it('clearing the overlay restores prior expansion without mutating collapsedPaths', () => {
-    localStorage.setItem(
-      'gr-review:committed',
-      JSON.stringify({ collapsedPaths: ['src'], reviewedPaths: [], reviewedCommitFiles: [] }),
-    );
+    seedReviewState(['src']);
 
-    const overlay = new Set(['src']);
-    const { result, rerender } = renderHook(
-      ({ forced }: { forced: ReadonlySet<string> | undefined }) =>
-        useTreeState(files, 'committed', forced),
-      { initialProps: { forced: overlay as ReadonlySet<string> | undefined } },
-    );
+    const { result, rerender } = renderWithOverlay(new Set(['src']));
     expect(result.current.expandedKeys.has('src')).toBe(true);
 
     rerender({ forced: undefined });
@@ -90,5 +90,22 @@ describe('useTreeState', () => {
 
     const stored = JSON.parse(localStorage.getItem('gr-review:committed') ?? '{}');
     expect(new Set(stored.collapsedPaths)).toEqual(new Set(['src/utils']));
+  });
+
+  it('preserves previously-collapsed descendants of overlay-forced parents on spurious emits', () => {
+    seedReviewState(['src/utils']);
+
+    const { result, rerender } = renderWithOverlay(new Set(['src']));
+
+    act(() => {
+      result.current.handleExpandedKeysChange(new Set<string | number>(['src', 'src/utils']));
+    });
+
+    rerender({ forced: undefined });
+
+    expect(result.current.expandedKeys.has('src')).toBe(false);
+    expect(result.current.expandedKeys.has('src/utils')).toBe(false);
+    const stored = JSON.parse(localStorage.getItem('gr-review:committed') ?? '{}');
+    expect(stored.collapsedPaths).toContain('src/utils');
   });
 });

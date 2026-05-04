@@ -7,9 +7,19 @@ import type { CommitFileEntry } from '../../commitFileKey';
 import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
 import { CommitList } from '../CommitList/CommitList';
+import { FileFilterBar } from './FileFilterBar';
 import { FileTree } from './FileTree';
 
 import styles from './FileTreePanel.module.css';
+
+interface CommittedFilter {
+  query: string;
+  isActive: boolean;
+  setQuery: (query: string) => void;
+  reset: () => void;
+  visibleCount: number;
+  totalCount: number;
+}
 
 export type FileTreeSection = 'committed' | 'worktree' | 'commits';
 
@@ -27,6 +37,7 @@ interface FileTreePanelProps {
   reviewedCommitFiles?: ReadonlySet<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
+  committedFilter?: CommittedFilter;
   onToggleSection: (section: FileTreeSection) => void;
   onSelectCommittedFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectWorktreeFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
@@ -81,6 +92,7 @@ export const FileTreePanel = ({
   reviewedCommitFiles,
   committedExpandedKeys,
   worktreeExpandedKeys,
+  committedFilter,
   onToggleSection,
   onSelectCommittedFile,
   onSelectWorktreeFile,
@@ -166,16 +178,38 @@ export const FileTreePanel = ({
           transition={transition}
           onAnimationComplete={() => { handleExpandComplete('committed'); }}
         >
-          <FileTree
-            files={committedFiles}
-            selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
-            expandedKeys={committedExpandedKeys}
-            reviewedPaths={committedReviewedPaths}
-            onSelectFile={onSelectCommittedFile}
-            onSelectDirectory={onSelectCommittedDirectory}
-            onExpandedKeysChange={onCommittedExpandedKeysChange}
-            onCollapseDirectory={onCollapseCommittedDirectory}
-          />
+          {committedFilter != null && (
+            <FileFilterBar
+              query={committedFilter.query}
+              setQuery={committedFilter.setQuery}
+              reset={committedFilter.reset}
+            />
+          )}
+          {committedFilter != null
+          && committedFilter.isActive
+          && committedFilter.visibleCount === 0 ? (
+            <div className={styles.emptyFilter}>
+              <p className={styles.emptyFilterText}>No files match.</p>
+              <button
+                type="button"
+                className={styles.emptyFilterButton}
+                onClick={() => { committedFilter.reset(); }}
+              >
+                Clear filter
+              </button>
+            </div>
+          ) : (
+            <FileTree
+              files={committedFiles}
+              selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
+              expandedKeys={committedExpandedKeys}
+              reviewedPaths={committedReviewedPaths}
+              onSelectFile={onSelectCommittedFile}
+              onSelectDirectory={onSelectCommittedDirectory}
+              onExpandedKeysChange={onCommittedExpandedKeysChange}
+              onCollapseDirectory={onCollapseCommittedDirectory}
+            />
+          )}
         </motion.div>
       </div>
       <div

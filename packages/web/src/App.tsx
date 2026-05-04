@@ -12,10 +12,12 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
 import { comments, diffs, fileInfoMap } from './fixtures';
 import type { DiffFile, FileNode } from './fixtures/types';
+import { applyFilter } from './hooks/applyFilter';
 import { buildDiffFile } from './hooks/buildDiffFile';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
+import { useFileFilter } from './hooks/useFileFilter';
 import { useFileList } from './hooks/useFileList';
 import { useHashScroll } from './hooks/useHashScroll';
 import type { useMultiSelect } from './hooks/useMultiSelect';
@@ -67,6 +69,7 @@ interface StatusBarPropsInput {
   worktreeFileCount: number;
   committedReviewedCount: number;
   committedFileCount: number;
+  committedVisible: { matched: number; total: number } | null;
 }
 
 const EMPTY_FILES: FileNode[] = [];
@@ -208,6 +211,7 @@ const useStatusBarProps = ({
   worktreeFileCount,
   committedReviewedCount,
   committedFileCount,
+  committedVisible,
 }: StatusBarPropsInput): StatusBarProps =>
   useMemo(() => {
     if (activeSection === 'commits') {
@@ -225,6 +229,7 @@ const useStatusBarProps = ({
       mode: 'file-review',
       reviewedCount: committedReviewedCount,
       totalCount: committedFileCount,
+      ...(committedVisible != null ? { visible: committedVisible } : {}),
     };
   }, [
     activeSection,
@@ -233,6 +238,7 @@ const useStatusBarProps = ({
     worktreeFileCount,
     committedReviewedCount,
     committedFileCount,
+    committedVisible,
   ]);
 
 export const App = () => {
@@ -279,6 +285,12 @@ export const App = () => {
 
   const { files: worktreeFiles } = useWorktreeFiles();
 
+  const committedFilter = useFileFilter('committed');
+  const filteredCommitted = useMemo(
+    () => applyFilter(files, committedFilter.query),
+    [files, committedFilter.query],
+  );
+
   const {
     expandedKeys,
     handleExpandedKeysChange,
@@ -286,7 +298,7 @@ export const App = () => {
     toggleReviewed,
     reviewedCommitFiles,
     toggleReviewedCommitFile,
-  } = useTreeState(files, 'committed');
+  } = useTreeState(files, 'committed', filteredCommitted.autoExpand);
   const {
     expandedKeys: worktreeExpandedKeys,
     handleExpandedKeysChange: handleWorktreeExpandedKeysChange,
@@ -379,6 +391,19 @@ export const App = () => {
     selectedSource,
   );
 
+  const committedVisible = useMemo(
+    () =>
+      activeSection === 'committed' && committedFilter.isActive
+        ? { matched: filteredCommitted.visibleCount, total: filteredCommitted.totalCount }
+        : null,
+    [
+      activeSection,
+      committedFilter.isActive,
+      filteredCommitted.visibleCount,
+      filteredCommitted.totalCount,
+    ],
+  );
+
   const statusBarProps = useStatusBarProps({
     activeSection,
     selectedCommitShas: commitSelection.selectedShas,
@@ -387,6 +412,7 @@ export const App = () => {
     worktreeFileCount,
     committedReviewedCount,
     committedFileCount,
+    committedVisible,
   });
 
   if (refsLoading || refsError) {
@@ -423,7 +449,7 @@ export const App = () => {
           >
             <FileTreePanel
               expandedSection={activeSection}
-              committedFiles={files}
+              committedFiles={filteredCommitted.files}
               worktreeFiles={worktreeFiles ?? EMPTY_FILES}
               commits={commits}
               selectedPaths={treeSelectedPaths}
@@ -435,6 +461,14 @@ export const App = () => {
               reviewedCommitFiles={reviewedCommitFiles}
               committedExpandedKeys={expandedKeys}
               worktreeExpandedKeys={worktreeExpandedKeys}
+              committedFilter={{
+                query: committedFilter.query,
+                isActive: committedFilter.isActive,
+                setQuery: committedFilter.setQuery,
+                reset: committedFilter.reset,
+                visibleCount: filteredCommitted.visibleCount,
+                totalCount: filteredCommitted.totalCount,
+              }}
               onToggleSection={handleToggleSection}
               onSelectCommittedFile={handleSelectCommittedFile}
               onSelectWorktreeFile={handleSelectWorktreeFile}

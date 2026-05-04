@@ -58,6 +58,23 @@ describe('StatusBar', () => {
       expect(screen.getByText('Space')).toBeDefined();
       expect(screen.getByText('Tab')).toBeDefined();
     });
+
+    it('renders the X / Y visible segment when filter is active', () => {
+      render(
+        <StatusBar
+          mode="file-review"
+          reviewedCount={7}
+          totalCount={12}
+          visible={{ matched: 3, total: 12 }}
+        />,
+      );
+      expect(screen.getByText('3 / 12 visible')).toBeDefined();
+    });
+
+    it('omits the visible segment when not supplied', () => {
+      render(<StatusBar mode="file-review" reviewedCount={7} totalCount={12} />);
+      expect(screen.queryByText(/visible/i)).toBeNull();
+    });
   });
 
   describe('commit-review mode', () => {

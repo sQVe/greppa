@@ -1,8 +1,18 @@
 import 'fake-indexeddb/auto';
 
+import type * as IdbKeyval from 'idb-keyval';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { DiffResponse } from '@greppa/core';
+
+vi.mock('idb-keyval', async () => {
+  const actual = await vi.importActual<typeof IdbKeyval>('idb-keyval');
+  return {
+    createStore: actual.createStore,
+    get: vi.fn(actual.get),
+    set: vi.fn(actual.set),
+  };
+});
 
 describe('diffCache', () => {
   it('returns null when nothing is cached for the triple', async () => {
@@ -54,12 +64,10 @@ describe('diffCache', () => {
   });
 
   it('propagates setDiff rejections so callers can decide how to handle quota/private-mode errors', async () => {
-    vi.resetModules();
-    vi.doMock('idb-keyval', () => ({
-      createStore: vi.fn(() => ({})),
-      get: vi.fn(),
-      set: vi.fn(() => Promise.reject(new DOMException('QuotaExceededError', 'QuotaExceededError'))),
-    }));
+    const { set } = await import('idb-keyval');
+    vi.mocked(set).mockRejectedValueOnce(
+      new DOMException('QuotaExceededError', 'QuotaExceededError'),
+    );
 
     const { setDiff } = await import('./diffCache');
     const key = { oldRef: 'q', newRef: 'r', path: 'src/oom.ts' };
@@ -71,22 +79,16 @@ describe('diffCache', () => {
     };
 
     await expect(setDiff(key, value)).rejects.toThrow('QuotaExceededError');
-    vi.doUnmock('idb-keyval');
   });
 
   it('propagates getDiff rejections so callers see transport-level IndexedDB failures', async () => {
-    vi.resetModules();
-    vi.doMock('idb-keyval', () => ({
-      createStore: vi.fn(() => ({})),
-      get: vi.fn(() => Promise.reject(new Error('transaction aborted'))),
-      set: vi.fn(),
-    }));
+    const { get } = await import('idb-keyval');
+    vi.mocked(get).mockRejectedValueOnce(new Error('transaction aborted'));
 
     const { getDiff } = await import('./diffCache');
 
     await expect(
       getDiff({ oldRef: 'a', newRef: 'b', path: 'c' }),
     ).rejects.toThrow('transaction aborted');
-    vi.doUnmock('idb-keyval');
   });
 });

@@ -7,8 +7,7 @@ const THEMES = ['catppuccin-mocha', 'catppuccin-latte'] as const;
 
 type Theme = (typeof THEMES)[number];
 
-const isTheme = (value: string): value is Theme =>
-  (THEMES as readonly string[]).includes(value);
+const isTheme = (value: string): value is Theme => (THEMES as readonly string[]).includes(value);
 
 const ThemeSchema = Schema.Union([
   Schema.Literal('catppuccin-mocha'),

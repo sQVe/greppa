@@ -1,6 +1,6 @@
+import { act, renderHook } from '@testing-library/react';
 // @vitest-environment happy-dom
 import { Schema } from 'effect';
-import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createPersistedStore } from './createPersistedStore';
@@ -69,6 +69,18 @@ describe('createPersistedStore', () => {
     expect(result.current.state).toEqual(stored);
   });
 
+  it('fills missing fields with defaults instead of resetting', () => {
+    localStorage.setItem('gr-test', JSON.stringify({ color: 'blue' }));
+    const useStore = createPersistedStore({
+      key: 'gr-test',
+      schema: TestSchema,
+      defaults,
+    });
+
+    const { result } = renderHook(() => useStore());
+    expect(result.current.state).toEqual({ color: 'blue', count: 0 });
+  });
+
   it('set() writes partial updates to localStorage and notifies listeners', () => {
     const useStore = createPersistedStore({
       key: 'gr-test',
@@ -83,7 +95,11 @@ describe('createPersistedStore', () => {
     });
 
     expect(result.current.state).toEqual({ color: 'green', count: 0 });
-    expect(JSON.parse(localStorage.getItem('gr-test')!)).toEqual({
+    const stored = localStorage.getItem('gr-test');
+    if (stored == null) {
+      throw new Error('expected gr-test in localStorage');
+    }
+    expect(JSON.parse(stored)).toEqual({
       color: 'green',
       count: 0,
     });

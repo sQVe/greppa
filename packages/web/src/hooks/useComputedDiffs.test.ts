@@ -1,16 +1,15 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto';
-
+import type { DiffResponse } from '@greppa/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { DiffResponse } from '@greppa/core';
 import type { DiffMapping, DiffWorkerResponse } from '../workers/diffProtocol';
-import { resetDiffWorkerForTesting } from './useDiffComputation';
 import { useComputedDiffs } from './useComputedDiffs';
+import { resetDiffWorkerForTesting } from './useDiffComputation';
 
 const messageHandlers = new Set<(event: MessageEvent) => void>();
 const mockPostMessage = vi.fn();
@@ -33,35 +32,33 @@ const sampleChanges: DiffMapping[] = [
 vi.stubGlobal(
   'Worker',
   class {
-    postMessage = mockPostMessage.mockImplementation((request: { requestId: string; filePath: string }) => {
-      const response: DiffWorkerResponse = {
-        type: 'diff-result',
-        requestId: request.requestId,
-        filePath: request.filePath,
-        changes: sampleChanges,
-        hitTimeout: false,
-        error: null,
-      };
-      setTimeout(() => {
-        for (const handler of messageHandlers) {
-          handler({ data: response } as MessageEvent);
-        }
-      }, 0);
+    postMessage = mockPostMessage.mockImplementation(
+      (request: { requestId: string; filePath: string }) => {
+        const response: DiffWorkerResponse = {
+          type: 'diff-result',
+          requestId: request.requestId,
+          filePath: request.filePath,
+          changes: sampleChanges,
+          hitTimeout: false,
+          error: null,
+        };
+        setTimeout(() => {
+          for (const handler of messageHandlers) {
+            handler({ data: response } as MessageEvent);
+          }
+        }, 0);
+      },
+    );
+    addEventListener = vi.fn((_type: string, handler: (event: MessageEvent) => void) => {
+      if (_type === 'message') {
+        messageHandlers.add(handler);
+      }
     });
-    addEventListener = vi.fn(
-      (_type: string, handler: (event: MessageEvent) => void) => {
-        if (_type === 'message') {
-          messageHandlers.add(handler);
-        }
-      },
-    );
-    removeEventListener = vi.fn(
-      (_type: string, handler: (event: MessageEvent) => void) => {
-        if (_type === 'message') {
-          messageHandlers.delete(handler);
-        }
-      },
-    );
+    removeEventListener = vi.fn((_type: string, handler: (event: MessageEvent) => void) => {
+      if (_type === 'message') {
+        messageHandlers.delete(handler);
+      }
+    });
     terminate = vi.fn();
   },
 );
@@ -88,10 +85,9 @@ describe('useComputedDiffs', () => {
   });
 
   it('should return empty array when no paths', () => {
-    const { result } = renderHook(
-      () => useComputedDiffs([], null, 'old', 'new'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useComputedDiffs([], null, 'old', 'new'), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current).toEqual({ diffs: [], failedPaths: [] });
   });
@@ -126,16 +122,19 @@ describe('useComputedDiffs', () => {
     });
 
     const paths = ['src/a.ts', 'src/b.ts', 'src/c.ts'];
-    const { result } = renderHook(
-      () => useComputedDiffs(paths, 'committed', 'HEAD~1', 'HEAD'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useComputedDiffs(paths, 'committed', 'HEAD~1', 'HEAD'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.diffs).toHaveLength(3);
     });
 
-    expect(result.current.diffs.map((diff) => diff.path)).toEqual(['src/a.ts', 'src/b.ts', 'src/c.ts']);
+    expect(result.current.diffs.map((diff) => diff.path)).toEqual([
+      'src/a.ts',
+      'src/b.ts',
+      'src/c.ts',
+    ]);
   });
 
   it('should fetch worktree diffs when source is worktree', async () => {
@@ -145,10 +144,9 @@ describe('useComputedDiffs', () => {
       json: () => Promise.resolve(response),
     } as Response);
 
-    const { result } = renderHook(
-      () => useComputedDiffs(['src/index.ts'], 'worktree', '', ''),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useComputedDiffs(['src/index.ts'], 'worktree', '', ''), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.diffs).toHaveLength(1);
@@ -167,10 +165,9 @@ describe('useComputedDiffs', () => {
     });
 
     const paths = ['z.ts', 'a.ts', 'm.ts'];
-    const { result } = renderHook(
-      () => useComputedDiffs(paths, 'committed', 'a', 'b'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useComputedDiffs(paths, 'committed', 'a', 'b'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.diffs).toHaveLength(3);

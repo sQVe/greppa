@@ -34,9 +34,7 @@ const fileB: DiffFile = {
       oldCount: 0,
       newStart: 1,
       newCount: 1,
-      lines: [
-        { lineType: 'added', oldLineNumber: null, newLineNumber: 1, content: 'new file' },
-      ],
+      lines: [{ lineType: 'added', oldLineNumber: null, newLineNumber: 1, content: 'new file' }],
     },
   ],
 };
@@ -67,8 +65,13 @@ describe('buildFlatItems', () => {
     const kinds = items.map((item) => item.kind);
 
     expect(kinds).toEqual([
-      'file-header', 'hunk-header', 'diff-row', 'diff-row',
-      'file-header', 'hunk-header', 'diff-row',
+      'file-header',
+      'hunk-header',
+      'diff-row',
+      'diff-row',
+      'file-header',
+      'hunk-header',
+      'diff-row',
     ]);
   });
 

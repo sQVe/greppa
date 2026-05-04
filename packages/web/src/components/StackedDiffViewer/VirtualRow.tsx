@@ -14,42 +14,48 @@ interface VirtualRowProps {
   onToggleReviewed?: (path: string) => void;
 }
 
-export const VirtualRow = memo(({ item, tokenMap, reviewedPaths, onToggleReviewed }: VirtualRowProps) => {
-  switch (item.kind) {
-    case 'file-header': {
-      return (
-        <FileHeader
-          diff={item.diff}
-          reviewedPaths={reviewedPaths}
-          onToggleReviewed={onToggleReviewed}
-        />
-      );
-    }
-    case 'hunk-header': {
-      return (
-        <div data-testid="hunk-header">
-          <div className={diffStyles.hunkHeader}>{item.header}</div>
-        </div>
-      );
-    }
-    case 'diff-row': {
-      const fullWidth = item.changeType === 'added' || item.changeType === 'deleted';
-
-      if (fullWidth) {
-        const data = item.row.right ?? item.row.left;
+export const VirtualRow = memo(
+  ({ item, tokenMap, reviewedPaths, onToggleReviewed }: VirtualRowProps) => {
+    switch (item.kind) {
+      case 'file-header': {
         return (
-          <div className={diffStyles.rowFull} data-testid="diff-row">
-            <RowSideCell data={data} side={item.changeType === 'added' ? 'right' : 'left'} tokenMap={tokenMap} />
+          <FileHeader
+            diff={item.diff}
+            reviewedPaths={reviewedPaths}
+            onToggleReviewed={onToggleReviewed}
+          />
+        );
+      }
+      case 'hunk-header': {
+        return (
+          <div data-testid="hunk-header">
+            <div className={diffStyles.hunkHeader}>{item.header}</div>
           </div>
         );
       }
+      case 'diff-row': {
+        const fullWidth = item.changeType === 'added' || item.changeType === 'deleted';
 
-      return (
-        <div className={diffStyles.row} data-testid="diff-row">
-          <RowSideCell data={item.row.left} side="left" tokenMap={tokenMap} />
-          <RowSideCell data={item.row.right} side="right" tokenMap={tokenMap} />
-        </div>
-      );
+        if (fullWidth) {
+          const data = item.row.right ?? item.row.left;
+          return (
+            <div className={diffStyles.rowFull} data-testid="diff-row">
+              <RowSideCell
+                data={data}
+                side={item.changeType === 'added' ? 'right' : 'left'}
+                tokenMap={tokenMap}
+              />
+            </div>
+          );
+        }
+
+        return (
+          <div className={diffStyles.row} data-testid="diff-row">
+            <RowSideCell data={item.row.left} side="left" tokenMap={tokenMap} />
+            <RowSideCell data={item.row.right} side="right" tokenMap={tokenMap} />
+          </div>
+        );
+      }
     }
-  }
-});
+  },
+);

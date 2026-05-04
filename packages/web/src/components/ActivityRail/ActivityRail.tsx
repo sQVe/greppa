@@ -1,5 +1,5 @@
-import { IconFile, IconSettings } from '@tabler/icons-react';
 import { Popover } from '@greppa/ui';
+import { IconFile, IconSettings } from '@tabler/icons-react';
 
 import { THEMES, usePreferences } from '../../hooks/usePreferences';
 
@@ -29,16 +29,17 @@ export const ActivityRail = ({ isFileTreeExpanded, onToggleFileTree }: ActivityR
       <div className={styles.bottom}>
         <Popover.Root>
           <Popover.Trigger asChild>
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Settings"
-            >
+            <button type="button" className={styles.iconButton} aria-label="Settings">
               <IconSettings size={15} stroke={1.5} />
             </button>
           </Popover.Trigger>
           <Popover.Portal>
-            <Popover.Content className={styles.popoverContent} side="right" align="end" sideOffset={4}>
+            <Popover.Content
+              className={styles.popoverContent}
+              side="right"
+              align="end"
+              sideOffset={4}
+            >
               {THEMES.map((theme) => (
                 <button
                   type="button"
@@ -46,7 +47,9 @@ export const ActivityRail = ({ isFileTreeExpanded, onToggleFileTree }: ActivityR
                   className={styles.themeOption}
                   data-active={state.theme === theme}
                   aria-pressed={state.theme === theme}
-                  onClick={() => { set({ theme }); }}
+                  onClick={() => {
+                    set({ theme });
+                  }}
                 >
                   {theme}
                 </button>

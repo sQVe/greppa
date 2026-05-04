@@ -11,17 +11,8 @@ interface DiffRowRendererProps {
   dataIndex: number;
 }
 
-export const DiffRowRenderer = ({
-  row,
-  tokenMap,
-  measureRef,
-  dataIndex,
-}: DiffRowRendererProps) => (
-  <div
-    ref={measureRef}
-    data-index={dataIndex}
-    data-testid="diff-row"
-  >
+export const DiffRowRenderer = ({ row, tokenMap, measureRef, dataIndex }: DiffRowRendererProps) => (
+  <div ref={measureRef} data-index={dataIndex} data-testid="diff-row">
     <div className={styles.row}>
       <RowSideCell data={row.left} side="left" tokenMap={tokenMap} />
       <RowSideCell data={row.right} side="right" tokenMap={tokenMap} />

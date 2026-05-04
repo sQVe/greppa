@@ -1,4 +1,5 @@
 import { Badge, FileIcon, Tree } from '@greppa/ui';
+import { IconCheck } from '@tabler/icons-react';
 import { useRef } from 'react';
 import type { ReactNode } from 'react';
 
@@ -10,6 +11,7 @@ interface FileTreeProps {
   files: FileNode[];
   selectedPaths: Set<string>;
   expandedKeys: Iterable<string>;
+  reviewedPaths?: ReadonlySet<string>;
   onSelectFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectDirectory?: (path: string) => void;
   onExpandedKeysChange: (keys: Set<string | number>) => void;
@@ -17,6 +19,7 @@ interface FileTreeProps {
 }
 
 const COLLAPSED_DIR = styles.collapsedDir ?? '';
+const REVIEWED_FILE = styles.reviewedFile ?? '';
 
 const ICONS_BASE_URL = '/material-icons';
 
@@ -36,6 +39,7 @@ export const FileTree = ({
   files,
   selectedPaths,
   expandedKeys,
+  reviewedPaths,
   onSelectFile,
   onSelectDirectory,
   onExpandedKeysChange,
@@ -48,13 +52,20 @@ export const FileTree = ({
     const isDirectory = node.type === 'directory';
     const { changeType } = node;
     const label = node.displayName ?? node.name;
+    const isReviewed = !isDirectory && (reviewedPaths?.has(node.path) ?? false);
 
     return (
       <Tree.Item
         key={node.path}
         id={node.path}
         textValue={label}
-        className={(renderProps) => isDirectory && !renderProps.isExpanded ? COLLAPSED_DIR : ''}
+        data-reviewed={isReviewed ? 'true' : undefined}
+        className={(renderProps) => {
+          if (isDirectory) {
+            return !renderProps.isExpanded ? COLLAPSED_DIR : '';
+          }
+          return isReviewed ? REVIEWED_FILE : '';
+        }}
         onPointerDown={(event) => {
           const metaKey = event.metaKey || event.ctrlKey;
           if (isDirectory) {
@@ -97,6 +108,11 @@ export const FileTree = ({
               {changeType != null && !isDirectory ? (
                 <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
               ) : null}
+              {isReviewed ? (
+                <span className={styles.reviewedCheck} aria-label="Reviewed">
+                  <IconCheck size={12} stroke={2.5} />
+                </span>
+              ) : null}
             </>
           )}
         </Tree.ItemContent>
@@ -114,7 +130,9 @@ export const FileTree = ({
       selectedKeys={selectedPaths}
       expandedKeys={expandedKeys}
       onExpandedChange={onExpandedKeysChange}
-      onSelectionChange={() => { /* managed via onPointerDown */ }}
+      onSelectionChange={() => {
+        /* managed via onPointerDown */
+      }}
     >
       <Tree.Collection items={files}>{renderItem}</Tree.Collection>
     </Tree.Root>

@@ -33,6 +33,9 @@
       },
       "crap_critical": {
         "count": 2
+      },
+      "crap_moderate": {
+        "count": 2
       }
     },
     "packages/web/src/components/CommitList/CommitList.tsx": {
@@ -43,6 +46,9 @@
         "count": 2
       },
       "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -111,6 +117,9 @@
         "count": 1
       },
       "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -124,7 +133,7 @@
     },
     "packages/web/src/components/StackedDiffViewer/FileHeader.tsx": {
       "crap_moderate": {
-        "count": 1
+        "count": 2
       }
     },
     "packages/web/src/components/StackedDiffViewer/StackedDiffViewer.tsx": {
@@ -167,6 +176,11 @@
         "count": 1
       }
     },
+    "packages/web/src/hooks/commitFileVisibility.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "packages/web/src/hooks/nextFilesToPrefetch.ts": {
       "crap_high": {
         "count": 1
@@ -178,7 +192,10 @@
       }
     },
     "packages/web/src/hooks/useCommitFileDiffs.ts": {
-      "crap_moderate": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
         "count": 1
       }
     },
@@ -298,9 +315,8 @@
   "runtime_coverage_findings": [],
   "target_keys": [
     "packages/web/src/hooks/useRefs.ts:untested risk",
-    "packages/server/src/Http.ts:dead code",
-    "packages/web/src/hooks/useFileList.ts:dead code",
     "packages/web/src/components/DiffViewer/findNavigationTarget.ts:untested risk",
+    "packages/server/src/Http.ts:dead code",
     "packages/web/src/stateCache.ts:dead code",
     "packages/web/src/useFileSelection.ts:high impact"
   ]

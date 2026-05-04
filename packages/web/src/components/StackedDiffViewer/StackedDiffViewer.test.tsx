@@ -147,7 +147,8 @@ describe('StackedDiffViewer', () => {
   describe('review button', () => {
     const getVirtualListButtons = () => {
       const stickyHeader = screen.getByTestId('sticky-file-header');
-      return screen.getAllByRole('button', { name: /mark reviewed/i })
+      return screen
+        .getAllByRole('button', { name: /mark reviewed/i })
         .filter((button) => !stickyHeader.contains(button));
     };
 
@@ -167,7 +168,8 @@ describe('StackedDiffViewer', () => {
         />,
       );
       const stickyHeader = screen.getByTestId('sticky-file-header');
-      const reviewButtons = screen.getAllByRole('button')
+      const reviewButtons = screen
+        .getAllByRole('button')
         .filter((b) => !stickyHeader.contains(b))
         .filter((b) => b.textContent?.includes('eviewed'));
 
@@ -192,14 +194,46 @@ describe('StackedDiffViewer', () => {
 
       expect(onToggle).toHaveBeenCalledWith('src/Api.ts');
     });
+
+    it('calls onToggleReviewed with sha:path key when the diff has a sha (commit-source file)', async () => {
+      const onToggle = vi.fn();
+      const commitDiff: DiffFile = { ...fileA, sha: 'abc123' };
+      render(
+        <StackedDiffViewer
+          diffs={[commitDiff]}
+          reviewedPaths={new Set()}
+          onToggleReviewed={onToggle}
+        />,
+      );
+      const buttons = screen.getAllByRole('button', { name: /mark reviewed/i });
+      await userEvent.click(buttons[0] as HTMLElement);
+
+      expect(onToggle).toHaveBeenCalledWith('abc123:src/Api.ts');
+    });
+
+    it('reads reviewed state by sha:path key when the diff has a sha', () => {
+      const commitDiff: DiffFile = { ...fileA, sha: 'abc123' };
+      render(
+        <StackedDiffViewer
+          diffs={[commitDiff]}
+          reviewedPaths={new Set(['abc123:src/Api.ts'])}
+          onToggleReviewed={vi.fn()}
+        />,
+      );
+      const stickyHeader = screen.getByTestId('sticky-file-header');
+      const reviewButtons = screen
+        .getAllByRole('button')
+        .filter((b) => !stickyHeader.contains(b))
+        .filter((b) => b.textContent?.includes('eviewed'));
+
+      expect(reviewButtons.filter((b) => b.textContent === '✓ Reviewed')).toHaveLength(1);
+    });
   });
 
   describe('scroll sync', () => {
     it('calls onActiveFileChange with the first file on mount', () => {
       const onActiveFileChange = vi.fn();
-      render(
-        <StackedDiffViewer diffs={[fileA, fileB]} onActiveFileChange={onActiveFileChange} />,
-      );
+      render(<StackedDiffViewer diffs={[fileA, fileB]} onActiveFileChange={onActiveFileChange} />);
 
       expect(onActiveFileChange).toHaveBeenCalledWith('src/Api.ts');
     });

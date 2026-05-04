@@ -121,9 +121,7 @@ describe('handleHighlightRequest', () => {
   it('falls back to plaintext for unknown languages', async () => {
     mockLoadLanguage.mockRejectedValueOnce(new Error('Unknown language'));
     mockCodeToTokens.mockReturnValue({
-      tokens: [
-        [{ content: 'some code', color: undefined }],
-      ],
+      tokens: [[{ content: 'some code', color: undefined }]],
     });
 
     const { handleHighlightRequest } = await import('./highlightEngine');

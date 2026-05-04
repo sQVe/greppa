@@ -8,7 +8,7 @@ import { useCommitFileSelection } from './useCommitFileSelection';
 import { useCommitList } from './useCommitList';
 import { useCommitSelection } from './useCommitSelection';
 import { useComputedDiffs } from './useComputedDiffs';
-import { useFileList } from './useFileList';
+import { sortPathsTreeOrder, useFileList } from './useFileList';
 import { useFileSelectionHandlers } from './useFileSelectionHandlers';
 import { useMultiSelect } from './useMultiSelect';
 import { usePrefetchNeighbors } from './usePrefetchNeighbors';
@@ -82,38 +82,41 @@ export const useSelectionCoordinator = ({
   const commitDiffRange = commitSelection.diffRange;
   const commitFilePaths = useFileList(commitDiffRange?.oldRef ?? '', commitDiffRange?.newRef ?? '');
   const commitFilePathsList = useMemo(
-    () => (commitFilePaths.files != null ? collectFiles(commitFilePaths.files).map((f) => f.path) : []),
+    () =>
+      commitFilePaths.files != null ? collectFiles(commitFilePaths.files).map((f) => f.path) : [],
     [commitFilePaths.files],
   );
+  const singleCommitSha =
+    commitSelection.selectedShas.size === 1 ? ([...commitSelection.selectedShas][0] ?? null) : null;
   const commitDiffs = useComputedDiffs(
     commitSelection.isActive ? commitFilePathsList : [],
     'committed',
     commitDiffRange?.oldRef ?? '',
     commitDiffRange?.newRef ?? '',
+    singleCommitSha,
   );
 
   const commitFileSelection = useCommitFileSelection();
 
+  // Match the collapsed-commit path's ordering: tree-DFS over the union of
+  // selected paths so expanded and collapsed clicks render the same files in
+  // the same order.
   const sortedCommitFileEntries = useMemo(() => {
-    if (commitFileSelection.entries.length === 0 || commits.length === 0) {
+    if (commitFileSelection.entries.length === 0) {
       return commitFileSelection.entries;
     }
+    const uniquePaths = [...new Set(commitFileSelection.entries.map((e) => e.path))];
+    const pathIndex = new Map(sortPathsTreeOrder(uniquePaths).map((path, i) => [path, i]));
     const commitIndex = new Map(commits.map((commit, index) => [commit.sha, index]));
-    const fileIndex = new Map<string, Map<string, number>>();
-    for (const commit of commits) {
-      const pathToIndex = new Map<string, number>();
-      commit.files.forEach((path, index) => pathToIndex.set(path, index));
-      fileIndex.set(commit.sha, pathToIndex);
-    }
     return commitFileSelection.entries.toSorted((a, b) => {
-      const aCommitIndex = commitIndex.get(a.sha) ?? Infinity;
-      const bCommitIndex = commitIndex.get(b.sha) ?? Infinity;
-      if (aCommitIndex !== bCommitIndex) {
-        return aCommitIndex - bCommitIndex;
+      const aPath = pathIndex.get(a.path) ?? Infinity;
+      const bPath = pathIndex.get(b.path) ?? Infinity;
+      if (aPath !== bPath) {
+        return aPath - bPath;
       }
-      const aFileIndex = fileIndex.get(a.sha)?.get(a.path) ?? Infinity;
-      const bFileIndex = fileIndex.get(b.sha)?.get(b.path) ?? Infinity;
-      return aFileIndex - bFileIndex;
+      const aCommit = commitIndex.get(a.sha) ?? Infinity;
+      const bCommit = commitIndex.get(b.sha) ?? Infinity;
+      return aCommit - bCommit;
     });
   }, [commits, commitFileSelection.entries]);
 

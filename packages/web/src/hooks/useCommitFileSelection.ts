@@ -86,14 +86,10 @@ export const useCommitFileSelection = () => {
 
       if (modifiers.shiftKey) {
         const anchor = anchorRef.current;
-        const targetIndex = orderedFileEntries.findIndex(
-          (e) => e.sha === sha && e.path === path,
-        );
+        const targetIndex = orderedFileEntries.findIndex((e) => e.sha === sha && e.path === path);
         const anchorIndex =
           anchor != null
-            ? orderedFileEntries.findIndex(
-                (e) => e.sha === anchor.sha && e.path === anchor.path,
-              )
+            ? orderedFileEntries.findIndex((e) => e.sha === anchor.sha && e.path === anchor.path)
             : -1;
         if (anchorIndex === -1 || targetIndex === -1) {
           anchorRef.current = { sha, path };

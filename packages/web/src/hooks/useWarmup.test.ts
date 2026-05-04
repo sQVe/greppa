@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto';
-
 import { renderHook, waitFor } from '@testing-library/react';
 import { clear, createStore } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

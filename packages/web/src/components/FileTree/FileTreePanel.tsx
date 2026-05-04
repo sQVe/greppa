@@ -8,6 +8,8 @@ import type { FileNode } from '../../fixtures/types';
 import { collectFiles } from '../../useFileSelection';
 import { CommitList } from '../CommitList/CommitList';
 import { FileTree } from './FileTree';
+import { FilteredTreeSection } from './FilteredTreeSection';
+import type { SectionFilter } from './FilteredTreeSection';
 
 import styles from './FileTreePanel.module.css';
 
@@ -22,8 +24,15 @@ interface FileTreePanelProps {
   selectedSource: 'committed' | 'worktree' | null;
   selectedCommitShas: Set<string>;
   selectedCommitFiles?: ReadonlySet<string>;
+  committedReviewedPaths?: ReadonlySet<string>;
+  worktreeReviewedPaths?: ReadonlySet<string>;
+  reviewedCommitFiles?: ReadonlySet<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
+  committedFilter?: SectionFilter;
+  worktreeFilter?: SectionFilter;
+  commitsFilter?: SectionFilter;
+  commitsVisibleFilesBySha?: ReadonlyMap<string, readonly string[]>;
   onToggleSection: (section: FileTreeSection) => void;
   onSelectCommittedFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectWorktreeFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
@@ -73,8 +82,15 @@ export const FileTreePanel = ({
   selectedSource,
   selectedCommitShas,
   selectedCommitFiles,
+  committedReviewedPaths,
+  worktreeReviewedPaths,
+  reviewedCommitFiles,
   committedExpandedKeys,
   worktreeExpandedKeys,
+  committedFilter,
+  worktreeFilter,
+  commitsFilter,
+  commitsVisibleFilesBySha,
   onToggleSection,
   onSelectCommittedFile,
   onSelectWorktreeFile,
@@ -135,7 +151,9 @@ export const FileTreePanel = ({
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'committed'}
-          onClick={() => { handleToggle('committed'); }}
+          onClick={() => {
+            handleToggle('committed');
+          }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -158,17 +176,22 @@ export const FileTreePanel = ({
           animate={expandedSection === 'committed' ? 'expanded' : 'collapsed'}
           initial={false}
           transition={transition}
-          onAnimationComplete={() => { handleExpandComplete('committed'); }}
+          onAnimationComplete={() => {
+            handleExpandComplete('committed');
+          }}
         >
-          <FileTree
-            files={committedFiles}
-            selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
-            expandedKeys={committedExpandedKeys}
-            onSelectFile={onSelectCommittedFile}
-            onSelectDirectory={onSelectCommittedDirectory}
-            onExpandedKeysChange={onCommittedExpandedKeysChange}
-            onCollapseDirectory={onCollapseCommittedDirectory}
-          />
+          <FilteredTreeSection filter={committedFilter}>
+            <FileTree
+              files={committedFiles}
+              selectedPaths={selectedSource === 'committed' ? selectedPaths : EMPTY_SET}
+              expandedKeys={committedExpandedKeys}
+              reviewedPaths={committedReviewedPaths}
+              onSelectFile={onSelectCommittedFile}
+              onSelectDirectory={onSelectCommittedDirectory}
+              onExpandedKeysChange={onCommittedExpandedKeysChange}
+              onCollapseDirectory={onCollapseCommittedDirectory}
+            />
+          </FilteredTreeSection>
         </motion.div>
       </div>
       <div
@@ -178,7 +201,9 @@ export const FileTreePanel = ({
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'worktree'}
-          onClick={() => { handleToggle('worktree'); }}
+          onClick={() => {
+            handleToggle('worktree');
+          }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -201,27 +226,32 @@ export const FileTreePanel = ({
           animate={expandedSection === 'worktree' ? 'expanded' : 'collapsed'}
           initial={false}
           transition={transition}
-          onAnimationComplete={() => { handleExpandComplete('worktree'); }}
+          onAnimationComplete={() => {
+            handleExpandComplete('worktree');
+          }}
         >
-          <FileTree
-            files={worktreeFiles}
-            selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
-            expandedKeys={worktreeExpandedKeys}
-            onSelectFile={onSelectWorktreeFile}
-            onSelectDirectory={onSelectWorktreeDirectory}
-            onExpandedKeysChange={onWorktreeExpandedKeysChange}
-            onCollapseDirectory={onCollapseWorktreeDirectory}
-          />
+          <FilteredTreeSection filter={worktreeFilter}>
+            <FileTree
+              files={worktreeFiles}
+              selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
+              expandedKeys={worktreeExpandedKeys}
+              reviewedPaths={worktreeReviewedPaths}
+              onSelectFile={onSelectWorktreeFile}
+              onSelectDirectory={onSelectWorktreeDirectory}
+              onExpandedKeysChange={onWorktreeExpandedKeysChange}
+              onCollapseDirectory={onCollapseWorktreeDirectory}
+            />
+          </FilteredTreeSection>
         </motion.div>
       </div>
-      <div
-        className={`${styles.section} ${expandedSection !== 'commits' ? styles.collapsed : ''}`}
-      >
+      <div className={`${styles.section} ${expandedSection !== 'commits' ? styles.collapsed : ''}`}>
         <button
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'commits'}
-          onClick={() => { handleToggle('commits'); }}
+          onClick={() => {
+            handleToggle('commits');
+          }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -244,16 +274,22 @@ export const FileTreePanel = ({
           animate={expandedSection === 'commits' ? 'expanded' : 'collapsed'}
           initial={false}
           transition={transition}
-          onAnimationComplete={() => { handleExpandComplete('commits'); }}
+          onAnimationComplete={() => {
+            handleExpandComplete('commits');
+          }}
         >
-          <CommitList
-            commits={commits}
-            selectedShas={selectedCommitShas}
-            selectedCommitFiles={selectedCommitFiles}
-            onSelectCommit={onSelectCommit}
-            onSelectCommitFile={onSelectCommitFile}
-            onSelectAllFilesInCommit={onSelectAllFilesInCommit}
-          />
+          <FilteredTreeSection filter={commitsFilter}>
+            <CommitList
+              commits={commits}
+              selectedShas={selectedCommitShas}
+              selectedCommitFiles={selectedCommitFiles}
+              reviewedCommitFiles={reviewedCommitFiles}
+              visibleFilesBySha={commitsVisibleFilesBySha}
+              onSelectCommit={onSelectCommit}
+              onSelectCommitFile={onSelectCommitFile}
+              onSelectAllFilesInCommit={onSelectAllFilesInCommit}
+            />
+          </FilteredTreeSection>
         </motion.div>
       </div>
     </div>

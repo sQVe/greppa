@@ -34,13 +34,7 @@ describe('nextFilesToPrefetch', () => {
   });
 
   it('skips large successors and continues counting past them', () => {
-    const files = [
-      file('a.ts'),
-      file('b.ts'),
-      file('c.ts', 'large'),
-      file('d.ts'),
-      file('e.ts'),
-    ];
+    const files = [file('a.ts'), file('b.ts'), file('c.ts', 'large'), file('d.ts'), file('e.ts')];
 
     const result = nextFilesToPrefetch(files, 'b.ts', 2);
 

@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
-
 import type { DiffResponse } from '@greppa/core';
+import { useEffect } from 'react';
 
 import type { FileNode } from '../fixtures/types';
 import { setDiff } from './diffCache';

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useReviewState } from './useReviewState';
 
-const defaults = { collapsedPaths: [], reviewedPaths: [] };
+const defaults = { collapsedPaths: [], reviewedPaths: [], reviewedCommitFiles: [] };
 
 describe('useReviewState', () => {
   beforeEach(() => {
@@ -34,6 +34,7 @@ describe('useReviewState', () => {
     const stored = {
       collapsedPaths: ['src/utils'],
       reviewedPaths: ['src/index.ts'],
+      reviewedCommitFiles: ['abc:src/index.ts'],
     };
     localStorage.setItem('gr-review:session-1', JSON.stringify(stored));
 
@@ -51,9 +52,14 @@ describe('useReviewState', () => {
     expect(result.current.state).toEqual({
       collapsedPaths: [],
       reviewedPaths: ['file-a.ts'],
+      reviewedCommitFiles: [],
     });
 
-    const stored = JSON.parse(localStorage.getItem('gr-review:session-1')!);
+    const raw = localStorage.getItem('gr-review:session-1');
+    if (raw == null) {
+      throw new Error('expected gr-review:session-1 in localStorage');
+    }
+    const stored = JSON.parse(raw);
     expect(stored.reviewedPaths).toEqual(['file-a.ts']);
     expect(stored.collapsedPaths).toEqual([]);
   });
@@ -68,6 +74,28 @@ describe('useReviewState', () => {
 
     expect(result1.current.state.reviewedPaths).toEqual(['a.ts']);
     expect(result2.current.state.reviewedPaths).toEqual([]);
+  });
+
+  it('persists reviewedCommitFiles entries to localStorage independently of reviewedPaths', () => {
+    const { result } = renderHook(() => useReviewState('committed'));
+
+    act(() => {
+      result.current.set({ reviewedCommitFiles: ['abc123:src/foo.ts'] });
+    });
+
+    expect(result.current.state).toEqual({
+      collapsedPaths: [],
+      reviewedPaths: [],
+      reviewedCommitFiles: ['abc123:src/foo.ts'],
+    });
+
+    const raw = localStorage.getItem('gr-review:committed');
+    if (raw == null) {
+      throw new Error('expected gr-review:committed in localStorage');
+    }
+    const stored = JSON.parse(raw);
+    expect(stored.reviewedCommitFiles).toEqual(['abc123:src/foo.ts']);
+    expect(stored.reviewedPaths).toEqual([]);
   });
 
   it('same session ID from multiple components shares state', () => {

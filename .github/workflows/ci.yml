@@ -46,6 +46,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.0
+        with:
+          path: |
+            .fallow/cache.bin
+            .fallow/churn.bin
+          key: fallow-cache-${{ runner.os }}-${{ hashFiles('**/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            fallow-cache-${{ runner.os }}-
       - run: pnpm exec fallow audit --changed-since ${{ github.event.pull_request.base.sha }}
 
   test:

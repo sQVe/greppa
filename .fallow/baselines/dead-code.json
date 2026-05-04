@@ -12,23 +12,15 @@
     "packages/web/src/stateCache.ts:postState"
   ],
   "unused_types": [
-    "packages/web/src/components/DiffViewer/extractCharRanges.ts:CharRange",
-    "packages/web/src/components/DiffViewer/getFileSizeTier.ts:FileSizeTier",
-    "packages/web/src/components/DiffViewer/splitTokensWithHighlights.ts:HighlightedToken",
     "packages/web/src/components/StatusBar/StatusBar.tsx:StatusBarMode",
-    "packages/web/src/hooks/buildDiffFile.ts:BuildDiffFileInput",
-    "packages/web/src/hooks/diffCache.ts:DiffCacheKey",
-    "packages/web/src/hooks/parseHash.ts:HashTarget",
-    "packages/web/src/hooks/useCommitFileDiffs.ts:CommitFileDiffsResult",
-    "packages/web/src/hooks/useComputedDiffs.ts:ComputedDiffsResult",
-    "packages/web/src/hooks/useFileSelectionHandlers.ts:SelectModifiers",
-    "packages/web/src/hooks/usePreferences.ts:Theme",
-    "packages/web/src/workers/diffProtocol.ts:DiffLineRange",
-    "packages/web/src/workers/highlightProtocol.ts:HighlightLine",
-    "packages/web/src/workers/highlightProtocol.ts:WorkerResponse"
+    "packages/web/src/hooks/useFileSelectionHandlers.ts:SelectModifiers"
   ],
-  "unused_dependencies": ["packages/web/package.json:vscode-material-icons"],
-  "unused_dev_dependencies": [],
+  "private_type_leaks": [],
+  "unused_dependencies": [
+    "packages/cli/package.json:@greppa/core",
+    "packages/web/package.json:vscode-material-icons"
+  ],
+  "unused_dev_dependencies": ["packages/cli/package.json:@greppa/web"],
   "circular_dependencies": [],
   "unused_optional_dependencies": [],
   "unused_enum_members": [],

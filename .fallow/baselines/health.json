@@ -6,6 +6,12 @@
       }
     },
     "packages/server/src/GitService.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "complexity_high": {
+        "count": 1
+      },
       "crap_critical": {
         "count": 1
       },
@@ -41,6 +47,9 @@
       }
     },
     "packages/web/src/components/DiffViewer/DiffViewer.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
       "crap_critical": {
         "count": 1
       }
@@ -51,6 +60,9 @@
       }
     },
     "packages/web/src/components/DiffViewer/buildRows.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
       "crap_moderate": {
         "count": 1
       }
@@ -95,11 +107,17 @@
       }
     },
     "packages/web/src/components/FileTree/FileTree.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
       "crap_high": {
         "count": 1
       }
     },
     "packages/web/src/components/FileTree/FileTreePanel.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
       "crap_critical": {
         "count": 1
       }
@@ -140,7 +158,7 @@
     },
     "packages/web/src/hooks/buildDiffFile.ts": {
       "complexity_critical": {
-        "count": 1
+        "count": 2
       },
       "crap_critical": {
         "count": 2
@@ -173,6 +191,9 @@
       }
     },
     "packages/web/src/hooks/useCommitSelection.ts": {
+      "complexity_high": {
+        "count": 1
+      },
       "crap_high": {
         "count": 1
       },
@@ -186,6 +207,9 @@
       }
     },
     "packages/web/src/hooks/useFileList.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
       "crap_critical": {
         "count": 1
       },
@@ -217,6 +241,9 @@
       }
     },
     "packages/web/src/hooks/useSelectionCoordinator.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
       "crap_critical": {
         "count": 1
       },
@@ -230,6 +257,9 @@
       }
     },
     "packages/web/src/router.ts": {
+      "complexity_high": {
+        "count": 1
+      },
       "crap_high": {
         "count": 1
       },
@@ -249,6 +279,9 @@
       }
     },
     "packages/web/src/workers/highlightEngine.ts": {
+      "complexity_critical": {
+        "count": 3
+      },
       "crap_critical": {
         "count": 3
       },

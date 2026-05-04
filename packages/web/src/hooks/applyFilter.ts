@@ -1,5 +1,7 @@
 import type { FileNode } from '../fixtures/types';
 
+export type FilterPredicate = (file: FileNode) => boolean;
+
 export interface ApplyFilterResult {
   files: FileNode[];
   autoExpand: ReadonlySet<string>;
@@ -26,18 +28,15 @@ const countFiles = (nodes: FileNode[]): number => {
   return count;
 };
 
-const matchesNeedle = (node: FileNode, needle: string): boolean =>
-  node.name.toLowerCase().includes(needle);
-
-const filterFile = (node: FileNode, needle: string): FilterFrame | null =>
-  matchesNeedle(node, needle) ? { kept: [node], visible: 1 } : null;
+const filterFile = (node: FileNode, predicate: FilterPredicate): FilterFrame | null =>
+  predicate(node) ? { kept: [node], visible: 1 } : null;
 
 const filterDirectory = (
   node: FileNode,
-  needle: string,
+  predicate: FilterPredicate,
   autoExpand: Set<string>,
 ): FilterFrame | null => {
-  const childResult = filterNodes(node.children ?? [], needle, autoExpand);
+  const childResult = filterNodes(node.children ?? [], predicate, autoExpand);
   if (childResult.visible === 0) return null;
   autoExpand.add(node.path);
   return {
@@ -48,25 +47,31 @@ const filterDirectory = (
 
 const filterNode = (
   node: FileNode,
-  needle: string,
+  predicate: FilterPredicate,
   autoExpand: Set<string>,
 ): FilterFrame | null =>
-  node.type === 'file' ? filterFile(node, needle) : filterDirectory(node, needle, autoExpand);
+  node.type === 'file' ? filterFile(node, predicate) : filterDirectory(node, predicate, autoExpand);
 
 const mergeFrame = (acc: FilterFrame, frame: FilterFrame | null): FilterFrame =>
   frame == null
     ? acc
     : { kept: [...acc.kept, ...frame.kept], visible: acc.visible + frame.visible };
 
-const filterNodes = (nodes: FileNode[], needle: string, autoExpand: Set<string>): FilterFrame =>
+const filterNodes = (
+  nodes: FileNode[],
+  predicate: FilterPredicate,
+  autoExpand: Set<string>,
+): FilterFrame =>
   nodes.reduce<FilterFrame>(
-    (acc, node) => mergeFrame(acc, filterNode(node, needle, autoExpand)),
+    (acc, node) => mergeFrame(acc, filterNode(node, predicate, autoExpand)),
     { kept: [], visible: 0 },
   );
 
-export const applyFilter = (files: FileNode[], query: string): ApplyFilterResult => {
-  const trimmed = query.trim();
-  if (trimmed.length === 0) {
+export const applyFilter = (
+  files: FileNode[],
+  predicate: FilterPredicate | null,
+): ApplyFilterResult => {
+  if (predicate == null) {
     const total = countFiles(files);
     return {
       files,
@@ -76,9 +81,8 @@ export const applyFilter = (files: FileNode[], query: string): ApplyFilterResult
     };
   }
 
-  const needle = trimmed.toLowerCase();
   const autoExpand = new Set<string>();
-  const { kept, visible } = filterNodes(files, needle, autoExpand);
+  const { kept, visible } = filterNodes(files, predicate, autoExpand);
   const total = countFiles(files);
 
   return {

@@ -11,9 +11,15 @@ import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/Sta
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
 import { comments, diffs, fileInfoMap } from './fixtures';
-import type { DiffFile, FileNode } from './fixtures/types';
+import type { ChangeType, DiffFile, FileNode } from './fixtures/types';
 import { applyFilter } from './hooks/applyFilter';
 import { buildDiffFile } from './hooks/buildDiffFile';
+import { buildFilterPredicate } from './hooks/buildFilterPredicate';
+import {
+  collectChangeTypeCounts,
+  collectExtensionCounts,
+  collectStatusCounts,
+} from './hooks/facetCounts';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
@@ -22,6 +28,7 @@ import { useFileList } from './hooks/useFileList';
 import { useHashScroll } from './hooks/useHashScroll';
 import type { useMultiSelect } from './hooks/useMultiSelect';
 import { useRefs } from './hooks/useRefs';
+import { useReviewState } from './hooks/useReviewState';
 import { useSelectionCoordinator } from './hooks/useSelectionCoordinator';
 import { useTreeState } from './hooks/useTreeState';
 import { useWarmup } from './hooks/useWarmup';
@@ -286,9 +293,90 @@ export const App = () => {
   const { files: worktreeFiles } = useWorktreeFiles();
 
   const committedFilter = useFileFilter('committed');
+  const { state: committedReviewState } = useReviewState('committed');
+  const committedReviewedSet = useMemo(
+    () => new Set(committedReviewState.reviewedPaths),
+    [committedReviewState.reviewedPaths],
+  );
+  const committedPredicate = useMemo(
+    () =>
+      buildFilterPredicate(
+        {
+          query: committedFilter.query,
+          extensions: committedFilter.extensions,
+          changeTypes: committedFilter.changeTypes,
+          statuses: committedFilter.statuses,
+        },
+        committedReviewedSet,
+      ),
+    [
+      committedFilter.query,
+      committedFilter.extensions,
+      committedFilter.changeTypes,
+      committedFilter.statuses,
+      committedReviewedSet,
+    ],
+  );
   const filteredCommitted = useMemo(
-    () => applyFilter(files, committedFilter.query),
-    [files, committedFilter.query],
+    () => applyFilter(files, committedPredicate),
+    [files, committedPredicate],
+  );
+
+  const extensionRows = useMemo(() => collectExtensionCounts(files), [files]);
+  const changeTypeRows = useMemo(() => {
+    const counts = collectChangeTypeCounts(files);
+    return (['added', 'modified', 'deleted', 'renamed'] as ChangeType[]).map((type) => ({
+      type,
+      count: counts[type],
+    }));
+  }, [files]);
+  const statusRows = useMemo(() => {
+    const counts = collectStatusCounts(files, committedReviewedSet);
+    return [
+      { status: 'reviewed' as const, count: counts.reviewed },
+      { status: 'unreviewed' as const, count: counts.unreviewed },
+    ];
+  }, [files, committedReviewedSet]);
+
+  const selectedExtensionsSet = useMemo(
+    () => new Set(committedFilter.extensions),
+    [committedFilter.extensions],
+  );
+  const selectedChangeTypesSet = useMemo(
+    () => new Set(committedFilter.changeTypes),
+    [committedFilter.changeTypes],
+  );
+  const selectedStatusesSet = useMemo(
+    () => new Set(committedFilter.statuses),
+    [committedFilter.statuses],
+  );
+
+  const toggleExtension = useCallback(
+    (extension: string) => {
+      const next = selectedExtensionsSet.has(extension)
+        ? committedFilter.extensions.filter((e) => e !== extension)
+        : [...committedFilter.extensions, extension];
+      committedFilter.setExtensions(next);
+    },
+    [selectedExtensionsSet, committedFilter],
+  );
+  const toggleChangeType = useCallback(
+    (type: ChangeType) => {
+      const next = selectedChangeTypesSet.has(type)
+        ? committedFilter.changeTypes.filter((t) => t !== type)
+        : [...committedFilter.changeTypes, type];
+      committedFilter.setChangeTypes(next);
+    },
+    [selectedChangeTypesSet, committedFilter],
+  );
+  const toggleStatus = useCallback(
+    (status: 'reviewed' | 'unreviewed') => {
+      const next = selectedStatusesSet.has(status)
+        ? committedFilter.statuses.filter((s) => s !== status)
+        : [...committedFilter.statuses, status];
+      committedFilter.setStatuses(next);
+    },
+    [selectedStatusesSet, committedFilter],
   );
 
   const {
@@ -468,6 +556,15 @@ export const App = () => {
                 reset: committedFilter.reset,
                 visibleCount: filteredCommitted.visibleCount,
                 totalCount: filteredCommitted.totalCount,
+                extensions: extensionRows,
+                changeTypes: changeTypeRows,
+                statuses: statusRows,
+                selectedExtensions: selectedExtensionsSet,
+                selectedChangeTypes: selectedChangeTypesSet,
+                selectedStatuses: selectedStatusesSet,
+                onToggleExtension: toggleExtension,
+                onToggleChangeType: toggleChangeType,
+                onToggleStatus: toggleStatus,
               }}
               onToggleSection={handleToggleSection}
               onSelectCommittedFile={handleSelectCommittedFile}

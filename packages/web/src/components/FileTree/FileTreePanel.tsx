@@ -4,7 +4,8 @@ import { motion } from 'motion/react';
 import { useMemo, useRef } from 'react';
 
 import type { CommitFileEntry } from '../../commitFileKey';
-import type { FileNode } from '../../fixtures/types';
+import type { ChangeType, FileNode } from '../../fixtures/types';
+import type { ReviewedStatus } from '../../hooks/useFileFilter';
 import { collectFiles } from '../../useFileSelection';
 import { CommitList } from '../CommitList/CommitList';
 import { FileFilterBar } from './FileFilterBar';
@@ -19,6 +20,15 @@ interface CommittedFilter {
   reset: () => void;
   visibleCount: number;
   totalCount: number;
+  extensions: { extension: string; count: number }[];
+  changeTypes: { type: ChangeType; count: number }[];
+  statuses: { status: ReviewedStatus; count: number }[];
+  selectedExtensions: ReadonlySet<string>;
+  selectedChangeTypes: ReadonlySet<ChangeType>;
+  selectedStatuses: ReadonlySet<ReviewedStatus>;
+  onToggleExtension: (extension: string) => void;
+  onToggleChangeType: (type: ChangeType) => void;
+  onToggleStatus: (status: ReviewedStatus) => void;
 }
 
 export type FileTreeSection = 'committed' | 'worktree' | 'commits';
@@ -183,6 +193,15 @@ export const FileTreePanel = ({
               query={committedFilter.query}
               setQuery={committedFilter.setQuery}
               reset={committedFilter.reset}
+              extensions={committedFilter.extensions}
+              changeTypes={committedFilter.changeTypes}
+              statuses={committedFilter.statuses}
+              selectedExtensions={committedFilter.selectedExtensions}
+              selectedChangeTypes={committedFilter.selectedChangeTypes}
+              selectedStatuses={committedFilter.selectedStatuses}
+              onToggleExtension={(extension) => { committedFilter.onToggleExtension(extension); }}
+              onToggleChangeType={(type) => { committedFilter.onToggleChangeType(type); }}
+              onToggleStatus={(status) => { committedFilter.onToggleStatus(status); }}
             />
           )}
           {committedFilter != null

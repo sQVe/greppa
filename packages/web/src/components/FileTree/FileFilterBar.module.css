@@ -27,7 +27,8 @@
   border-color: var(--gr-color-accent);
 }
 
-.clear {
+.clear,
+.funnel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,11 +42,21 @@
   cursor: pointer;
 }
 
-.clear:hover {
+.clear:hover,
+.funnel:hover {
   color: inherit;
   background: color-mix(
     in srgb,
     var(--gr-color-bg-surface) 40%,
     var(--gr-color-bg-subtle)
+  );
+}
+
+.funnel[aria-pressed='true'] {
+  color: var(--gr-color-text-primary);
+  background: color-mix(
+    in srgb,
+    var(--gr-color-bg-interactive) 12%,
+    transparent
   );
 }

@@ -3,8 +3,21 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { FileNode } from '../../fixtures/types';
+import type { ChangeType, FileNode } from '../../fixtures/types';
+import type { ReviewedStatus } from '../../hooks/useFileFilter';
 import { FileTreePanel } from './FileTreePanel';
+
+const emptyFacets = {
+  extensions: [] as { extension: string; count: number }[],
+  changeTypes: [] as { type: ChangeType; count: number }[],
+  statuses: [] as { status: ReviewedStatus; count: number }[],
+  selectedExtensions: new Set<string>(),
+  selectedChangeTypes: new Set<ChangeType>(),
+  selectedStatuses: new Set<ReviewedStatus>(),
+  onToggleExtension: vi.fn(),
+  onToggleChangeType: vi.fn(),
+  onToggleStatus: vi.fn(),
+};
 
 const committedFiles: FileNode[] = [
   {
@@ -51,6 +64,7 @@ describe('FileTreePanel', () => {
           reset: vi.fn(),
           visibleCount: 1,
           totalCount: 1,
+          ...emptyFacets,
         }}
       />,
     );
@@ -71,13 +85,16 @@ describe('FileTreePanel', () => {
           reset,
           visibleCount: 0,
           totalCount: 1,
+          ...emptyFacets,
         }}
       />,
     );
 
-    expect(screen.getByText(/no files match/i)).toBeDefined();
-    const clearButton = screen.getByRole('button', { name: /clear filter/i });
-    await userEvent.click(clearButton);
+    const placeholder = screen.getByText(/no files match/i).parentElement;
+    expect(placeholder).not.toBeNull();
+    const clearButton = placeholder?.querySelector('button');
+    expect(clearButton).not.toBeNull();
+    await userEvent.click(clearButton as HTMLButtonElement);
     expect(reset).toHaveBeenCalled();
   });
 

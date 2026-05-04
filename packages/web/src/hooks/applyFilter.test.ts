@@ -25,8 +25,8 @@ const tree: FileNode[] = [
 ];
 
 describe('applyFilter', () => {
-  it('returns the input tree untouched when query is empty', () => {
-    const result = applyFilter(tree, '');
+  it('returns the input tree untouched when predicate is null', () => {
+    const result = applyFilter(tree, null);
 
     expect(result.files).toBe(tree);
     expect(result.autoExpand.size).toBe(0);
@@ -34,8 +34,16 @@ describe('applyFilter', () => {
     expect(result.totalCount).toBe(4);
   });
 
+  it('keeps every leaf when predicate returns true for all', () => {
+    const result = applyFilter(tree, () => true);
+
+    expect(result.visibleCount).toBe(4);
+    expect(result.totalCount).toBe(4);
+    expect([...result.autoExpand].toSorted()).toEqual(['src', 'src/utils']);
+  });
+
   it('matches a leaf and surfaces ancestor directories in autoExpand', () => {
-    const result = applyFilter(tree, 'format');
+    const result = applyFilter(tree, (node) => node.name === 'format.ts');
 
     expect(result.visibleCount).toBe(1);
     expect(result.totalCount).toBe(4);
@@ -49,25 +57,15 @@ describe('applyFilter', () => {
   });
 
   it('prunes directories whose descendants do not match', () => {
-    const result = applyFilter(tree, 'README');
+    const result = applyFilter(tree, (node) => node.name === 'README.md');
 
     expect(result.visibleCount).toBe(1);
     expect(result.files.map((node) => node.path)).toEqual(['README.md']);
     expect(result.autoExpand.size).toBe(0);
   });
 
-  it('matches case-insensitively', () => {
-    const lower = applyFilter(tree, 'index.ts');
-    const upper = applyFilter(tree, 'INDEX.TS');
-
-    expect(lower.visibleCount).toBe(1);
-    expect(upper.visibleCount).toBe(1);
-    expect(lower.files[0]?.children?.[0]?.path).toBe('src/index.ts');
-    expect(upper.files[0]?.children?.[0]?.path).toBe('src/index.ts');
-  });
-
-  it('returns no files for a non-matching query and empty autoExpand', () => {
-    const result = applyFilter(tree, 'zzz');
+  it('returns no files when predicate rejects everything', () => {
+    const result = applyFilter(tree, () => false);
 
     expect(result.visibleCount).toBe(0);
     expect(result.totalCount).toBe(4);

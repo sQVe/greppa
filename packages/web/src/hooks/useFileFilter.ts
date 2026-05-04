@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 import type { ChangeType } from '../fixtures/types';
 
@@ -43,16 +43,6 @@ const getStore = (sessionId: string): SessionStore => {
   return store;
 };
 
-const subscribeFor = (sessionId: string) => (listener: () => void) => {
-  const store = getStore(sessionId);
-  store.listeners = [...store.listeners, listener];
-  return () => {
-    store.listeners = store.listeners.filter((existing) => existing !== listener);
-  };
-};
-
-const getSnapshotFor = (sessionId: string) => () => getStore(sessionId).state;
-
 const emitChange = (store: SessionStore) => {
   for (const listener of store.listeners) {
     listener();
@@ -72,7 +62,18 @@ const isActiveState = (state: FilterState) =>
   || state.statuses.length > 0;
 
 export const useFileFilter = (sessionId: string): UseFileFilterResult => {
-  const state = useSyncExternalStore(subscribeFor(sessionId), getSnapshotFor(sessionId));
+  const subscribe = useCallback(
+    (listener: () => void) => {
+      const store = getStore(sessionId);
+      store.listeners = [...store.listeners, listener];
+      return () => {
+        store.listeners = store.listeners.filter((existing) => existing !== listener);
+      };
+    },
+    [sessionId],
+  );
+  const getSnapshot = useCallback(() => getStore(sessionId).state, [sessionId]);
+  const state = useSyncExternalStore(subscribe, getSnapshot);
 
   return {
     query: state.query,

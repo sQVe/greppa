@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "entry": ["packages/ui/playground/main.tsx", "scripts/*.ts"],
+  "entry": ["packages/ui/playground/main.tsx", "scripts/worktreeEnv.ts"],
   "dynamicallyLoaded": [
     "packages/ui/src/**/*.preview.tsx",
     "packages/web/src/workers/**"

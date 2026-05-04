@@ -16,6 +16,7 @@ export interface BuildDiffFileInput {
   oldContent: string | null;
   newContent: string | null;
   changes?: DiffMapping[] | null;
+  sha?: string | null;
 }
 
 const CONTEXT_LINES = 3;
@@ -150,7 +151,7 @@ const buildHunk = (
 };
 
 export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
-  const { filePath, changeType, oldPath, oldContent, newContent, changes } = input;
+  const { filePath, changeType, oldPath, oldContent, newContent, changes, sha } = input;
 
   if (filePath == null || changeType == null || oldContent == null || newContent == null) {
     return null;
@@ -160,6 +161,7 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
     path: filePath,
     changeType,
     ...(oldPath != null ? { oldPath } : {}),
+    ...(sha != null ? { sha } : {}),
     language: getLanguage(filePath),
     oldContent,
     newContent,

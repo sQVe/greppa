@@ -55,6 +55,7 @@ export const fetchAndComputeDiff = async (
   source: FileSource,
   oldRef: string,
   newRef: string,
+  sha: string | null = null,
 ): Promise<DiffFile | null> => {
   const response: DiffResponse =
     source === 'worktree'
@@ -74,6 +75,7 @@ export const fetchAndComputeDiff = async (
     oldContent: response.oldContent,
     newContent: response.newContent,
     changes,
+    sha,
   });
 };
 
@@ -82,6 +84,7 @@ export const useComputedDiffs = (
   source: FileSource | null,
   oldRef: string,
   newRef: string,
+  sha: string | null = null,
 ): ComputedDiffsResult => {
   return useQueries({
     queries: paths.map((path) => ({
@@ -89,7 +92,7 @@ export const useComputedDiffs = (
         source === 'worktree'
           ? ['computed-diff', 'worktree', path]
           : ['computed-diff', oldRef, newRef, path],
-      queryFn: () => fetchAndComputeDiff(path, source ?? 'committed', oldRef, newRef),
+      queryFn: () => fetchAndComputeDiff(path, source ?? 'committed', oldRef, newRef, sha),
       enabled: source != null,
       retry: false,
       staleTime: source === 'worktree' ? 5_000 : Infinity,

@@ -467,7 +467,8 @@ export const App = () => {
 
   const { activeReviewedPaths, activeToggleReviewed } = useActiveTreeState({
     activeSource: multiSelect.activeSource,
-    isCommits: selectedCommitFileKeys.size > 0,
+    isCommits:
+      commitSelection.selectedShas.size === 1 || selectedCommitFileKeys.size > 0,
     committedReviewedPaths: reviewedPaths,
     worktreeReviewedPaths,
     reviewedCommitFiles,

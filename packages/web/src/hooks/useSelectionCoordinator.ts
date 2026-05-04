@@ -85,11 +85,16 @@ export const useSelectionCoordinator = ({
     () => (commitFilePaths.files != null ? collectFiles(commitFilePaths.files).map((f) => f.path) : []),
     [commitFilePaths.files],
   );
+  const singleCommitSha =
+    commitSelection.selectedShas.size === 1
+      ? ([...commitSelection.selectedShas][0] ?? null)
+      : null;
   const commitDiffs = useComputedDiffs(
     commitSelection.isActive ? commitFilePathsList : [],
     'committed',
     commitDiffRange?.oldRef ?? '',
     commitDiffRange?.newRef ?? '',
+    singleCommitSha,
   );
 
   const commitFileSelection = useCommitFileSelection();

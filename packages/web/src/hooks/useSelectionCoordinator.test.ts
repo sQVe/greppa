@@ -53,6 +53,7 @@ vi.mock('./useCommitSelection', () => ({
     isActive: false,
     diffRange: null,
     selectCommit: vi.fn(),
+    selectedShas: new Set<string>(),
   }),
 }));
 

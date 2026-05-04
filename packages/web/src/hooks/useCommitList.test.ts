@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fetchCommits, useCommitList } from './useCommitList';
 
-const createWrapper = (queryClient: QueryClient) =>
+const createWrapper =
+  (queryClient: QueryClient) =>
   ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client: queryClient }, children);
 
@@ -34,7 +35,13 @@ describe('useCommitList', () => {
 
     it('should return parsed commit entries', async () => {
       const expected = [
-        { sha: 'abc123', abbrevSha: 'abc', subject: 'feat: thing', author: 'Alice', date: '2026-04-03T10:00:00+00:00' },
+        {
+          sha: 'abc123',
+          abbrevSha: 'abc',
+          subject: 'feat: thing',
+          author: 'Alice',
+          date: '2026-04-03T10:00:00+00:00',
+        },
       ];
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
@@ -65,7 +72,7 @@ describe('useCommitList', () => {
       vi.restoreAllMocks();
     });
 
-    it('reorders each commit\'s files into tree-DFS layout', async () => {
+    it("reorders each commit's files into tree-DFS layout", async () => {
       const serverCommits = [
         {
           sha: 'abc123',
@@ -101,17 +108,16 @@ describe('useCommitList', () => {
     });
 
     it('does not mutate the original server response', async () => {
-      const serverCommits = [
-        {
-          sha: 'abc123',
-          abbrevSha: 'abc',
-          subject: 'feat: thing',
-          author: 'Alice',
-          date: '2026-04-03T10:00:00+00:00',
-          files: ['beads.jsonl', 'packages/web/src/App.tsx'],
-        },
-      ];
-      const originalFiles = [...serverCommits[0]!.files];
+      const firstCommit = {
+        sha: 'abc123',
+        abbrevSha: 'abc',
+        subject: 'feat: thing',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['beads.jsonl', 'packages/web/src/App.tsx'],
+      };
+      const serverCommits = [firstCommit];
+      const originalFiles = [...firstCommit.files];
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(serverCommits),

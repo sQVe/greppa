@@ -11,19 +11,25 @@ const getExtension = (name: string): string => {
 };
 
 const queryMatcher = (query: string): FilterPredicate | null => {
-  if (query.length === 0) return null;
+  if (query.length === 0) {
+    return null;
+  }
   const needle = query.toLowerCase();
   return (file) => file.name.toLowerCase().includes(needle);
 };
 
 const extensionMatcher = (extensions: string[]): FilterPredicate | null => {
-  if (extensions.length === 0) return null;
+  if (extensions.length === 0) {
+    return null;
+  }
   const set = new Set(extensions.map((ext) => ext.toLowerCase()));
   return (file) => set.has(getExtension(file.name));
 };
 
 const changeTypeMatcher = (changeTypes: ChangeType[]): FilterPredicate | null => {
-  if (changeTypes.length === 0) return null;
+  if (changeTypes.length === 0) {
+    return null;
+  }
   const set = new Set(changeTypes);
   return (file) => file.changeType != null && set.has(file.changeType);
 };
@@ -32,7 +38,9 @@ const statusMatcher = (
   statuses: ReviewedStatus[],
   reviewedPaths: ReadonlySet<string>,
 ): FilterPredicate | null => {
-  if (statuses.length === 0) return null;
+  if (statuses.length === 0) {
+    return null;
+  }
   const set = new Set(statuses);
   return (file) => set.has(reviewedPaths.has(file.path) ? 'reviewed' : 'unreviewed');
 };
@@ -48,6 +56,8 @@ export const buildFilterPredicate = (
     statusMatcher(state.statuses, reviewedPaths),
   ].filter((m): m is FilterPredicate => m !== null);
 
-  if (matchers.length === 0) return null;
+  if (matchers.length === 0) {
+    return null;
+  }
   return (file: FileNode) => matchers.every((m) => m(file));
 };

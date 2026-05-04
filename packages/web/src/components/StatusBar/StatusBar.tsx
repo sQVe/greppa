@@ -1,6 +1,11 @@
 import styles from './StatusBar.module.css';
 
-type StatusBarMode = 'file-review' | 'commit-review' | 'working-tree' | 'review-complete' | 'composer-open';
+type StatusBarMode =
+  | 'file-review'
+  | 'commit-review'
+  | 'working-tree'
+  | 'review-complete'
+  | 'composer-open';
 
 interface VisibleSegment {
   matched: number;
@@ -79,7 +84,9 @@ const renderComments = (count: number) => (
 );
 
 const renderVisible = (visible: VisibleSegment | undefined) => {
-  if (visible == null) return null;
+  if (visible == null) {
+    return null;
+  }
   return (
     <div className={styles.segment}>
       {visible.matched} / {visible.total} visible
@@ -158,7 +165,8 @@ const renderRightSegments = (mode: StatusBarMode) => {
     case 'composer-open':
       return (
         <div className={styles.segment}>
-          <kbd className={styles.kbd}>{getModifierKey()}+Enter</kbd> submit <kbd className={styles.kbd}>Esc</kbd> cancel
+          <kbd className={styles.kbd}>{getModifierKey()}+Enter</kbd> submit{' '}
+          <kbd className={styles.kbd}>Esc</kbd> cancel
         </div>
       );
   }

@@ -55,7 +55,11 @@ describe('useReviewState', () => {
       reviewedCommitFiles: [],
     });
 
-    const stored = JSON.parse(localStorage.getItem('gr-review:session-1')!);
+    const raw = localStorage.getItem('gr-review:session-1');
+    if (raw == null) {
+      throw new Error('expected gr-review:session-1 in localStorage');
+    }
+    const stored = JSON.parse(raw);
     expect(stored.reviewedPaths).toEqual(['file-a.ts']);
     expect(stored.collapsedPaths).toEqual([]);
   });
@@ -85,7 +89,11 @@ describe('useReviewState', () => {
       reviewedCommitFiles: ['abc123:src/foo.ts'],
     });
 
-    const stored = JSON.parse(localStorage.getItem('gr-review:committed')!);
+    const raw = localStorage.getItem('gr-review:committed');
+    if (raw == null) {
+      throw new Error('expected gr-review:committed in localStorage');
+    }
+    const stored = JSON.parse(raw);
     expect(stored.reviewedCommitFiles).toEqual(['abc123:src/foo.ts']);
     expect(stored.reviewedPaths).toEqual([]);
   });

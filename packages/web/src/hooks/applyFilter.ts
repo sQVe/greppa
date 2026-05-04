@@ -37,7 +37,9 @@ const filterDirectory = (
   autoExpand: Set<string>,
 ): FilterFrame | null => {
   const childResult = filterNodes(node.children ?? [], predicate, autoExpand);
-  if (childResult.visible === 0) return null;
+  if (childResult.visible === 0) {
+    return null;
+  }
   autoExpand.add(node.path);
   return {
     kept: [{ ...node, children: childResult.kept }],

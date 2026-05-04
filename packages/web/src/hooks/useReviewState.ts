@@ -20,7 +20,9 @@ const stores = new Map<string, ReturnType<typeof createPersistedStore<ReviewStat
 
 const getOrCreateStore = (sessionId: string) => {
   const existing = stores.get(sessionId);
-  if (existing != null) return existing;
+  if (existing != null) {
+    return existing;
+  }
 
   const store = createPersistedStore({
     key: `gr-review:${sessionId}`,

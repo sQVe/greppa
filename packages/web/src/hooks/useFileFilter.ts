@@ -56,10 +56,10 @@ const updateState = (sessionId: string, patch: Partial<FilterState>) => {
 };
 
 const isActiveState = (state: FilterState) =>
-  state.query.length > 0
-  || state.extensions.length > 0
-  || state.changeTypes.length > 0
-  || state.statuses.length > 0;
+  state.query.length > 0 ||
+  state.extensions.length > 0 ||
+  state.changeTypes.length > 0 ||
+  state.statuses.length > 0;
 
 export const useFileFilter = (sessionId: string): UseFileFilterResult => {
   const subscribe = useCallback(
@@ -81,7 +81,9 @@ export const useFileFilter = (sessionId: string): UseFileFilterResult => {
     changeTypes: state.changeTypes,
     statuses: state.statuses,
     setQuery: (query) => {
-      if (getStore(sessionId).state.query === query) return;
+      if (getStore(sessionId).state.query === query) {
+        return;
+      }
       updateState(sessionId, { query });
     },
     setExtensions: (extensions) => {
@@ -95,7 +97,9 @@ export const useFileFilter = (sessionId: string): UseFileFilterResult => {
     },
     reset: () => {
       const store = getStore(sessionId);
-      if (store.state === EMPTY_STATE) return;
+      if (store.state === EMPTY_STATE) {
+        return;
+      }
       store.state = EMPTY_STATE;
       emitChange(store);
     },

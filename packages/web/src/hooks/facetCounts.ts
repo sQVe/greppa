@@ -10,16 +10,13 @@ export interface StatusCounts {
   unreviewed: number;
 }
 
-const CHANGE_TYPES: ReadonlySet<ChangeType> = new Set([
-  'added',
-  'modified',
-  'deleted',
-  'renamed',
-]);
+const CHANGE_TYPES: ReadonlySet<ChangeType> = new Set(['added', 'modified', 'deleted', 'renamed']);
 
 const getExtension = (name: string): string => {
   const dot = name.lastIndexOf('.');
-  if (dot <= 0) return '';
+  if (dot <= 0) {
+    return '';
+  }
   return name.slice(dot + 1).toLowerCase();
 };
 
@@ -37,7 +34,9 @@ export const collectExtensionCounts = (files: FileNode[]): ExtensionCount[] => {
   const counts = new Map<string, number>();
   walkFiles(files, (file) => {
     const extension = getExtension(file.name);
-    if (extension === '') return;
+    if (extension === '') {
+      return;
+    }
     counts.set(extension, (counts.get(extension) ?? 0) + 1);
   });
 

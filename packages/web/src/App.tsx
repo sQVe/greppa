@@ -10,7 +10,7 @@ import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffVie
 import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
-import { decodeCommitFileKey, encodeCommitFileKey } from './commitFileKey';
+import { encodeCommitFileKey } from './commitFileKey';
 import { comments, diffs, fileInfoMap } from './fixtures';
 import type { DiffFile, FileNode } from './fixtures/types';
 import { buildDiffFile } from './hooks/buildDiffFile';
@@ -371,38 +371,25 @@ export const App = () => {
   });
 
   const commitFiles = useMemo(() => {
-    const seen = new Set<string>();
     const result: FileNode[] = [];
     for (const commit of commits) {
       for (const path of commit.files) {
-        if (seen.has(path)) {
-          continue;
-        }
-        seen.add(path);
-        const existing = fileLookupByPath.get(path);
-        if (existing != null) {
-          result.push(existing);
-          continue;
-        }
+        const key = encodeCommitFileKey({ sha: commit.sha, path });
         const name = path.split('/').pop() ?? path;
-        result.push({ path, name, type: 'file' });
+        const existing = fileLookupByPath.get(path);
+        const node: FileNode = {
+          path: key,
+          name,
+          type: 'file',
+          ...(existing?.changeType != null ? { changeType: existing.changeType } : {}),
+        };
+        result.push(node);
       }
     }
     return result;
   }, [commits, fileLookupByPath]);
 
-  const commitsAllReviewedPaths = useMemo(() => {
-    const result = new Set<string>();
-    for (const key of reviewedCommitFiles) {
-      const decoded = decodeCommitFileKey(key);
-      if (decoded != null) {
-        result.add(decoded.path);
-      }
-    }
-    return result;
-  }, [reviewedCommitFiles]);
-
-  const commitsSection = useSectionFilter('commits', commitFiles, commitsAllReviewedPaths);
+  const commitsSection = useSectionFilter('commits', commitFiles, reviewedCommitFiles);
 
   const commitVisibility = useMemo(
     () =>

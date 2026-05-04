@@ -26,6 +26,17 @@ export const createPersistedStore = <T>(config: StoreConfig<T>) => {
   let cachedRaw: string | null | undefined;
   let cachedSnapshot: T = config.defaults;
 
+  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    value != null && typeof value === 'object' && !Array.isArray(value);
+
+  // Merge with defaults so newly-added schema fields don't blow away
+  // previously-persisted state (the decode catch would reset everything).
+  const mergeWithDefaults = (parsed: unknown): unknown =>
+    isPlainObject(parsed) ? { ...config.defaults, ...parsed } : parsed;
+
+  const decodeRaw = (raw: string): T =>
+    Schema.decodeUnknownSync(config.schema)(mergeWithDefaults(JSON.parse(raw)));
+
   const getSnapshot = (): T => {
     try {
       const raw = localStorage.getItem(config.key);
@@ -33,12 +44,7 @@ export const createPersistedStore = <T>(config: StoreConfig<T>) => {
         return cachedSnapshot;
       }
       cachedRaw = raw;
-      if (raw == null) {
-        cachedSnapshot = config.defaults;
-        return cachedSnapshot;
-      }
-      const parsed: unknown = JSON.parse(raw);
-      cachedSnapshot = Schema.decodeUnknownSync(config.schema)(parsed);
+      cachedSnapshot = raw == null ? config.defaults : decodeRaw(raw);
       return cachedSnapshot;
     } catch {
       cachedSnapshot = config.defaults;

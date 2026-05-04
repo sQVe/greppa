@@ -69,6 +69,18 @@ describe('createPersistedStore', () => {
     expect(result.current.state).toEqual(stored);
   });
 
+  it('fills missing fields with defaults instead of resetting', () => {
+    localStorage.setItem('gr-test', JSON.stringify({ color: 'blue' }));
+    const useStore = createPersistedStore({
+      key: 'gr-test',
+      schema: TestSchema,
+      defaults,
+    });
+
+    const { result } = renderHook(() => useStore());
+    expect(result.current.state).toEqual({ color: 'blue', count: 0 });
+  });
+
   it('set() writes partial updates to localStorage and notifies listeners', () => {
     const useStore = createPersistedStore({
       key: 'gr-test',

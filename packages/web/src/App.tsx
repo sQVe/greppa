@@ -1,28 +1,27 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
 
 import { ActivityRail } from './components/ActivityRail/ActivityRail';
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
-import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffViewer';
-import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
-import { collectDirectoryIds } from './components/FileTree/FileTree';
 import { FileTreePanel } from './components/FileTree/FileTreePanel';
 import type { FileTreeSection } from './components/FileTree/FileTreePanel';
+import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffViewer';
+import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
-import type { DiffFile, FileNode } from './fixtures/types';
 import { comments, diffs, fileInfoMap } from './fixtures';
+import type { DiffFile, FileNode } from './fixtures/types';
 import { buildDiffFile } from './hooks/buildDiffFile';
 import { useComputedDiffs } from './hooks/useComputedDiffs';
 import { useDiffComputation } from './hooks/useDiffComputation';
 import { useDiffContent } from './hooks/useDiffContent';
 import { useFileList } from './hooks/useFileList';
+import { useHashScroll } from './hooks/useHashScroll';
 import type { useMultiSelect } from './hooks/useMultiSelect';
 import { useRefs } from './hooks/useRefs';
-import { useReviewState } from './hooks/useReviewState';
-import { useHashScroll } from './hooks/useHashScroll';
 import { useSelectionCoordinator } from './hooks/useSelectionCoordinator';
+import { useTreeState } from './hooks/useTreeState';
 import { useWarmup } from './hooks/useWarmup';
 import { useWorktreeDiffContent } from './hooks/useWorktreeDiffContent';
 import { useWorktreeFiles } from './hooks/useWorktreeFiles';
@@ -73,66 +72,6 @@ interface StatusBarPropsInput {
 const EMPTY_FILES: FileNode[] = [];
 const EMPTY_PATHS = new Set<string>();
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
-
-const useTreeState = (files: FileNode[], sessionId: string) => {
-  const { state: reviewState, set: setReviewState } = useReviewState(sessionId);
-  const allDirectoryIds = useMemo(() => collectDirectoryIds(files), [files]);
-  const expandedKeys = useMemo(
-    () => {
-      const collapsed = new Set(reviewState.collapsedPaths);
-      return new Set(allDirectoryIds.filter((id) => !collapsed.has(id)));
-    },
-    [allDirectoryIds, reviewState.collapsedPaths],
-  );
-  const handleExpandedKeysChange = useCallback(
-    (keys: Set<string | number>) => {
-      const collapsed = allDirectoryIds.filter((id) => !keys.has(id));
-      setReviewState({ collapsedPaths: collapsed });
-    },
-    [allDirectoryIds, setReviewState],
-  );
-
-  const reviewedPaths = useMemo(
-    () => new Set(reviewState.reviewedPaths),
-    [reviewState.reviewedPaths],
-  );
-
-  const reviewedCommitFiles = useMemo(
-    () => new Set(reviewState.reviewedCommitFiles),
-    [reviewState.reviewedCommitFiles],
-  );
-
-  const toggleReviewed = useCallback(
-    (path: string) => {
-      const current = reviewState.reviewedPaths;
-      const next = current.includes(path)
-        ? current.filter((p) => p !== path)
-        : [...current, path];
-      setReviewState({ reviewedPaths: next });
-    },
-    [reviewState.reviewedPaths, setReviewState],
-  );
-
-  const toggleReviewedCommitFile = useCallback(
-    (key: string) => {
-      const current = reviewState.reviewedCommitFiles;
-      const next = current.includes(key)
-        ? current.filter((k) => k !== key)
-        : [...current, key];
-      setReviewState({ reviewedCommitFiles: next });
-    },
-    [reviewState.reviewedCommitFiles, setReviewState],
-  );
-
-  return {
-    expandedKeys,
-    handleExpandedKeysChange,
-    reviewedPaths,
-    toggleReviewed,
-    reviewedCommitFiles,
-    toggleReviewedCommitFile,
-  };
-};
 
 const useComputedDiff = ({
   selectedFilePath,
@@ -189,17 +128,16 @@ const useSelectedDiffs = ({
     fixtureDiff,
   });
 
-  const orderedFilePaths = multiSelect.activeSource === 'worktree' ? worktreeFilePaths : committedFilePaths;
+  const orderedFilePaths =
+    multiSelect.activeSource === 'worktree' ? worktreeFilePaths : committedFilePaths;
   const multiDiffPaths = useMemo(
-    () => (multiSelect.isMultiSelect ? orderedFilePaths.filter((p) => multiSelect.selectedPaths.has(p)) : []),
+    () =>
+      multiSelect.isMultiSelect
+        ? orderedFilePaths.filter((p) => multiSelect.selectedPaths.has(p))
+        : [],
     [multiSelect.isMultiSelect, multiSelect.selectedPaths, orderedFilePaths],
   );
-  const multiDiffs = useComputedDiffs(
-    multiDiffPaths,
-    multiSelect.activeSource,
-    oldRef,
-    newRef,
-  );
+  const multiDiffs = useComputedDiffs(multiDiffPaths, multiSelect.activeSource, oldRef, newRef);
 
   return useMemo(() => {
     if (multiSelect.isMultiSelect) {
@@ -304,13 +242,18 @@ export const App = () => {
   const [isFileTreeExpanded, setIsFileTreeExpanded] = useState(true);
   const navigate = useNavigate();
 
-  const pathname = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
+  const pathname = useRouterState({
+    select: (s: { location: { pathname: string } }) => s.location.pathname,
+  });
   const activeSection = resolveActiveSection(pathname);
 
-  const handleToggleSection = useCallback((section: FileTreeSection) => {
-    const routes = { committed: '/changes', worktree: '/worktree', commits: '/commits' } as const;
-    void navigate({ to: routes[section] });
-  }, [navigate]);
+  const handleToggleSection = useCallback(
+    (section: FileTreeSection) => {
+      const routes = { committed: '/changes', worktree: '/worktree', commits: '/commits' } as const;
+      void navigate({ to: routes[section] });
+    },
+    [navigate],
+  );
 
   const handleToggleFileTree = useCallback(() => {
     const panel = fileTreePanelRef.current;
@@ -393,15 +336,18 @@ export const App = () => {
     worktreeFilePaths,
   });
 
-  const selectedDiffs = useMemo(
-    () => {
-      if (selectedCommitFileKeys.size > 0) {
-        return commitFileDiffs.diffs;
-      }
-      return commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
-    },
-    [selectedCommitFileKeys, commitSelection.isActive, commitDiffs.diffs, commitFileDiffs.diffs, fileDiffs],
-  );
+  const selectedDiffs = useMemo(() => {
+    if (selectedCommitFileKeys.size > 0) {
+      return commitFileDiffs.diffs;
+    }
+    return commitSelection.isActive ? commitDiffs.diffs : fileDiffs;
+  }, [
+    selectedCommitFileKeys,
+    commitSelection.isActive,
+    commitDiffs.diffs,
+    commitFileDiffs.diffs,
+    fileDiffs,
+  ]);
 
   const hash = useRouterState({ select: (s: { location: { hash: string } }) => s.location.hash });
   useHashScroll(stackedDiffRef, selectedDiffs, hash);
@@ -411,7 +357,10 @@ export const App = () => {
     () => committedFilePaths.filter((p) => reviewedPaths.has(p)).length,
     [committedFilePaths, reviewedPaths],
   );
-  const worktreeFileCount = useMemo(() => collectFiles(worktreeFiles ?? EMPTY_FILES).length, [worktreeFiles]);
+  const worktreeFileCount = useMemo(
+    () => collectFiles(worktreeFiles ?? EMPTY_FILES).length,
+    [worktreeFiles],
+  );
 
   const { activeReviewedPaths, activeToggleReviewed } = useActiveTreeState({
     activeSource: multiSelect.activeSource,
@@ -447,7 +396,10 @@ export const App = () => {
   return (
     <div className={styles.app}>
       <div className={styles.main}>
-        <ActivityRail isFileTreeExpanded={isFileTreeExpanded} onToggleFileTree={handleToggleFileTree} />
+        <ActivityRail
+          isFileTreeExpanded={isFileTreeExpanded}
+          onToggleFileTree={handleToggleFileTree}
+        />
         <Group
           id="gr-panels"
           orientation="horizontal"

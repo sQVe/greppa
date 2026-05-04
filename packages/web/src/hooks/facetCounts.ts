@@ -10,7 +10,12 @@ export interface StatusCounts {
   unreviewed: number;
 }
 
-const CHANGE_TYPES: ChangeType[] = new Set(['added', 'modified', 'deleted', 'renamed']);
+const CHANGE_TYPES: ReadonlySet<ChangeType> = new Set([
+  'added',
+  'modified',
+  'deleted',
+  'renamed',
+]);
 
 const getExtension = (name: string): string => {
   const dot = name.lastIndexOf('.');

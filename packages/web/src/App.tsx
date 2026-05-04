@@ -10,7 +10,7 @@ import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffVie
 import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
-import { decodeCommitFileKey } from './commitFileKey';
+import { decodeCommitFileKey, encodeCommitFileKey } from './commitFileKey';
 import { comments, diffs, fileInfoMap } from './fixtures';
 import type { DiffFile, FileNode } from './fixtures/types';
 import { buildDiffFile } from './hooks/buildDiffFile';
@@ -68,6 +68,7 @@ interface StatusBarPropsInput {
   activeSection: FileTreeSection;
   selectedCommitShas: Set<string>;
   commitDiffCount: number;
+  commitReviewedCount: number;
   worktreeFileCount: number;
   committedReviewedCount: number;
   committedFileCount: number;
@@ -212,6 +213,7 @@ const useStatusBarProps = ({
   activeSection,
   selectedCommitShas,
   commitDiffCount,
+  commitReviewedCount,
   worktreeFileCount,
   committedReviewedCount,
   committedFileCount,
@@ -224,7 +226,7 @@ const useStatusBarProps = ({
       return {
         mode: 'commit-review',
         commitSha: [...selectedCommitShas][0],
-        reviewedCount: 0,
+        reviewedCount: commitReviewedCount,
         totalCount: commitDiffCount,
         ...(commitsVisible != null ? { visible: commitsVisible } : {}),
       };
@@ -246,6 +248,7 @@ const useStatusBarProps = ({
     activeSection,
     selectedCommitShas,
     commitDiffCount,
+    commitReviewedCount,
     worktreeFileCount,
     committedReviewedCount,
     committedFileCount,
@@ -522,11 +525,23 @@ export const App = () => {
     ],
   );
 
+  const commitDisplayedDiffs =
+    selectedCommitFileKeys.size > 0 ? commitFileDiffs.diffs : commitDiffs.diffs;
+  const commitReviewedCount = useMemo(
+    () =>
+      commitDisplayedDiffs.filter(
+        (d) =>
+          d.sha != null
+          && reviewedCommitFiles.has(encodeCommitFileKey({ sha: d.sha, path: d.path })),
+      ).length,
+    [commitDisplayedDiffs, reviewedCommitFiles],
+  );
+
   const statusBarProps = useStatusBarProps({
     activeSection,
     selectedCommitShas: commitSelection.selectedShas,
-    commitDiffCount:
-      selectedCommitFileKeys.size > 0 ? commitFileDiffs.diffs.length : commitDiffs.diffs.length,
+    commitDiffCount: commitDisplayedDiffs.length,
+    commitReviewedCount,
     worktreeFileCount,
     committedReviewedCount,
     committedFileCount,

@@ -103,6 +103,22 @@ describe('StatusBar', () => {
       render(<StatusBar mode="working-tree" modifiedCount={4} />);
       expect(screen.getByText('4 modified')).toBeDefined();
     });
+
+    it('renders the X / Y visible segment when filter is active', () => {
+      render(
+        <StatusBar
+          mode="working-tree"
+          modifiedCount={4}
+          visible={{ matched: 2, total: 4 }}
+        />,
+      );
+      expect(screen.getByText('2 / 4 visible')).toBeDefined();
+    });
+
+    it('omits the visible segment when not supplied', () => {
+      render(<StatusBar mode="working-tree" modifiedCount={4} />);
+      expect(screen.queryByText(/visible/i)).toBeNull();
+    });
   });
 
   describe('review-complete mode', () => {

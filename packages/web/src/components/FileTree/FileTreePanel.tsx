@@ -13,7 +13,7 @@ import { FileTree } from './FileTree';
 
 import styles from './FileTreePanel.module.css';
 
-interface CommittedFilter {
+interface SectionFilter {
   query: string;
   isActive: boolean;
   setQuery: (query: string) => void;
@@ -47,7 +47,8 @@ interface FileTreePanelProps {
   reviewedCommitFiles?: ReadonlySet<string>;
   committedExpandedKeys: Iterable<string>;
   worktreeExpandedKeys: Iterable<string>;
-  committedFilter?: CommittedFilter;
+  committedFilter?: SectionFilter;
+  worktreeFilter?: SectionFilter;
   onToggleSection: (section: FileTreeSection) => void;
   onSelectCommittedFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
   onSelectWorktreeFile: (path: string, modifiers: { shiftKey: boolean; metaKey: boolean }) => void;
@@ -103,6 +104,7 @@ export const FileTreePanel = ({
   committedExpandedKeys,
   worktreeExpandedKeys,
   committedFilter,
+  worktreeFilter,
   onToggleSection,
   onSelectCommittedFile,
   onSelectWorktreeFile,
@@ -263,16 +265,47 @@ export const FileTreePanel = ({
           transition={transition}
           onAnimationComplete={() => { handleExpandComplete('worktree'); }}
         >
-          <FileTree
-            files={worktreeFiles}
-            selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
-            expandedKeys={worktreeExpandedKeys}
-            reviewedPaths={worktreeReviewedPaths}
-            onSelectFile={onSelectWorktreeFile}
-            onSelectDirectory={onSelectWorktreeDirectory}
-            onExpandedKeysChange={onWorktreeExpandedKeysChange}
-            onCollapseDirectory={onCollapseWorktreeDirectory}
-          />
+          {worktreeFilter != null && (
+            <FileFilterBar
+              query={worktreeFilter.query}
+              setQuery={worktreeFilter.setQuery}
+              reset={worktreeFilter.reset}
+              extensions={worktreeFilter.extensions}
+              changeTypes={worktreeFilter.changeTypes}
+              statuses={worktreeFilter.statuses}
+              selectedExtensions={worktreeFilter.selectedExtensions}
+              selectedChangeTypes={worktreeFilter.selectedChangeTypes}
+              selectedStatuses={worktreeFilter.selectedStatuses}
+              onToggleExtension={(extension) => { worktreeFilter.onToggleExtension(extension); }}
+              onToggleChangeType={(type) => { worktreeFilter.onToggleChangeType(type); }}
+              onToggleStatus={(status) => { worktreeFilter.onToggleStatus(status); }}
+            />
+          )}
+          {worktreeFilter != null
+          && worktreeFilter.isActive
+          && worktreeFilter.visibleCount === 0 ? (
+            <div className={styles.emptyFilter}>
+              <p className={styles.emptyFilterText}>No files match.</p>
+              <button
+                type="button"
+                className={styles.emptyFilterButton}
+                onClick={() => { worktreeFilter.reset(); }}
+              >
+                Clear filter
+              </button>
+            </div>
+          ) : (
+            <FileTree
+              files={worktreeFiles}
+              selectedPaths={selectedSource === 'worktree' ? selectedPaths : EMPTY_SET}
+              expandedKeys={worktreeExpandedKeys}
+              reviewedPaths={worktreeReviewedPaths}
+              onSelectFile={onSelectWorktreeFile}
+              onSelectDirectory={onSelectWorktreeDirectory}
+              onExpandedKeysChange={onWorktreeExpandedKeysChange}
+              onCollapseDirectory={onCollapseWorktreeDirectory}
+            />
+          )}
         </motion.div>
       </div>
       <div

@@ -25,6 +25,7 @@ interface CommitReviewProps {
 interface WorkingTreeProps {
   mode: 'working-tree';
   modifiedCount: number;
+  visible?: VisibleSegment;
 }
 
 interface ReviewCompleteProps {
@@ -110,6 +111,7 @@ const renderLeftSegments = (props: StatusBarProps) => {
         <>
           <div className={`${styles.segment} ${styles.warning}`}>working tree</div>
           <div className={styles.segment}>{props.modifiedCount} modified</div>
+          {renderVisible(props.visible)}
         </>
       );
     case 'review-complete':

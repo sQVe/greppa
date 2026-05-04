@@ -28,6 +28,15 @@ const committedFiles: FileNode[] = [
   },
 ];
 
+const worktreeFiles: FileNode[] = [
+  {
+    path: 'src/draft.ts',
+    name: 'draft.ts',
+    type: 'file',
+    changeType: 'modified',
+  },
+];
+
 const baseProps = {
   expandedSection: 'committed' as const,
   committedFiles,
@@ -100,6 +109,59 @@ describe('FileTreePanel', () => {
 
   it('omits the filter bar when no committedFilter prop is supplied', () => {
     render(<FileTreePanel {...baseProps} />);
+    expect(screen.queryByRole('searchbox', { name: /filter files/i })).toBeNull();
+  });
+
+  it('renders FileFilterBar above the Working tree when a worktreeFilter is supplied', () => {
+    render(
+      <FileTreePanel
+        {...baseProps}
+        expandedSection="worktree"
+        worktreeFiles={worktreeFiles}
+        worktreeFilter={{
+          query: '',
+          isActive: false,
+          setQuery: vi.fn(),
+          reset: vi.fn(),
+          visibleCount: 1,
+          totalCount: 1,
+          ...emptyFacets,
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('searchbox', { name: /filter files/i })).toBeDefined();
+  });
+
+  it('renders the No files match placeholder when worktree filter narrows to zero', async () => {
+    const reset = vi.fn();
+    render(
+      <FileTreePanel
+        {...baseProps}
+        expandedSection="worktree"
+        worktreeFiles={[]}
+        worktreeFilter={{
+          query: 'zzz',
+          isActive: true,
+          setQuery: vi.fn(),
+          reset,
+          visibleCount: 0,
+          totalCount: 1,
+          ...emptyFacets,
+        }}
+      />,
+    );
+
+    const placeholder = screen.getByText(/no files match/i).parentElement;
+    expect(placeholder).not.toBeNull();
+    const clearButton = placeholder?.querySelector('button');
+    expect(clearButton).not.toBeNull();
+    await userEvent.click(clearButton as HTMLButtonElement);
+    expect(reset).toHaveBeenCalled();
+  });
+
+  it('omits the worktree filter bar when no worktreeFilter prop is supplied', () => {
+    render(<FileTreePanel {...baseProps} expandedSection="worktree" />);
     expect(screen.queryByRole('searchbox', { name: /filter files/i })).toBeNull();
   });
 });

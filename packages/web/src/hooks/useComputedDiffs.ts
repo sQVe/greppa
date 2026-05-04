@@ -2,11 +2,11 @@ import type { DiffResponse } from '@greppa/core';
 import { useQueries } from '@tanstack/react-query';
 
 import type { DiffFile } from '../fixtures/types';
-import type { DiffMapping, DiffWorkerResponse } from '../workers/diffProtocol';
 import type { FileSource } from '../useFileSelection';
+import type { DiffMapping, DiffWorkerResponse } from '../workers/diffProtocol';
 import { buildDiffFile } from './buildDiffFile';
-import { fetchDiffContent } from './useDiffContent';
 import { getOrCreateWorker } from './useDiffComputation';
+import { fetchDiffContent } from './useDiffContent';
 import { fetchWorktreeDiffContent } from './useWorktreeDiffContent';
 
 export interface ComputedDiffsResult {

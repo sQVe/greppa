@@ -1,6 +1,5 @@
-import { memo, useMemo } from 'react';
-
 import { Badge } from '@greppa/ui';
+import { memo, useMemo } from 'react';
 
 import { encodeCommitFileKey } from '../../commitFileKey';
 import type { ChangeType, DiffFile } from '../../fixtures/types';
@@ -82,8 +81,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   yaml: 'YAML',
 };
 
-const formatLanguage = (language: string) =>
-  LANGUAGE_LABELS[language] ?? language;
+const formatLanguage = (language: string) => LANGUAGE_LABELS[language] ?? language;
 
 const splitPath = (filePath: string) => filePath.split('/');
 
@@ -107,9 +105,8 @@ export const FileHeader = memo(({ diff, reviewedPaths, onToggleReviewed }: FileH
   const segments = useMemo(() => splitPath(diff.path), [diff.path]);
   // Commit-source diffs carry sha; key as `sha:path` so the same path tracked
   // under two commits stays independent. Path-only otherwise.
-  const reviewedKey = diff.sha != null
-    ? encodeCommitFileKey({ sha: diff.sha, path: diff.path })
-    : diff.path;
+  const reviewedKey =
+    diff.sha != null ? encodeCommitFileKey({ sha: diff.sha, path: diff.path }) : diff.path;
   const isReviewed = reviewedPaths?.has(reviewedKey) ?? false;
 
   return (
@@ -133,14 +130,19 @@ export const FileHeader = memo(({ diff, reviewedPaths, onToggleReviewed }: FileH
       <Badge variant={diff.changeType}>{CHANGE_LABELS[diff.changeType]}</Badge>
       <span className={styles.diffStat}>
         <span className={styles.additions}>+{additions}</span>
-        <span className={styles.deletions}>{'\u2212'}{deletions}</span>
+        <span className={styles.deletions}>
+          {'\u2212'}
+          {deletions}
+        </span>
       </span>
       <span className={styles.language}>{formatLanguage(diff.language)}</span>
       <button
         type="button"
         aria-pressed={isReviewed}
         className={`${styles.reviewButton} ${isReviewed ? styles.reviewed : ''}`}
-        onClick={() => { onToggleReviewed?.(reviewedKey); }}
+        onClick={() => {
+          onToggleReviewed?.(reviewedKey);
+        }}
       >
         {isReviewed ? '\u2713 Reviewed' : 'Mark reviewed'}
       </button>

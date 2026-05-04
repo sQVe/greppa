@@ -130,7 +130,9 @@ export const FileTree = ({
       selectedKeys={selectedPaths}
       expandedKeys={expandedKeys}
       onExpandedChange={onExpandedKeysChange}
-      onSelectionChange={() => { /* managed via onPointerDown */ }}
+      onSelectionChange={() => {
+        /* managed via onPointerDown */
+      }}
     >
       <Tree.Collection items={files}>{renderItem}</Tree.Collection>
     </Tree.Root>

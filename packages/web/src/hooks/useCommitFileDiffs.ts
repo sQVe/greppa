@@ -12,9 +12,7 @@ export interface CommitFileDiffsResult {
   failedPaths: string[];
 }
 
-export const useCommitFileDiffs = (
-  entries: readonly CommitFileEntry[],
-): CommitFileDiffsResult => {
+export const useCommitFileDiffs = (entries: readonly CommitFileEntry[]): CommitFileDiffsResult => {
   // Root commits (no parent) fail here and land in failedPaths — `^1` is an
   // explicit first-parent form; it makes intent clearer but does not resolve
   // for initial commits. Non-blocking for typical ref-to-ref ranges.

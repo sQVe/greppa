@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -8,6 +6,8 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { zodValidator, fallback } from '@tanstack/zod-adapter';
+// @vitest-environment happy-dom
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import type { RefObject } from 'react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';

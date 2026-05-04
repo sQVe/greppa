@@ -2,6 +2,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from 'react-resizable-panels';
 
+import { encodeCommitFileKey } from './commitFileKey';
 import { ActivityRail } from './components/ActivityRail/ActivityRail';
 import { DetailPanel } from './components/DetailPanel/DetailPanel';
 import { FileTreePanel } from './components/FileTree/FileTreePanel';
@@ -10,7 +11,6 @@ import { StackedDiffViewer } from './components/StackedDiffViewer/StackedDiffVie
 import type { StackedDiffViewerHandle } from './components/StackedDiffViewer/StackedDiffViewer';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import type { StatusBarProps } from './components/StatusBar/StatusBar';
-import { encodeCommitFileKey } from './commitFileKey';
 import { comments, diffs, fileInfoMap } from './fixtures';
 import type { DiffFile, FileNode } from './fixtures/types';
 import { buildDiffFile } from './hooks/buildDiffFile';
@@ -454,8 +454,7 @@ export const App = () => {
 
   const { activeReviewedPaths, activeToggleReviewed } = useActiveTreeState({
     activeSource: multiSelect.activeSource,
-    isCommits:
-      commitSelection.selectedShas.size === 1 || selectedCommitFileKeys.size > 0,
+    isCommits: commitSelection.selectedShas.size === 1 || selectedCommitFileKeys.size > 0,
     committedReviewedPaths: reviewedPaths,
     worktreeReviewedPaths,
     reviewedCommitFiles,
@@ -519,8 +518,8 @@ export const App = () => {
     () =>
       commitDisplayedDiffs.filter(
         (d) =>
-          d.sha != null
-          && reviewedCommitFiles.has(encodeCommitFileKey({ sha: d.sha, path: d.path })),
+          d.sha != null &&
+          reviewedCommitFiles.has(encodeCommitFileKey({ sha: d.sha, path: d.path })),
       ).length,
     [commitDisplayedDiffs, reviewedCommitFiles],
   );

@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { Popover } from '@greppa/ui';
+import type { ReactNode } from 'react';
 
 import type { ChangeType } from '../../fixtures/types';
 import type { ReviewedStatus } from '../../hooks/useFileFilter';
@@ -85,17 +84,21 @@ export const FileFilterPopover = ({
       <Popover.Content className={styles.content} side="bottom" align="end" sideOffset={4}>
         <div className={styles.group}>
           <div className={styles.groupTitle}>Extensions</div>
-          {extensions.length === 0
-            ? <div className={styles.empty}>No extensions</div>
-            : extensions.map((row) =>
-                renderRow(
-                  row.extension,
-                  row.extension,
-                  row.count,
-                  selectedExtensions.has(row.extension),
-                  () => { onToggleExtension(row.extension); },
-                ),
-              )}
+          {extensions.length === 0 ? (
+            <div className={styles.empty}>No extensions</div>
+          ) : (
+            extensions.map((row) =>
+              renderRow(
+                row.extension,
+                row.extension,
+                row.count,
+                selectedExtensions.has(row.extension),
+                () => {
+                  onToggleExtension(row.extension);
+                },
+              ),
+            )
+          )}
         </div>
         <div className={styles.group}>
           <div className={styles.groupTitle}>Change types</div>
@@ -105,7 +108,9 @@ export const FileFilterPopover = ({
               CHANGE_TYPE_LABELS[row.type],
               row.count,
               selectedChangeTypes.has(row.type),
-              () => { onToggleChangeType(row.type); },
+              () => {
+                onToggleChangeType(row.type);
+              },
             ),
           )}
         </div>
@@ -117,7 +122,9 @@ export const FileFilterPopover = ({
               STATUS_LABELS[row.status],
               row.count,
               selectedStatuses.has(row.status),
-              () => { onToggleStatus(row.status); },
+              () => {
+                onToggleStatus(row.status);
+              },
             ),
           )}
         </div>

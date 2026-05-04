@@ -10,7 +10,10 @@ const CHANGE_TYPE_PRIORITY: Record<ChangeType, number> = {
   renamed: 3,
 };
 
-const higherPriority = (a: ChangeType | undefined, b: ChangeType | undefined): ChangeType | undefined => {
+const higherPriority = (
+  a: ChangeType | undefined,
+  b: ChangeType | undefined,
+): ChangeType | undefined => {
   if (a == null) {
     return b;
   }

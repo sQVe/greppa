@@ -20,9 +20,7 @@ const makeFileNode = (path: string, lookup: ReadonlyMap<string, FileNode>): File
   return { path, name, type: 'file' };
 };
 
-const buildReviewedBySha = (
-  reviewedCommitFiles: ReadonlySet<string>,
-): Map<string, Set<string>> => {
+const buildReviewedBySha = (reviewedCommitFiles: ReadonlySet<string>): Map<string, Set<string>> => {
   const result = new Map<string, Set<string>>();
   for (const key of reviewedCommitFiles) {
     const decoded = decodeCommitFileKey(key);

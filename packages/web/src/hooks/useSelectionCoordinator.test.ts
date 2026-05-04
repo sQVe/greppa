@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 // oxlint-disable-next-line import/no-unassigned-import -- side-effect polyfill for IndexedDB under happy-dom
 import 'fake-indexeddb/auto';
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
 import { createElement } from 'react';
@@ -98,7 +97,8 @@ vi.mock('./useFileSelectionHandlers', () => ({
 
 const file = (path: string): FileNode => ({ path, name: path, type: 'file' });
 
-const createWrapper = (queryClient: QueryClient) =>
+const createWrapper =
+  (queryClient: QueryClient) =>
   ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client: queryClient }, children);
 
@@ -165,8 +165,22 @@ describe('useSelectionCoordinator', () => {
   it('sorts commitFile entries by tree-DFS path order with commit order as tiebreaker', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     mockedCommits = [
-      { sha: 'aaa111', abbrevSha: 'aaa', subject: 'newer', author: 'A', date: '2026-04-03T10:00:00+00:00', files: ['src/a.ts', 'src/b.ts'] },
-      { sha: 'bbb222', abbrevSha: 'bbb', subject: 'older', author: 'B', date: '2026-04-01T09:00:00+00:00', files: ['src/a.ts'] },
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'newer',
+        author: 'A',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/a.ts', 'src/b.ts'],
+      },
+      {
+        sha: 'bbb222',
+        abbrevSha: 'bbb',
+        subject: 'older',
+        author: 'B',
+        date: '2026-04-01T09:00:00+00:00',
+        files: ['src/a.ts'],
+      },
     ];
     mockedCommitFileEntries = [
       { sha: 'bbb222', path: 'src/a.ts' },

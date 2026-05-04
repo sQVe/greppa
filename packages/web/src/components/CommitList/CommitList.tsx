@@ -1,11 +1,12 @@
+import type { CommitEntry } from '@greppa/core';
 import { FileIcon, Tree } from '@greppa/ui';
 import { IconCheck } from '@tabler/icons-react';
 import { useMemo, useRef, useState } from 'react';
-import type { CommitEntry } from '@greppa/core';
 
 import type { CommitFileEntry } from '../../commitFileKey';
 import { decodeCommitFileKey, encodeCommitFileKey } from '../../commitFileKey';
 import { formatRelativeTime } from '../../formatRelativeTime';
+
 import styles from './CommitList.module.css';
 
 interface CommitListProps {
@@ -82,8 +83,7 @@ export const CommitList = ({
       // A commit is implicitly selected when every visible file under it is
       // selected, or when it sits in selectedShas with no file-level selection
       // active anywhere to demote it.
-      const isSelected =
-        allFilesSelected || (selectedShas.has(commit.sha) && !hasFileSelection);
+      const isSelected = allFilesSelected || (selectedShas.has(commit.sha) && !hasFileSelection);
 
       if (!isSelected) {
         continue;
@@ -202,87 +202,87 @@ export const CommitList = ({
           const isFiltered = visibleFilesBySha != null;
           const isDimmed = isFiltered && visibleCount === 0;
           return (
-          <Tree.Item
-            key={commit.sha}
-            id={commit.sha}
-            textValue={commit.subject}
-            data-dimmed={isDimmed ? 'true' : undefined}
-            className={isDimmed ? styles.dimmedCommit : undefined}
-            onPointerDown={(event) => {
-              if (event.button !== 0) {
-                return;
-              }
-              const target = event.target;
-              if (target instanceof Element && target.closest('[slot="chevron"]') != null) {
-                return;
-              }
-              armSelectionChangeSuppression();
-              const modifiers = {
-                shiftKey: event.shiftKey,
-                metaKey: event.metaKey || event.ctrlKey,
-              };
-              const isExpanded = expandedKeysRef.current.has(commit.sha);
-              if (isExpanded && onSelectAllFilesInCommit != null) {
-                onSelectAllFilesInCommit(
-                  commit.sha,
-                  filesForSelectAll(commit.sha, commit.files),
-                  modifiers,
-                );
-                return;
-              }
-              onSelectCommit(commit.sha, modifiers);
-            }}
-          >
-            <Tree.ItemContent>
-              <Tree.Chevron />
-              <span className={styles.subject}>{commit.subject}</span>
-              {isFiltered && (
-                <span className={styles.matchAnnotation}>
-                  ({visibleCount} / {commit.files.length} matching)
-                </span>
-              )}
-              <span className={styles.meta}>{formatRelativeTime(commit.date)}</span>
-            </Tree.ItemContent>
-            <Tree.Collection items={fileChildrenByCommit.get(commit.sha) ?? []}>
-              {(child: { id: string; path: string }) => {
-                const isReviewed = reviewedCommitFiles?.has(child.id) ?? false;
-                return (
-                  <Tree.Item
-                    key={child.id}
-                    id={child.id}
-                    textValue={child.path}
-                    data-reviewed={isReviewed ? 'true' : undefined}
-                    className={isReviewed ? styles.reviewedFile : undefined}
-                    onPointerDown={(event) => {
-                      if (event.button !== 0) {
-                        return;
-                      }
-                      event.stopPropagation();
-                      armSelectionChangeSuppression();
-                      onSelectCommitFile?.(commit.sha, child.path, orderedFileEntries, {
-                        shiftKey: event.shiftKey,
-                        metaKey: event.metaKey || event.ctrlKey,
-                      });
-                    }}
-                  >
-                    <Tree.ItemContent>
-                      <Tree.Indent />
-                      <FileIcon
-                        name={child.path.split('/').pop() ?? child.path}
-                        baseUrl="/material-icons"
-                      />
-                      <Tree.Label>{child.path}</Tree.Label>
-                      {isReviewed ? (
-                        <span className={styles.reviewedCheck} aria-label="Reviewed">
-                          <IconCheck size={12} stroke={2.5} />
-                        </span>
-                      ) : null}
-                    </Tree.ItemContent>
-                  </Tree.Item>
-                );
+            <Tree.Item
+              key={commit.sha}
+              id={commit.sha}
+              textValue={commit.subject}
+              data-dimmed={isDimmed ? 'true' : undefined}
+              className={isDimmed ? styles.dimmedCommit : undefined}
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                const target = event.target;
+                if (target instanceof Element && target.closest('[slot="chevron"]') != null) {
+                  return;
+                }
+                armSelectionChangeSuppression();
+                const modifiers = {
+                  shiftKey: event.shiftKey,
+                  metaKey: event.metaKey || event.ctrlKey,
+                };
+                const isExpanded = expandedKeysRef.current.has(commit.sha);
+                if (isExpanded && onSelectAllFilesInCommit != null) {
+                  onSelectAllFilesInCommit(
+                    commit.sha,
+                    filesForSelectAll(commit.sha, commit.files),
+                    modifiers,
+                  );
+                  return;
+                }
+                onSelectCommit(commit.sha, modifiers);
               }}
-            </Tree.Collection>
-          </Tree.Item>
+            >
+              <Tree.ItemContent>
+                <Tree.Chevron />
+                <span className={styles.subject}>{commit.subject}</span>
+                {isFiltered && (
+                  <span className={styles.matchAnnotation}>
+                    ({visibleCount} / {commit.files.length} matching)
+                  </span>
+                )}
+                <span className={styles.meta}>{formatRelativeTime(commit.date)}</span>
+              </Tree.ItemContent>
+              <Tree.Collection items={fileChildrenByCommit.get(commit.sha) ?? []}>
+                {(child: { id: string; path: string }) => {
+                  const isReviewed = reviewedCommitFiles?.has(child.id) ?? false;
+                  return (
+                    <Tree.Item
+                      key={child.id}
+                      id={child.id}
+                      textValue={child.path}
+                      data-reviewed={isReviewed ? 'true' : undefined}
+                      className={isReviewed ? styles.reviewedFile : undefined}
+                      onPointerDown={(event) => {
+                        if (event.button !== 0) {
+                          return;
+                        }
+                        event.stopPropagation();
+                        armSelectionChangeSuppression();
+                        onSelectCommitFile?.(commit.sha, child.path, orderedFileEntries, {
+                          shiftKey: event.shiftKey,
+                          metaKey: event.metaKey || event.ctrlKey,
+                        });
+                      }}
+                    >
+                      <Tree.ItemContent>
+                        <Tree.Indent />
+                        <FileIcon
+                          name={child.path.split('/').pop() ?? child.path}
+                          baseUrl="/material-icons"
+                        />
+                        <Tree.Label>{child.path}</Tree.Label>
+                        {isReviewed ? (
+                          <span className={styles.reviewedCheck} aria-label="Reviewed">
+                            <IconCheck size={12} stroke={2.5} />
+                          </span>
+                        ) : null}
+                      </Tree.ItemContent>
+                    </Tree.Item>
+                  );
+                }}
+              </Tree.Collection>
+            </Tree.Item>
           );
         }}
       </Tree.Collection>

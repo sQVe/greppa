@@ -1,5 +1,5 @@
-import type { WorkerRequest } from './highlightProtocol';
 import { handleHighlightRequest } from './highlightEngine';
+import type { WorkerRequest } from './highlightProtocol';
 
 globalThis.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
@@ -9,7 +9,12 @@ globalThis.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
       globalThis.postMessage(response);
     })
     .catch(() => {
-      const fallback = { type: 'highlight-result' as const, requestId: request.requestId, filePath: request.filePath, tokens: {} };
+      const fallback = {
+        type: 'highlight-result' as const,
+        requestId: request.requestId,
+        filePath: request.filePath,
+        tokens: {},
+      };
       // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage does not accept targetOrigin
       globalThis.postMessage(fallback);
     });

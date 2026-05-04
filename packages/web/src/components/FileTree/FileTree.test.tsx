@@ -78,12 +78,7 @@ describe('FileTree', () => {
   });
 
   it('marks rows whose path is in reviewedPaths with the reviewed indicator', () => {
-    render(
-      <FileTree
-        {...defaultProps}
-        reviewedPaths={new Set(['src/auth/validateToken.ts'])}
-      />,
-    );
+    render(<FileTree {...defaultProps} reviewedPaths={new Set(['src/auth/validateToken.ts'])} />);
 
     const reviewedRow = screen.getByText('validateToken.ts').closest('[role="row"]');
     const unreviewedRow = screen.getByText('rateLimiter.ts').closest('[role="row"]');
@@ -98,7 +93,10 @@ describe('FileTree', () => {
 
     await userEvent.click(screen.getByText('validateToken.ts'));
 
-    expect(onSelectFile).toHaveBeenCalledWith('src/auth/validateToken.ts', { shiftKey: false, metaKey: false });
+    expect(onSelectFile).toHaveBeenCalledWith('src/auth/validateToken.ts', {
+      shiftKey: false,
+      metaKey: false,
+    });
   });
 
   it('should call onSelectFile with shiftKey true when shift-clicking', async () => {
@@ -110,7 +108,10 @@ describe('FileTree', () => {
     await user.click(screen.getByText('rateLimiter.ts'));
     await user.keyboard('{/Shift}');
 
-    expect(onSelectFile).toHaveBeenCalledWith('src/middleware/rateLimiter.ts', { shiftKey: true, metaKey: false });
+    expect(onSelectFile).toHaveBeenCalledWith('src/middleware/rateLimiter.ts', {
+      shiftKey: true,
+      metaKey: false,
+    });
   });
 
   it('should highlight all paths in selectedPaths', () => {
@@ -190,9 +191,7 @@ describe('FileTree', () => {
 
   it('should toggle expansion when clicking a directory', async () => {
     const onExpandedKeysChange = vi.fn();
-    render(
-      <FileTree {...defaultProps} onExpandedKeysChange={onExpandedKeysChange} />,
-    );
+    render(<FileTree {...defaultProps} onExpandedKeysChange={onExpandedKeysChange} />);
 
     await userEvent.click(screen.getByText('auth'));
 
@@ -263,7 +262,11 @@ describe('FileTree', () => {
   it('should expand a collapsed directory when clicked', async () => {
     const onExpandedKeysChange = vi.fn();
     render(
-      <FileTree {...defaultProps} expandedKeys={['src/middleware']} onExpandedKeysChange={onExpandedKeysChange} />,
+      <FileTree
+        {...defaultProps}
+        expandedKeys={['src/middleware']}
+        onExpandedKeysChange={onExpandedKeysChange}
+      />,
     );
 
     await userEvent.click(screen.getByText('auth'));

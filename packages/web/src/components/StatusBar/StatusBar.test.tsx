@@ -13,9 +13,7 @@ afterEach(() => {
 
 describe('StatusBar', () => {
   it('renders as a footer element', () => {
-    const { container } = render(
-      <StatusBar mode="file-review" reviewedCount={0} totalCount={0} />,
-    );
+    const { container } = render(<StatusBar mode="file-review" reviewedCount={0} totalCount={0} />);
     expect(container.querySelector('footer')).not.toBeNull();
   });
 
@@ -40,16 +38,12 @@ describe('StatusBar', () => {
     });
 
     it('renders comment count when greater than zero', () => {
-      render(
-        <StatusBar mode="file-review" reviewedCount={7} totalCount={12} commentCount={3} />,
-      );
+      render(<StatusBar mode="file-review" reviewedCount={7} totalCount={12} commentCount={3} />);
       expect(screen.getByText('3 comments')).toBeDefined();
     });
 
     it('renders zero comments in muted state', () => {
-      render(
-        <StatusBar mode="file-review" reviewedCount={7} totalCount={12} commentCount={0} />,
-      );
+      render(<StatusBar mode="file-review" reviewedCount={7} totalCount={12} commentCount={0} />);
       expect(screen.getByText('0 comments')).toBeDefined();
     });
 
@@ -126,11 +120,7 @@ describe('StatusBar', () => {
 
     it('renders the X / Y visible segment when filter is active', () => {
       render(
-        <StatusBar
-          mode="working-tree"
-          modifiedCount={4}
-          visible={{ matched: 2, total: 4 }}
-        />,
+        <StatusBar mode="working-tree" modifiedCount={4} visible={{ matched: 2, total: 4 }} />,
       );
       expect(screen.getByText('2 / 4 visible')).toBeDefined();
     });
@@ -163,18 +153,14 @@ describe('StatusBar', () => {
 
   describe('composer-open mode', () => {
     it('renders reviewed count and comment count', () => {
-      render(
-        <StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />,
-      );
+      render(<StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />);
       expect(screen.getByText('7 / 12')).toBeDefined();
       expect(screen.getByText('3 comments')).toBeDefined();
     });
 
     it('renders platform-aware modifier and Esc keyboard hints', () => {
       vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh)');
-      render(
-        <StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />,
-      );
+      render(<StatusBar mode="composer-open" reviewedCount={7} totalCount={12} commentCount={3} />);
       expect(screen.getByText(/Cmd/)).toBeDefined();
       expect(screen.getByText(/\+Enter/)).toBeDefined();
       expect(screen.getByText('Esc')).toBeDefined();

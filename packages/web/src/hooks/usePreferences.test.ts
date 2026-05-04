@@ -35,10 +35,7 @@ describe('usePreferences', () => {
 
   describe('theme persistence', () => {
     it('returns stored theme from localStorage', () => {
-      localStorage.setItem(
-        'gr-preferences',
-        JSON.stringify({ theme: 'catppuccin-mocha' }),
-      );
+      localStorage.setItem('gr-preferences', JSON.stringify({ theme: 'catppuccin-mocha' }));
 
       const { result } = renderHook(() => usePreferences());
       expect(result.current.state.theme).toBe('catppuccin-mocha');
@@ -68,15 +65,10 @@ describe('usePreferences', () => {
 
   describe('data-theme attribute', () => {
     it('sets data-theme on document element on mount', () => {
-      localStorage.setItem(
-        'gr-preferences',
-        JSON.stringify({ theme: 'catppuccin-mocha' }),
-      );
+      localStorage.setItem('gr-preferences', JSON.stringify({ theme: 'catppuccin-mocha' }));
 
       renderHook(() => usePreferences());
-      expect(document.documentElement.getAttribute('data-theme')).toBe(
-        'catppuccin-mocha',
-      );
+      expect(document.documentElement.getAttribute('data-theme')).toBe('catppuccin-mocha');
     });
 
     it('updates data-theme when theme changes', () => {
@@ -86,9 +78,7 @@ describe('usePreferences', () => {
         result.current.set({ theme: 'catppuccin-mocha' });
       });
 
-      expect(document.documentElement.getAttribute('data-theme')).toBe(
-        'catppuccin-mocha',
-      );
+      expect(document.documentElement.getAttribute('data-theme')).toBe('catppuccin-mocha');
     });
   });
 });

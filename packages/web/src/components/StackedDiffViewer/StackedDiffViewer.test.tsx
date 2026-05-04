@@ -147,7 +147,8 @@ describe('StackedDiffViewer', () => {
   describe('review button', () => {
     const getVirtualListButtons = () => {
       const stickyHeader = screen.getByTestId('sticky-file-header');
-      return screen.getAllByRole('button', { name: /mark reviewed/i })
+      return screen
+        .getAllByRole('button', { name: /mark reviewed/i })
         .filter((button) => !stickyHeader.contains(button));
     };
 
@@ -167,7 +168,8 @@ describe('StackedDiffViewer', () => {
         />,
       );
       const stickyHeader = screen.getByTestId('sticky-file-header');
-      const reviewButtons = screen.getAllByRole('button')
+      const reviewButtons = screen
+        .getAllByRole('button')
         .filter((b) => !stickyHeader.contains(b))
         .filter((b) => b.textContent?.includes('eviewed'));
 
@@ -219,7 +221,8 @@ describe('StackedDiffViewer', () => {
         />,
       );
       const stickyHeader = screen.getByTestId('sticky-file-header');
-      const reviewButtons = screen.getAllByRole('button')
+      const reviewButtons = screen
+        .getAllByRole('button')
         .filter((b) => !stickyHeader.contains(b))
         .filter((b) => b.textContent?.includes('eviewed'));
 
@@ -230,9 +233,7 @@ describe('StackedDiffViewer', () => {
   describe('scroll sync', () => {
     it('calls onActiveFileChange with the first file on mount', () => {
       const onActiveFileChange = vi.fn();
-      render(
-        <StackedDiffViewer diffs={[fileA, fileB]} onActiveFileChange={onActiveFileChange} />,
-      );
+      render(<StackedDiffViewer diffs={[fileA, fileB]} onActiveFileChange={onActiveFileChange} />);
 
       expect(onActiveFileChange).toHaveBeenCalledWith('src/Api.ts');
     });

@@ -1,5 +1,5 @@
-import type { DiffWorkerRequest, DiffWorkerResponse } from './diffProtocol';
 import { handleDiffRequest } from './diffEngine';
+import type { DiffWorkerRequest, DiffWorkerResponse } from './diffProtocol';
 
 globalThis.addEventListener('message', (event: MessageEvent<DiffWorkerRequest>) => {
   try {

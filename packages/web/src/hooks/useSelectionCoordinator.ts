@@ -82,13 +82,12 @@ export const useSelectionCoordinator = ({
   const commitDiffRange = commitSelection.diffRange;
   const commitFilePaths = useFileList(commitDiffRange?.oldRef ?? '', commitDiffRange?.newRef ?? '');
   const commitFilePathsList = useMemo(
-    () => (commitFilePaths.files != null ? collectFiles(commitFilePaths.files).map((f) => f.path) : []),
+    () =>
+      commitFilePaths.files != null ? collectFiles(commitFilePaths.files).map((f) => f.path) : [],
     [commitFilePaths.files],
   );
   const singleCommitSha =
-    commitSelection.selectedShas.size === 1
-      ? ([...commitSelection.selectedShas][0] ?? null)
-      : null;
+    commitSelection.selectedShas.size === 1 ? ([...commitSelection.selectedShas][0] ?? null) : null;
   const commitDiffs = useComputedDiffs(
     commitSelection.isActive ? commitFilePathsList : [],
     'committed',

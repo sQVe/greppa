@@ -1,5 +1,5 @@
-import type { ChangeType, DiffFile, DiffHunk, DiffLine } from '../fixtures/types';
 import { extractCharRanges } from '../components/DiffViewer/extractCharRanges';
+import type { ChangeType, DiffFile, DiffHunk, DiffLine } from '../fixtures/types';
 import type { DiffMapping } from '../workers/diffProtocol';
 
 interface HunkRange {
@@ -57,9 +57,15 @@ const computeHunkRanges = (
 
   for (const change of changes) {
     const oldStart = Math.max(1, change.original.startLineNumber - CONTEXT_LINES);
-    const oldEnd = Math.min(oldLineCount, change.original.endLineNumberExclusive - 1 + CONTEXT_LINES);
+    const oldEnd = Math.min(
+      oldLineCount,
+      change.original.endLineNumberExclusive - 1 + CONTEXT_LINES,
+    );
     const newStart = Math.max(1, change.modified.startLineNumber - CONTEXT_LINES);
-    const newEnd = Math.min(newLineCount, change.modified.endLineNumberExclusive - 1 + CONTEXT_LINES);
+    const newEnd = Math.min(
+      newLineCount,
+      change.modified.endLineNumberExclusive - 1 + CONTEXT_LINES,
+    );
 
     const prev = ranges[ranges.length - 1];
     if (prev != null && oldStart <= prev.oldEnd + 1) {
@@ -90,7 +96,10 @@ const buildHunk = (
   );
 
   for (const change of relevantChanges) {
-    while (oldLineNumber < change.original.startLineNumber && newLineNumber < change.modified.startLineNumber) {
+    while (
+      oldLineNumber < change.original.startLineNumber &&
+      newLineNumber < change.modified.startLineNumber
+    ) {
       lines.push({
         lineType: 'context',
         oldLineNumber: oldLineNumber,
@@ -178,14 +187,19 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
       newLineNumber: i + 1,
       content,
     }));
-    return { ...base, hunks: [{
-      header: `@@ -0,0 +1,${lines.length} @@`,
-      oldStart: 0,
-      oldCount: 0,
-      newStart: 1,
-      newCount: lines.length,
-      lines: hunkLines,
-    }] };
+    return {
+      ...base,
+      hunks: [
+        {
+          header: `@@ -0,0 +1,${lines.length} @@`,
+          oldStart: 0,
+          oldCount: 0,
+          newStart: 1,
+          newCount: lines.length,
+          lines: hunkLines,
+        },
+      ],
+    };
   }
 
   if (changeType === 'deleted') {
@@ -199,14 +213,19 @@ export const buildDiffFile = (input: BuildDiffFileInput): DiffFile | null => {
       newLineNumber: null,
       content,
     }));
-    return { ...base, hunks: [{
-      header: `@@ -1,${lines.length} +0,0 @@`,
-      oldStart: 1,
-      oldCount: lines.length,
-      newStart: 0,
-      newCount: 0,
-      lines: hunkLines,
-    }] };
+    return {
+      ...base,
+      hunks: [
+        {
+          header: `@@ -1,${lines.length} +0,0 @@`,
+          oldStart: 1,
+          oldCount: lines.length,
+          newStart: 0,
+          newCount: 0,
+          lines: hunkLines,
+        },
+      ],
+    };
   }
 
   if (changes == null || changes.length === 0) {

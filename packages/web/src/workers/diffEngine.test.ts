@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { DiffRequest } from './diffProtocol';
 import { handleDiffRequest } from './diffEngine';
+import type { DiffRequest } from './diffProtocol';
 
 const makeRequest = (overrides: Partial<DiffRequest> = {}): DiffRequest => ({
   type: 'diff',

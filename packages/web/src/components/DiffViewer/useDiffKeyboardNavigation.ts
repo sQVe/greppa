@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
+import { useEffect, useRef } from 'react';
 
 import type { VirtualItem } from './buildVirtualItems';
 import type { NavigationAction } from './findNavigationTarget';
@@ -39,10 +39,7 @@ export const useDiffKeyboardNavigation = ({
         return;
       }
 
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
@@ -61,6 +58,8 @@ export const useDiffKeyboardNavigation = ({
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () =>{  document.removeEventListener('keydown', handleKeyDown); };
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [items, virtualizer, enabled]);
 };

@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto';
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
 import { createElement } from 'react';

@@ -5,12 +5,42 @@ import { findNavigationTarget } from './findNavigationTarget';
 
 const items: VirtualItem[] = [
   { kind: 'hunk-header', header: '@@ -1,3 +1,3 @@' },
-  { kind: 'diff-row', row: { left: { lineNumber: 1, tokenMapKey: 'context:1:1', content: 'a', type: 'context' }, right: { lineNumber: 1, tokenMapKey: 'context:1:1', content: 'a', type: 'context' } } },
-  { kind: 'diff-row', row: { left: { lineNumber: 2, tokenMapKey: 'removed:2:', content: 'old', type: 'removed' }, right: { lineNumber: 2, tokenMapKey: 'added::2', content: 'new', type: 'added' } } },
-  { kind: 'diff-row', row: { left: { lineNumber: 3, tokenMapKey: 'context:3:3', content: 'b', type: 'context' }, right: { lineNumber: 3, tokenMapKey: 'context:3:3', content: 'b', type: 'context' } } },
+  {
+    kind: 'diff-row',
+    row: {
+      left: { lineNumber: 1, tokenMapKey: 'context:1:1', content: 'a', type: 'context' },
+      right: { lineNumber: 1, tokenMapKey: 'context:1:1', content: 'a', type: 'context' },
+    },
+  },
+  {
+    kind: 'diff-row',
+    row: {
+      left: { lineNumber: 2, tokenMapKey: 'removed:2:', content: 'old', type: 'removed' },
+      right: { lineNumber: 2, tokenMapKey: 'added::2', content: 'new', type: 'added' },
+    },
+  },
+  {
+    kind: 'diff-row',
+    row: {
+      left: { lineNumber: 3, tokenMapKey: 'context:3:3', content: 'b', type: 'context' },
+      right: { lineNumber: 3, tokenMapKey: 'context:3:3', content: 'b', type: 'context' },
+    },
+  },
   { kind: 'hunk-header', header: '@@ -10,2 +10,2 @@' },
-  { kind: 'diff-row', row: { left: { lineNumber: 10, tokenMapKey: 'removed:10:', content: 'x', type: 'removed' }, right: { lineNumber: 10, tokenMapKey: 'added::10', content: 'y', type: 'added' } } },
-  { kind: 'diff-row', row: { left: { lineNumber: 11, tokenMapKey: 'context:11:11', content: 'c', type: 'context' }, right: { lineNumber: 11, tokenMapKey: 'context:11:11', content: 'c', type: 'context' } } },
+  {
+    kind: 'diff-row',
+    row: {
+      left: { lineNumber: 10, tokenMapKey: 'removed:10:', content: 'x', type: 'removed' },
+      right: { lineNumber: 10, tokenMapKey: 'added::10', content: 'y', type: 'added' },
+    },
+  },
+  {
+    kind: 'diff-row',
+    row: {
+      left: { lineNumber: 11, tokenMapKey: 'context:11:11', content: 'c', type: 'context' },
+      right: { lineNumber: 11, tokenMapKey: 'context:11:11', content: 'c', type: 'context' },
+    },
+  },
 ];
 
 describe('findNavigationTarget', () => {

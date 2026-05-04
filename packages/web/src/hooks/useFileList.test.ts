@@ -196,9 +196,7 @@ describe('compactTree', () => {
             path: 'src/events',
             name: 'events',
             type: 'directory',
-            children: [
-              { path: 'src/events/handler.ts', name: 'handler.ts', type: 'file' },
-            ],
+            children: [{ path: 'src/events/handler.ts', name: 'handler.ts', type: 'file' }],
           },
         ],
       },
@@ -249,9 +247,7 @@ describe('compactTree', () => {
                 path: 'a/b/c',
                 name: 'c',
                 type: 'directory',
-                children: [
-                  { path: 'a/b/c/file.ts', name: 'file.ts', type: 'file' },
-                ],
+                children: [{ path: 'a/b/c/file.ts', name: 'file.ts', type: 'file' }],
               },
             ],
           },
@@ -336,10 +332,7 @@ describe('sortPathsTreeOrder', () => {
   });
 
   it('places files inside a directory before sibling files at the same level', () => {
-    const result = sortPathsTreeOrder([
-      'src/z.ts',
-      'src/a/b.ts',
-    ]);
+    const result = sortPathsTreeOrder(['src/z.ts', 'src/a/b.ts']);
 
     expect(result).toEqual(['src/a/b.ts', 'src/z.ts']);
   });

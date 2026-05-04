@@ -151,7 +151,9 @@ export const FileTreePanel = ({
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'committed'}
-          onClick={() => { handleToggle('committed'); }}
+          onClick={() => {
+            handleToggle('committed');
+          }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -174,7 +176,9 @@ export const FileTreePanel = ({
           animate={expandedSection === 'committed' ? 'expanded' : 'collapsed'}
           initial={false}
           transition={transition}
-          onAnimationComplete={() => { handleExpandComplete('committed'); }}
+          onAnimationComplete={() => {
+            handleExpandComplete('committed');
+          }}
         >
           <FilteredTreeSection filter={committedFilter}>
             <FileTree
@@ -197,7 +201,9 @@ export const FileTreePanel = ({
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'worktree'}
-          onClick={() => { handleToggle('worktree'); }}
+          onClick={() => {
+            handleToggle('worktree');
+          }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -220,7 +226,9 @@ export const FileTreePanel = ({
           animate={expandedSection === 'worktree' ? 'expanded' : 'collapsed'}
           initial={false}
           transition={transition}
-          onAnimationComplete={() => { handleExpandComplete('worktree'); }}
+          onAnimationComplete={() => {
+            handleExpandComplete('worktree');
+          }}
         >
           <FilteredTreeSection filter={worktreeFilter}>
             <FileTree
@@ -236,14 +244,14 @@ export const FileTreePanel = ({
           </FilteredTreeSection>
         </motion.div>
       </div>
-      <div
-        className={`${styles.section} ${expandedSection !== 'commits' ? styles.collapsed : ''}`}
-      >
+      <div className={`${styles.section} ${expandedSection !== 'commits' ? styles.collapsed : ''}`}>
         <button
           type="button"
           className={styles.sectionHeader}
           aria-expanded={expandedSection === 'commits'}
-          onClick={() => { handleToggle('commits'); }}
+          onClick={() => {
+            handleToggle('commits');
+          }}
         >
           <motion.span
             className={styles.sectionChevron}
@@ -266,7 +274,9 @@ export const FileTreePanel = ({
           animate={expandedSection === 'commits' ? 'expanded' : 'collapsed'}
           initial={false}
           transition={transition}
-          onAnimationComplete={() => { handleExpandComplete('commits'); }}
+          onAnimationComplete={() => {
+            handleExpandComplete('commits');
+          }}
         >
           <FilteredTreeSection filter={commitsFilter}>
             <CommitList

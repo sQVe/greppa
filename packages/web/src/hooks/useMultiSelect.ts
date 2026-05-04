@@ -1,10 +1,10 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useMemo, useRef } from 'react';
 
-import type { FileSource } from '../useFileSelection';
 import type { StatePayload } from '../stateCache';
 import { getOrCreateStateId } from '../stateCache';
 import { toStringArray } from '../toStringArray';
+import type { FileSource } from '../useFileSelection';
 
 interface MultiSelectOptions {
   committedFilePaths: string[];
@@ -68,19 +68,20 @@ export const useMultiSelect = ({ committedFilePaths, worktreeFilePaths }: MultiS
   const navigateWithState = useCallback(
     (state: StatePayload, source: FileSource, options?: NavigateOptions) => {
       const id = getOrCreateStateId(state);
-      const to = source === 'committed' ? '/changes' as const : '/worktree' as const;
-      const routeSearch = source === 'committed'
-        ? { s: id, file: state.file }
-        : { s: id, wt: state.wt };
+      const to = source === 'committed' ? ('/changes' as const) : ('/worktree' as const);
+      const routeSearch =
+        source === 'committed' ? { s: id, file: state.file } : { s: id, wt: state.wt };
       void navigate({ to, search: routeSearch, replace: options?.replace, hash: options?.hash });
     },
     [navigate],
   );
 
-  const pathname = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
+  const pathname = useRouterState({
+    select: (s: { location: { pathname: string } }) => s.location.pathname,
+  });
   const clear = useCallback(() => {
     anchorRef.current = null;
-    const to = pathname === '/worktree' ? '/worktree' as const : '/changes' as const;
+    const to = pathname === '/worktree' ? ('/worktree' as const) : ('/changes' as const);
     void navigate({ to, search: { s: '' }, replace: true });
   }, [navigate, pathname]);
 

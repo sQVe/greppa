@@ -12,9 +12,7 @@ const files: FileNode[] = [
 
 describe('useSectionFilter', () => {
   it('returns the unfiltered file list when no filter is active', () => {
-    const { result } = renderHook(() =>
-      useSectionFilter('section-empty', files, new Set()),
-    );
+    const { result } = renderHook(() => useSectionFilter('section-empty', files, new Set()));
 
     expect(result.current.filtered.files).toEqual(files);
     expect(result.current.filtered.visibleCount).toBe(2);
@@ -23,9 +21,7 @@ describe('useSectionFilter', () => {
   });
 
   it('narrows the filtered list when query is applied', () => {
-    const { result } = renderHook(() =>
-      useSectionFilter('section-query', files, new Set()),
-    );
+    const { result } = renderHook(() => useSectionFilter('section-query', files, new Set()));
 
     act(() => {
       result.current.filter.setQuery('b');
@@ -36,9 +32,7 @@ describe('useSectionFilter', () => {
   });
 
   it('toggles facets via toggles helpers', () => {
-    const { result } = renderHook(() =>
-      useSectionFilter('section-toggle', files, new Set()),
-    );
+    const { result } = renderHook(() => useSectionFilter('section-toggle', files, new Set()));
 
     act(() => {
       result.current.toggles.toggleExtension('ts');

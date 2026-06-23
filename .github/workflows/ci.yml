@@ -84,6 +84,8 @@ jobs:
   fallow-report:
     name: Fallow report (non-blocking)
     needs: [test]
+    # Informational only: never fail the workflow, even on setup/download errors.
+    continue-on-error: true
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
@@ -110,7 +112,7 @@ jobs:
           {
             echo "## Fallow code health (with coverage, informational)"
             echo '```'
-            pnpm exec fallow health --coverage coverage/coverage-final.json --coverage-root "$GITHUB_WORKSPACE" --score --quiet || true
+            pnpm exec fallow health --coverage coverage/coverage-final.json --coverage-root "$GITHUB_WORKSPACE" --score --quiet 2>&1 || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

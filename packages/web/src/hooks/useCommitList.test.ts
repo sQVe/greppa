@@ -81,7 +81,7 @@ describe('useCommitList', () => {
           author: 'Alice',
           date: '2026-04-03T10:00:00+00:00',
           files: [
-            'beads.jsonl',
+            'data.jsonl',
             'packages/web/src/App.tsx',
             'packages/web/src/components/CommitList/CommitList.tsx',
           ],
@@ -103,7 +103,7 @@ describe('useCommitList', () => {
       expect(result.current.commits[0]?.files).toEqual([
         'packages/web/src/components/CommitList/CommitList.tsx',
         'packages/web/src/App.tsx',
-        'beads.jsonl',
+        'data.jsonl',
       ]);
     });
 
@@ -114,7 +114,7 @@ describe('useCommitList', () => {
         subject: 'feat: thing',
         author: 'Alice',
         date: '2026-04-03T10:00:00+00:00',
-        files: ['beads.jsonl', 'packages/web/src/App.tsx'],
+        files: ['data.jsonl', 'packages/web/src/App.tsx'],
       };
       const serverCommits = [firstCommit];
       const originalFiles = [...firstCommit.files];

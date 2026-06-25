@@ -21,7 +21,6 @@ reviews:
   path_filters:
     - '!**/dist/**'
     - '!**/node_modules/**'
-    - '!.beads/**'
     - '!.changeset/*.md'
     - '!pnpm-lock.yaml'
 

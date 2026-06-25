@@ -312,9 +312,9 @@ describe('sortPathsTreeOrder', () => {
   });
 
   it('groups directories before top-level files', () => {
-    const result = sortPathsTreeOrder(['beads.jsonl', 'packages/web/src/App.tsx']);
+    const result = sortPathsTreeOrder(['data.jsonl', 'packages/web/src/App.tsx']);
 
-    expect(result).toEqual(['packages/web/src/App.tsx', 'beads.jsonl']);
+    expect(result).toEqual(['packages/web/src/App.tsx', 'data.jsonl']);
   });
 
   it('orders sibling directories alphabetically', () => {
@@ -339,7 +339,7 @@ describe('sortPathsTreeOrder', () => {
 
   it('reorders git-log emit order into tree-DFS layout', () => {
     const gitLogOrder = [
-      'beads.jsonl',
+      'data.jsonl',
       'packages/web/src/App.tsx',
       'packages/web/src/components/CommitList/CommitList.tsx',
       'packages/web/src/components/FileTree/FileTree.tsx',
@@ -355,7 +355,7 @@ describe('sortPathsTreeOrder', () => {
       'packages/web/src/fixtures/types.ts',
       'packages/web/src/hooks/useReviewState.ts',
       'packages/web/src/App.tsx',
-      'beads.jsonl',
+      'data.jsonl',
     ]);
   });
 });

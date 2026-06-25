@@ -91,7 +91,7 @@ export const useComputedDiffs = (
       queryKey:
         source === 'worktree'
           ? ['computed-diff', 'worktree', path]
-          : ['computed-diff', oldRef, newRef, path],
+          : ['computed-diff', oldRef, newRef, path, sha],
       queryFn: () => fetchAndComputeDiff(path, source ?? 'committed', oldRef, newRef, sha),
       enabled: source != null,
       retry: false,

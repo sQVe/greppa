@@ -176,6 +176,29 @@ describe('useComputedDiffs', () => {
     expect(result.current.diffs.map((diff) => diff.path)).toEqual(['z.ts', 'a.ts', 'm.ts']);
   });
 
+  it('should not share a cache entry when sha differs for identical refs and path', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(makeDiffResponse('src/index.ts')),
+    } as Response);
+
+    const { result } = renderHook(
+      () => ({
+        base: useComputedDiffs(['src/index.ts'], 'committed', 'HEAD~1', 'HEAD'),
+        withSha: useComputedDiffs(['src/index.ts'], 'committed', 'HEAD~1', 'HEAD', 'commit-sha'),
+      }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.base.diffs).toHaveLength(1);
+      expect(result.current.withSha.diffs).toHaveLength(1);
+    });
+
+    expect(result.current.base.diffs[0]?.sha ?? null).toBeNull();
+    expect(result.current.withSha.diffs[0]?.sha).toBe('commit-sha');
+  });
+
   it('should report failed paths when fetch errors', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('network error'));
 

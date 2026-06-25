@@ -2,8 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
 import type { FileNode } from '../fixtures/types';
-import { fetchDiffContent } from './useDiffContent';
 import { nextFilesToPrefetch } from './nextFilesToPrefetch';
+import { fetchDiffContent } from './useDiffContent';
 
 interface UsePrefetchNeighborsOptions {
   orderedFiles: FileNode[];

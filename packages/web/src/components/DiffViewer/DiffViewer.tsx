@@ -1,7 +1,6 @@
+import { EmptyState } from '@greppa/ui';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useMemo, useRef, useState } from 'react';
-
-import { EmptyState } from '@greppa/ui';
 
 import type { DiffFile } from '../../fixtures/types';
 import { usePreferences } from '../../hooks/usePreferences';
@@ -33,12 +32,20 @@ const useDeferredDiff = (diff: DiffFile | null, shouldDefer: boolean) => {
     }
 
     if (typeof requestIdleCallback === 'function') {
-      const id = requestIdleCallback(() =>{  setReady(true); });
-      return () =>{  cancelIdleCallback(id); };
+      const id = requestIdleCallback(() => {
+        setReady(true);
+      });
+      return () => {
+        cancelIdleCallback(id);
+      };
     }
 
-    const id = setTimeout(() =>{  setReady(true); }, 0);
-    return () =>{  clearTimeout(id); };
+    const id = setTimeout(() => {
+      setReady(true);
+    }, 0);
+    return () => {
+      clearTimeout(id);
+    };
   }, [diff, shouldDefer]);
 
   if (!shouldDefer) {
@@ -49,12 +56,15 @@ const useDeferredDiff = (diff: DiffFile | null, shouldDefer: boolean) => {
 };
 
 export const DiffViewer = ({ diff }: DiffViewerProps) => {
-  const { state: { theme } } = usePreferences();
+  const {
+    state: { theme },
+  } = usePreferences();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [forceExpanded, setForceExpanded] = useState(false);
 
-  useEffect(() =>{  setForceExpanded(false); }, [diff]);
-
+  useEffect(() => {
+    setForceExpanded(false);
+  }, [diff]);
 
   const hunks: HunkData[] = useMemo(() => {
     if (diff == null) {
@@ -96,7 +106,13 @@ export const DiffViewer = ({ diff }: DiffViewerProps) => {
     return (
       <div className={styles.collapsed} data-testid="diff-collapsed">
         <p>{totalLines.toLocaleString()} lines — diff is too large to render by default</p>
-        <button type="button" className={styles.expandButton} onClick={() =>{  setForceExpanded(true); }}>
+        <button
+          type="button"
+          className={styles.expandButton}
+          onClick={() => {
+            setForceExpanded(true);
+          }}
+        >
           Show diff
         </button>
       </div>

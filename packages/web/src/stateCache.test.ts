@@ -14,13 +14,28 @@ afterEach(() => {
 describe('stateCache', () => {
   it('produces distinct ids for payloads that differ only in commitFile', () => {
     const a = getOrCreateStateId({ file: [], wt: [], commits: ['aaa'], commitFile: [] });
-    const b = getOrCreateStateId({ file: [], wt: [], commits: ['aaa'], commitFile: ['aaa:src/a.ts'] });
+    const b = getOrCreateStateId({
+      file: [],
+      wt: [],
+      commits: ['aaa'],
+      commitFile: ['aaa:src/a.ts'],
+    });
     expect(a).not.toBe(b);
   });
 
   it('returns the same id for identical payloads', () => {
-    const a = getOrCreateStateId({ file: [], wt: [], commits: ['aaa'], commitFile: ['aaa:src/a.ts'] });
-    const b = getOrCreateStateId({ file: [], wt: [], commits: ['aaa'], commitFile: ['aaa:src/a.ts'] });
+    const a = getOrCreateStateId({
+      file: [],
+      wt: [],
+      commits: ['aaa'],
+      commitFile: ['aaa:src/a.ts'],
+    });
+    const b = getOrCreateStateId({
+      file: [],
+      wt: [],
+      commits: ['aaa'],
+      commitFile: ['aaa:src/a.ts'],
+    });
     expect(a).toBe(b);
   });
 });

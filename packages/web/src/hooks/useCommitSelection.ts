@@ -1,7 +1,6 @@
+import type { CommitEntry } from '@greppa/core';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useMemo, useRef } from 'react';
-
-import type { CommitEntry } from '@greppa/core';
 
 import type { StatePayload } from '../stateCache';
 import { getOrCreateStateId } from '../stateCache';
@@ -22,10 +21,7 @@ export const useCommitSelection = (commits: CommitEntry[]) => {
   const navigate = useNavigate();
   const anchorRef = useRef<string | null>(null);
 
-  const selectedShas = useMemo(
-    () => new Set(commitParams),
-    [commitParams],
-  );
+  const selectedShas = useMemo(() => new Set(commitParams), [commitParams]);
 
   const commitsRef = useRef(commits);
   commitsRef.current = commits;

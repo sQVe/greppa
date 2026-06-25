@@ -19,7 +19,11 @@ const getOrCreateWorker = () => {
   return sharedWorker;
 };
 
-const buildHighlightRequest = (diff: DiffFile, theme: string, requestId: number): HighlightRequest => {
+const buildHighlightRequest = (
+  diff: DiffFile,
+  theme: string,
+  requestId: number,
+): HighlightRequest => {
   const lines: HighlightRequest['lines'] = [];
 
   for (const hunk of diff.hunks) {
@@ -93,9 +97,7 @@ export const useSyntaxHighlighting = (diff: DiffFile | null, theme: string) => {
 };
 
 export const useMultiSyntaxHighlighting = (diffs: DiffFile[], theme: string) => {
-  const [tokenMaps, setTokenMaps] = useState<Map<string, Map<string, HighlightToken[]>>>(
-    new Map(),
-  );
+  const [tokenMaps, setTokenMaps] = useState<Map<string, Map<string, HighlightToken[]>>>(new Map());
   const requestIdRef = useRef(0);
   const prevThemeRef = useRef(theme);
 

@@ -1,5 +1,4 @@
-// @vitest-environment happy-dom
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import type { CommitEntry } from '@greppa/core';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -8,12 +7,12 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { zodValidator, fallback } from '@tanstack/zod-adapter';
+// @vitest-environment happy-dom
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import type { RefObject } from 'react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-
-import type { CommitEntry } from '@greppa/core';
 
 import { parseSearch, stringifySearch } from '../router';
 import { cacheState, clearAllStateCaches } from '../stateCache';
@@ -105,7 +104,9 @@ describe('useCommitSelection', () => {
   it('should select a single commit on click', async () => {
     const { result } = await renderCommitSelection();
 
-    act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: false }); });
+    act(() => {
+      result.current.selectCommit('bbb', { shiftKey: false, metaKey: false });
+    });
 
     await waitFor(() => {
       expect(result.current.selectedShas).toEqual(new Set(['bbb']));
@@ -116,12 +117,16 @@ describe('useCommitSelection', () => {
   it('should replace selection on plain click', async () => {
     const { result } = await renderCommitSelection();
 
-    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    act(() => {
+      result.current.selectCommit('aaa', { shiftKey: false, metaKey: false });
+    });
     await waitFor(() => {
       expect(result.current.selectedShas).toEqual(new Set(['aaa']));
     });
 
-    act(() => { result.current.selectCommit('ccc', { shiftKey: false, metaKey: false }); });
+    act(() => {
+      result.current.selectCommit('ccc', { shiftKey: false, metaKey: false });
+    });
 
     await waitFor(() => {
       expect(result.current.selectedShas).toEqual(new Set(['ccc']));
@@ -131,12 +136,16 @@ describe('useCommitSelection', () => {
   it('should select range on shift+click', async () => {
     const { result } = await renderCommitSelection();
 
-    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    act(() => {
+      result.current.selectCommit('aaa', { shiftKey: false, metaKey: false });
+    });
     await waitFor(() => {
       expect(result.current.selectedShas).toEqual(new Set(['aaa']));
     });
 
-    act(() => { result.current.selectCommit('ccc', { shiftKey: true, metaKey: false }); });
+    act(() => {
+      result.current.selectCommit('ccc', { shiftKey: true, metaKey: false });
+    });
 
     await waitFor(() => {
       expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb', 'ccc']));
@@ -146,7 +155,9 @@ describe('useCommitSelection', () => {
   it('should toggle on meta+click', async () => {
     const { result } = await renderCommitSelection(commitsUrl(['aaa']));
 
-    act(() => { result.current.selectCommit('bbb', { shiftKey: false, metaKey: true }); });
+    act(() => {
+      result.current.selectCommit('bbb', { shiftKey: false, metaKey: true });
+    });
 
     await waitFor(() => {
       expect(result.current.selectedShas).toEqual(new Set(['aaa', 'bbb']));
@@ -174,7 +185,9 @@ describe('useCommitSelection', () => {
   it('should clear selection', async () => {
     const { result } = await renderCommitSelection(commitsUrl(['aaa', 'bbb']));
 
-    act(() => { result.current.clear(); });
+    act(() => {
+      result.current.clear();
+    });
 
     await waitFor(() => {
       expect(result.current.selectedShas.size).toBe(0);
@@ -186,7 +199,9 @@ describe('useCommitSelection', () => {
   it('should navigate to /commits route', async () => {
     const { result, router } = await renderCommitSelection();
 
-    act(() => { result.current.selectCommit('aaa', { shiftKey: false, metaKey: false }); });
+    act(() => {
+      result.current.selectCommit('aaa', { shiftKey: false, metaKey: false });
+    });
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/commits');

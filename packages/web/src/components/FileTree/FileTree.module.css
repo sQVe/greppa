@@ -1,3 +1,13 @@
 .collapsedDir {
   opacity: 0.5;
 }
+
+.reviewedFile {
+  opacity: 0.5;
+}
+
+.reviewedCheck {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}

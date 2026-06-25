@@ -1,5 +1,4 @@
 import 'fake-indexeddb/auto';
-
 import { clear, createStore } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -58,9 +57,9 @@ describe('useDiffContent', () => {
         status: 500,
       } as Response);
 
-      await expect(
-        fetchDiffContent('HEAD~1', 'HEAD', 'src/index.ts'),
-      ).rejects.toThrow('Failed to fetch diff: 500');
+      await expect(fetchDiffContent('HEAD~1', 'HEAD', 'src/index.ts')).rejects.toThrow(
+        'Failed to fetch diff: 500',
+      );
     });
 
     it('returns the cached value without calling fetch when diffCache has a hit', async () => {

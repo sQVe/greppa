@@ -1,6 +1,8 @@
 import type { CommitEntry } from '@greppa/core';
 import { useQuery } from '@tanstack/react-query';
 
+import { sortPathsTreeOrder } from './useFileList';
+
 export const fetchCommits = async (oldRef: string, newRef: string): Promise<CommitEntry[]> => {
   const params = new URLSearchParams({ oldRef, newRef });
   const response = await fetch(`/api/commits?${params.toString()}`);
@@ -12,6 +14,12 @@ export const fetchCommits = async (oldRef: string, newRef: string): Promise<Comm
   return response.json() as Promise<CommitEntry[]>;
 };
 
+// Server returns each commit's files in `git log --name-only` order; reorder to
+// the same tree-DFS layout the file tree uses so visual lists and selection
+// ranges stay consistent across views.
+const sortCommitFiles = (commits: CommitEntry[]): CommitEntry[] =>
+  commits.map((commit) => ({ ...commit, files: sortPathsTreeOrder(commit.files) }));
+
 export const useCommitList = (oldRef: string, newRef: string) => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['commits', oldRef, newRef],
@@ -19,6 +27,7 @@ export const useCommitList = (oldRef: string, newRef: string) => {
     enabled: oldRef !== '' && newRef !== '',
     retry: false,
     staleTime: Infinity,
+    select: sortCommitFiles,
   });
 
   return {

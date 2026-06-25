@@ -122,10 +122,9 @@ describe('useSyntaxHighlighting', () => {
   });
 
   it('reuses the same worker across renders', () => {
-    const { rerender } = renderHook(
-      ({ diff }) => useSyntaxHighlighting(diff, 'catppuccin-mocha'),
-      { initialProps: { diff: singleHunkDiff as DiffFile | null } },
-    );
+    const { rerender } = renderHook(({ diff }) => useSyntaxHighlighting(diff, 'catppuccin-mocha'), {
+      initialProps: { diff: singleHunkDiff as DiffFile | null },
+    });
 
     rerender({ diff: { ...singleHunkDiff, path: 'src/bar.ts' } });
 

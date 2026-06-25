@@ -56,10 +56,18 @@ describe('buildDiffFile', () => {
     expect(hunk).toBeDefined();
     if (hunk == null) return;
 
-    expect(hunk.lines.some((line) => line.lineType === 'context' && line.content === 'line 1')).toBe(true);
-    expect(hunk.lines.some((line) => line.lineType === 'removed' && line.content === 'line 4')).toBe(true);
-    expect(hunk.lines.some((line) => line.lineType === 'added' && line.content === 'CHANGED')).toBe(true);
-    expect(hunk.lines.some((line) => line.lineType === 'context' && line.content === 'line 7')).toBe(true);
+    expect(
+      hunk.lines.some((line) => line.lineType === 'context' && line.content === 'line 1'),
+    ).toBe(true);
+    expect(
+      hunk.lines.some((line) => line.lineType === 'removed' && line.content === 'line 4'),
+    ).toBe(true);
+    expect(hunk.lines.some((line) => line.lineType === 'added' && line.content === 'CHANGED')).toBe(
+      true,
+    );
+    expect(
+      hunk.lines.some((line) => line.lineType === 'context' && line.content === 'line 7'),
+    ).toBe(true);
   });
 
   it('handles added file', () => {

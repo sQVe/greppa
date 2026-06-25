@@ -1,11 +1,7 @@
 import type { BundledLanguage, Highlighter } from 'shiki';
 import { createHighlighter } from 'shiki';
 
-import type {
-  HighlightRequest,
-  HighlightResponse,
-  HighlightToken,
-} from './highlightProtocol';
+import type { HighlightRequest, HighlightResponse, HighlightToken } from './highlightProtocol';
 
 let highlighterPromise: Promise<Highlighter> | null = null;
 const loadedLanguages = new Set<string>();
@@ -25,10 +21,7 @@ const getOrCreateHighlighter = () => {
   return highlighterPromise;
 };
 
-const resolveLanguage = async (
-  highlighter: Highlighter,
-  language: string,
-): Promise<string> => {
+const resolveLanguage = async (highlighter: Highlighter, language: string): Promise<string> => {
   if (failedLanguages.has(language)) {
     return 'plaintext';
   }
@@ -68,7 +61,9 @@ const highlightFullContent = (
     theme,
   });
 
-  return tokenLines.map((line) => line.map((token) => ({ content: token.content, color: token.color })));
+  return tokenLines.map((line) =>
+    line.map((token) => ({ content: token.content, color: token.color })),
+  );
 };
 
 const parseLineKey = (key: string): { side: 'old' | 'new'; lineNumber: number } | null => {
@@ -88,9 +83,7 @@ const parseLineKey = (key: string): { side: 'old' | 'new'; lineNumber: number } 
   return null;
 };
 
-const handleFullFileRequest = async (
-  request: HighlightRequest,
-): Promise<HighlightResponse> => {
+const handleFullFileRequest = async (request: HighlightRequest): Promise<HighlightResponse> => {
   const highlighter = await getOrCreateHighlighter();
   const { filePath, language, theme, lines, oldContent, newContent } = request;
 
@@ -137,9 +130,7 @@ const handleFullFileRequest = async (
   return { type: 'highlight-result', requestId: request.requestId, filePath, tokens };
 };
 
-const handleLineByLineRequest = async (
-  request: HighlightRequest,
-): Promise<HighlightResponse> => {
+const handleLineByLineRequest = async (request: HighlightRequest): Promise<HighlightResponse> => {
   const highlighter = await getOrCreateHighlighter();
   const { filePath, language, theme, lines } = request;
   const resolvedLanguage = await resolveLanguage(highlighter, language);

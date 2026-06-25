@@ -9,17 +9,14 @@ const resolveSide = (activeSide: string | null, selection: Selection) => {
   }
 
   const anchorNode = selection.anchorNode;
-  const element =
-    anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement;
+  const element = anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement;
 
   return element?.closest('[data-side]')?.getAttribute('data-side') ?? null;
 };
 
 const collectLines = (viewer: HTMLElement, side: string, range: Range) => {
   const lines: string[] = [];
-  const contentCells = viewer.querySelectorAll(
-    `[data-side="${side}"] .${styles.content}`,
-  );
+  const contentCells = viewer.querySelectorAll(`[data-side="${side}"] .${styles.content}`);
 
   for (const cell of contentCells) {
     if (!range.intersectsNode(cell)) {
@@ -34,10 +31,7 @@ const collectLines = (viewer: HTMLElement, side: string, range: Range) => {
   return lines;
 };
 
-export const useDiffSelection = (
-  viewerRef: RefObject<HTMLDivElement | null>,
-  enabled: boolean,
-) => {
+export const useDiffSelection = (viewerRef: RefObject<HTMLDivElement | null>, enabled: boolean) => {
   useEffect(() => {
     if (!enabled) {
       viewerRef.current?.removeAttribute('data-active-side');

@@ -54,7 +54,10 @@ jobs:
           key: fallow-cache-${{ runner.os }}-${{ hashFiles('**/package.json', 'pnpm-lock.yaml') }}
           restore-keys: |
             fallow-cache-${{ runner.os }}-
-      - run: pnpm exec fallow audit --changed-since ${{ github.event.pull_request.base.sha }}
+      # CRAP is coverage-blind in the gate and over-flags untested branchy
+      # code. Keep it non-blocking here; it surfaces with real coverage in the
+      # fallow-report job below.
+      - run: pnpm exec fallow audit --changed-since ${{ github.event.pull_request.base.sha }} --max-crap 100000
 
   test:
     name: Test
@@ -69,7 +72,49 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      - run: pnpm test --coverage --coverage.provider istanbul --coverage.reporter json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage
+          path: coverage/coverage-final.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  fallow-report:
+    name: Fallow report (non-blocking)
+    needs: [test]
+    # Informational only: never fail the workflow, even on setup/download errors.
+    continue-on-error: true
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 2
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: coverage
+          path: coverage
+      # --coverage-root rewrites the test runner's absolute paths onto this
+      # checkout. CRAP uses real Istanbul coverage instead of the static
+      # estimate. Non-blocking: never fails the PR.
+      - name: Coverage-aware health report
+        run: |
+          {
+            echo "## Fallow code health (with coverage, informational)"
+            echo '```'
+            pnpm exec fallow health --coverage coverage/coverage-final.json --coverage-root "$GITHUB_WORKSPACE" --score --quiet 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   build:
     name: Build

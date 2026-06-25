@@ -1,5 +1,5 @@
-import { act, renderHook } from '@testing-library/react';
 // @vitest-environment happy-dom
+import { act, renderHook } from '@testing-library/react';
 import { Schema } from 'effect';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

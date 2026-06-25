@@ -56,6 +56,7 @@ interface SelectedDiffsInput {
 interface ActiveTreeStateInput {
   activeSource: FileSource | null;
   isCommits: boolean;
+  isCommitRange: boolean;
   committedReviewedPaths: Set<string>;
   worktreeReviewedPaths: Set<string>;
   reviewedCommitFiles: Set<string>;
@@ -78,6 +79,8 @@ interface StatusBarPropsInput {
 }
 
 const EMPTY_FILES: FileNode[] = [];
+const EMPTY_REVIEWED_PATHS = new Set<string>();
+const noopToggleReviewed = () => {};
 const EMPTY_PATHS = new Set<string>();
 const PANEL_IDS = ['file-tree', 'diff-viewer', 'detail-panel'];
 
@@ -168,6 +171,7 @@ const resolveActiveSection = (pathname: string) => {
 const useActiveTreeState = ({
   activeSource,
   isCommits,
+  isCommitRange,
   committedReviewedPaths,
   worktreeReviewedPaths,
   reviewedCommitFiles,
@@ -175,6 +179,16 @@ const useActiveTreeState = ({
   toggleWorktreeReviewed,
   toggleReviewedCommitFile,
 }: ActiveTreeStateInput) => {
+  // A multi-commit range diff has no single sha, so it can't be keyed as
+  // `sha:path`. Disable review there instead of writing path-only entries into
+  // the committed (Changes) track. ponytail: per-range review unsupported;
+  // give ranges their own track if that's ever wanted.
+  if (isCommitRange) {
+    return {
+      activeReviewedPaths: EMPTY_REVIEWED_PATHS,
+      activeToggleReviewed: noopToggleReviewed,
+    };
+  }
   if (isCommits) {
     return {
       activeReviewedPaths: reviewedCommitFiles,
@@ -455,6 +469,10 @@ export const App = () => {
   const { activeReviewedPaths, activeToggleReviewed } = useActiveTreeState({
     activeSource: multiSelect.activeSource,
     isCommits: commitSelection.selectedShas.size === 1 || selectedCommitFileKeys.size > 0,
+    isCommitRange:
+      commitSelection.isActive &&
+      commitSelection.selectedShas.size !== 1 &&
+      selectedCommitFileKeys.size === 0,
     committedReviewedPaths: reviewedPaths,
     worktreeReviewedPaths,
     reviewedCommitFiles,

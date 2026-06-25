@@ -109,8 +109,8 @@ export const FileTree = ({
                 <Badge variant={changeType}>{CHANGE_TYPE_LABELS[changeType]}</Badge>
               ) : null}
               {isReviewed ? (
-                <span className={styles.reviewedCheck} aria-label="Reviewed">
-                  <IconCheck size={12} stroke={2.5} />
+                <span className={styles.reviewedCheck} role="img" aria-label="Reviewed">
+                  <IconCheck size={12} stroke={2.5} aria-hidden />
                 </span>
               ) : null}
             </>

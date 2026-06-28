@@ -64,3 +64,24 @@
   line-height: 1;
   white-space: nowrap;
 }
+
+.reviewedFile {
+  opacity: 0.5;
+}
+
+.reviewedCheck {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dimmedCommit {
+  opacity: 0.4;
+}
+
+.matchAnnotation {
+  flex-shrink: 0;
+  font-family: var(--gr-font-mono);
+  font-size: var(--gr-text-xs);
+  color: var(--gr-color-text-muted);
+}

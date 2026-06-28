@@ -1,6 +1,6 @@
+import { renderHook } from '@testing-library/react';
 // @vitest-environment happy-dom
 import { createRef } from 'react';
-import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { StackedDiffViewerHandle } from '../components/StackedDiffViewer/StackedDiffViewer';
@@ -19,7 +19,9 @@ describe('useHashScroll', () => {
     const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
-    renderHook(() => { useHashScroll(ref, [fileA], '#src/App.tsx'); });
+    renderHook(() => {
+      useHashScroll(ref, [fileA], '#src/App.tsx');
+    });
 
     expect(ref.current.scrollToFile).toHaveBeenCalledWith('src/App.tsx');
   });
@@ -28,7 +30,9 @@ describe('useHashScroll', () => {
     const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
-    renderHook(() => { useHashScroll(ref, [fileA], '#src/App.tsx:L42'); });
+    renderHook(() => {
+      useHashScroll(ref, [fileA], '#src/App.tsx:L42');
+    });
 
     expect(ref.current.scrollToLine).toHaveBeenCalledWith('src/App.tsx', 42);
   });
@@ -37,7 +41,9 @@ describe('useHashScroll', () => {
     const ref = createRef<StackedDiffViewerHandle>() as { current: StackedDiffViewerHandle };
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
-    renderHook(() => { useHashScroll(ref, [], '#src/App.tsx'); });
+    renderHook(() => {
+      useHashScroll(ref, [], '#src/App.tsx');
+    });
 
     expect(ref.current.scrollToFile).not.toHaveBeenCalled();
   });
@@ -47,11 +53,18 @@ describe('useHashScroll', () => {
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
     const { rerender } = renderHook(
-      ({ diffs, hash }) => { useHashScroll(ref, diffs, hash); },
+      ({ diffs, hash }) => {
+        useHashScroll(ref, diffs, hash);
+      },
       { initialProps: { diffs: [fileA], hash: '#src/App.tsx' } },
     );
 
-    const fileB: DiffFile = { path: 'src/B.tsx', changeType: 'added', language: 'typescript', hunks: [] };
+    const fileB: DiffFile = {
+      path: 'src/B.tsx',
+      changeType: 'added',
+      language: 'typescript',
+      hunks: [],
+    };
     rerender({ diffs: [fileA, fileB], hash: '#src/App.tsx' });
 
     expect(ref.current.scrollToFile).toHaveBeenCalledTimes(1);
@@ -62,7 +75,9 @@ describe('useHashScroll', () => {
     ref.current = { scrollToFile: vi.fn(), scrollToLine: vi.fn() };
 
     const { rerender } = renderHook(
-      ({ diffs, hash }) => { useHashScroll(ref, diffs, hash); },
+      ({ diffs, hash }) => {
+        useHashScroll(ref, diffs, hash);
+      },
       { initialProps: { diffs: [fileA], hash: '#src/App.tsx' } },
     );
 

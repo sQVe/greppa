@@ -38,9 +38,7 @@ const worktreeFiles: FileNode[] = [
     path: 'lib',
     name: 'lib',
     type: 'directory',
-    children: [
-      { path: 'lib/helpers.ts', name: 'helpers.ts', type: 'file', changeType: 'added' },
-    ],
+    children: [{ path: 'lib/helpers.ts', name: 'helpers.ts', type: 'file', changeType: 'added' }],
   },
 ];
 
@@ -92,35 +90,63 @@ describe('useFileSelectionHandlers', () => {
     it('should call multiSelect.select on plain click', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS);
+      });
 
-      expect(result.current.selectSpy).toHaveBeenCalledWith('src/index.ts', 'committed', 'src/index.ts');
+      expect(result.current.selectSpy).toHaveBeenCalledWith(
+        'src/index.ts',
+        'committed',
+        'src/index.ts',
+      );
     });
 
     it('should toggle file on meta+click', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS);
+      });
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/utils.ts', META); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/utils.ts', META);
+      });
 
-      expect(result.current.toggleSpy).toHaveBeenCalledWith('src/utils.ts', 'committed', 'src/utils.ts');
+      expect(result.current.toggleSpy).toHaveBeenCalledWith(
+        'src/utils.ts',
+        'committed',
+        'src/utils.ts',
+      );
     });
 
     it('should remove file on meta+click when already selected', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/utils.ts', META); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS);
+      });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/utils.ts', META);
+      });
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', META); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', META);
+      });
 
-      expect(result.current.toggleSpy).toHaveBeenCalledWith('src/index.ts', 'committed', 'src/index.ts');
+      expect(result.current.toggleSpy).toHaveBeenCalledWith(
+        'src/index.ts',
+        'committed',
+        'src/index.ts',
+      );
     });
 
     it('should range select on shift+click', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS);
+      });
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('README.md', SHIFT); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('README.md', SHIFT);
+      });
 
       expect(result.current.selectRangeSpy).toHaveBeenCalledWith(
         'README.md',
@@ -133,7 +159,9 @@ describe('useFileSelectionHandlers', () => {
     it('should not call select on shift+click', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', SHIFT); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', SHIFT);
+      });
 
       expect(result.current.selectSpy).not.toHaveBeenCalled();
     });
@@ -141,16 +169,22 @@ describe('useFileSelectionHandlers', () => {
     it('should not call select on meta+click', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', META); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', META);
+      });
 
       expect(result.current.selectSpy).not.toHaveBeenCalled();
     });
 
     it('should toggle all directory children on meta+click directory', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectCommittedFile('README.md', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('README.md', NO_MODIFIERS);
+      });
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('src', META); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src', META);
+      });
 
       expect(result.current.toggleAllSpy).toHaveBeenCalledWith(
         ['src/index.ts', 'src/utils.ts'],
@@ -161,9 +195,13 @@ describe('useFileSelectionHandlers', () => {
 
     it('should remove all directory children on meta+click when all already selected', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectAllCommitted(); });
+      act(() => {
+        result.current.handlers.handleSelectAllCommitted();
+      });
 
-      act(() => { result.current.handlers.handleSelectCommittedFile('src', META); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src', META);
+      });
 
       expect(result.current.toggleAllSpy).toHaveBeenCalledWith(
         ['src/index.ts', 'src/utils.ts'],
@@ -177,7 +215,9 @@ describe('useFileSelectionHandlers', () => {
     it('should select all descendant files', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectCommittedDirectory('src'); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedDirectory('src');
+      });
 
       expect(result.current.selectAllSpy).toHaveBeenCalledWith(
         ['src/index.ts', 'src/utils.ts'],
@@ -188,7 +228,9 @@ describe('useFileSelectionHandlers', () => {
     it('should do nothing for empty directory', () => {
       const { result } = setup(emptyDirectory);
 
-      act(() => { result.current.handlers.handleSelectCommittedDirectory('empty'); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedDirectory('empty');
+      });
 
       expect(result.current.selectAllSpy).not.toHaveBeenCalled();
     });
@@ -198,7 +240,9 @@ describe('useFileSelectionHandlers', () => {
     it('should select all committed files', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectAllCommitted(); });
+      act(() => {
+        result.current.handlers.handleSelectAllCommitted();
+      });
 
       expect(result.current.selectAllSpy).toHaveBeenCalledWith(
         ['src/index.ts', 'src/utils.ts', 'README.md'],
@@ -211,25 +255,39 @@ describe('useFileSelectionHandlers', () => {
     it('should call multiSelect.select on plain click', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS);
+      });
 
       expect(result.current.selectSpy).toHaveBeenCalledWith('config.ts', 'worktree', 'config.ts');
     });
 
     it('should toggle file on meta+click', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS);
+      });
 
-      act(() => { result.current.handlers.handleSelectWorktreeFile('lib/helpers.ts', META); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('lib/helpers.ts', META);
+      });
 
-      expect(result.current.toggleSpy).toHaveBeenCalledWith('lib/helpers.ts', 'worktree', 'lib/helpers.ts');
+      expect(result.current.toggleSpy).toHaveBeenCalledWith(
+        'lib/helpers.ts',
+        'worktree',
+        'lib/helpers.ts',
+      );
     });
 
     it('should range select on shift+click', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS);
+      });
 
-      act(() => { result.current.handlers.handleSelectWorktreeFile('lib/helpers.ts', SHIFT); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('lib/helpers.ts', SHIFT);
+      });
 
       expect(result.current.selectRangeSpy).toHaveBeenCalledWith(
         'lib/helpers.ts',
@@ -241,11 +299,19 @@ describe('useFileSelectionHandlers', () => {
 
     it('should toggle all directory children on meta+click directory', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS);
+      });
 
-      act(() => { result.current.handlers.handleSelectWorktreeFile('lib', META); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('lib', META);
+      });
 
-      expect(result.current.toggleAllSpy).toHaveBeenCalledWith(['lib/helpers.ts'], 'worktree', 'lib/helpers.ts');
+      expect(result.current.toggleAllSpy).toHaveBeenCalledWith(
+        ['lib/helpers.ts'],
+        'worktree',
+        'lib/helpers.ts',
+      );
     });
   });
 
@@ -253,7 +319,9 @@ describe('useFileSelectionHandlers', () => {
     it('should select all descendant files with worktree source', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectWorktreeDirectory('lib'); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeDirectory('lib');
+      });
 
       expect(result.current.selectAllSpy).toHaveBeenCalledWith(['lib/helpers.ts'], 'worktree');
     });
@@ -263,7 +331,9 @@ describe('useFileSelectionHandlers', () => {
     it('should select all worktree files', () => {
       const { result } = setup();
 
-      act(() => { result.current.handlers.handleSelectAllWorktree(); });
+      act(() => {
+        result.current.handlers.handleSelectAllWorktree();
+      });
 
       expect(result.current.selectAllSpy).toHaveBeenCalledWith(
         ['config.ts', 'lib/helpers.ts'],
@@ -275,12 +345,15 @@ describe('useFileSelectionHandlers', () => {
   describe('cross-source behavior', () => {
     it('should call multiSelect.select when switching sources', () => {
       const { result } = setup();
-      act(() => { result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectCommittedFile('src/index.ts', NO_MODIFIERS);
+      });
 
-      act(() => { result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS); });
+      act(() => {
+        result.current.handlers.handleSelectWorktreeFile('config.ts', NO_MODIFIERS);
+      });
 
       expect(result.current.selectSpy).toHaveBeenCalledWith('config.ts', 'worktree', 'config.ts');
     });
   });
-
 });

@@ -1,12 +1,23 @@
 import styles from './StatusBar.module.css';
 
-type StatusBarMode = 'file-review' | 'commit-review' | 'working-tree' | 'review-complete' | 'composer-open';
+type StatusBarMode =
+  | 'file-review'
+  | 'commit-review'
+  | 'working-tree'
+  | 'review-complete'
+  | 'composer-open';
+
+interface VisibleSegment {
+  matched: number;
+  total: number;
+}
 
 interface FileReviewProps {
   mode: 'file-review';
   reviewedCount: number;
   totalCount: number;
   commentCount?: number;
+  visible?: VisibleSegment;
 }
 
 interface CommitReviewProps {
@@ -14,11 +25,13 @@ interface CommitReviewProps {
   commitSha?: string;
   reviewedCount: number;
   totalCount: number;
+  visible?: VisibleSegment;
 }
 
 interface WorkingTreeProps {
   mode: 'working-tree';
   modifiedCount: number;
+  visible?: VisibleSegment;
 }
 
 interface ReviewCompleteProps {
@@ -70,6 +83,17 @@ const renderComments = (count: number) => (
   </div>
 );
 
+const renderVisible = (visible: VisibleSegment | undefined) => {
+  if (visible == null) {
+    return null;
+  }
+  return (
+    <div className={styles.segment}>
+      {visible.matched} / {visible.total} visible
+    </div>
+  );
+};
+
 const renderLeftSegments = (props: StatusBarProps) => {
   switch (props.mode) {
     case 'file-review':
@@ -77,6 +101,7 @@ const renderLeftSegments = (props: StatusBarProps) => {
         <>
           <div className={styles.segment}>{props.totalCount} files</div>
           {renderReviewed(props.reviewedCount, props.totalCount)}
+          {renderVisible(props.visible)}
           {renderComments(props.commentCount ?? 0)}
         </>
       );
@@ -87,6 +112,7 @@ const renderLeftSegments = (props: StatusBarProps) => {
             <div className={`${styles.segment} ${styles.interactive}`}>{props.commitSha}</div>
           )}
           {renderReviewed(props.reviewedCount, props.totalCount)}
+          {renderVisible(props.visible)}
         </>
       );
     case 'working-tree':
@@ -94,6 +120,7 @@ const renderLeftSegments = (props: StatusBarProps) => {
         <>
           <div className={`${styles.segment} ${styles.warning}`}>working tree</div>
           <div className={styles.segment}>{props.modifiedCount} modified</div>
+          {renderVisible(props.visible)}
         </>
       );
     case 'review-complete':
@@ -138,7 +165,8 @@ const renderRightSegments = (mode: StatusBarMode) => {
     case 'composer-open':
       return (
         <div className={styles.segment}>
-          <kbd className={styles.kbd}>{getModifierKey()}+Enter</kbd> submit <kbd className={styles.kbd}>Esc</kbd> cancel
+          <kbd className={styles.kbd}>{getModifierKey()}+Enter</kbd> submit{' '}
+          <kbd className={styles.kbd}>Esc</kbd> cancel
         </div>
       );
   }

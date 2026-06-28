@@ -11,9 +11,12 @@ export const fetchRefs = async (): Promise<RefsResponse> => {
   if (
     json == null ||
     typeof json !== 'object' ||
-    !('oldRef' in json) || typeof json.oldRef !== 'string' ||
-    !('newRef' in json) || typeof json.newRef !== 'string' ||
-    !('mergeBaseRef' in json) || typeof json.mergeBaseRef !== 'string'
+    !('oldRef' in json) ||
+    typeof json.oldRef !== 'string' ||
+    !('newRef' in json) ||
+    typeof json.newRef !== 'string' ||
+    !('mergeBaseRef' in json) ||
+    typeof json.mergeBaseRef !== 'string'
   ) {
     throw new Error('Invalid refs response payload');
   }

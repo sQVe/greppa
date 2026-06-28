@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { diffs } from './index';
 import type { DiffFile, DiffLine } from './types';
 
-const countLines = (diff: DiffFile) =>
-  diff.hunks.reduce((sum, hunk) => sum + hunk.lines.length, 0);
+const countLines = (diff: DiffFile) => diff.hunks.reduce((sum, hunk) => sum + hunk.lines.length, 0);
 
 const hasLineType = (diff: DiffFile, type: DiffLine['lineType']) =>
   diff.hunks.some((hunk) => hunk.lines.some((line) => line.lineType === type));

@@ -1,16 +1,36 @@
+import type { CommitEntry } from '@greppa/core';
 // @vitest-environment happy-dom
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { CommitEntry } from '@greppa/core';
-
 import { CommitList } from './CommitList';
 
 const commits: CommitEntry[] = [
-  { sha: 'aaa111', abbrevSha: 'aaa', subject: 'feat: first commit', author: 'Alice', date: '2026-04-03T10:00:00+00:00', files: ['src/a.ts'] },
-  { sha: 'bbb222', abbrevSha: 'bbb', subject: 'fix: second commit', author: 'Bob', date: '2026-04-02T09:00:00+00:00', files: ['src/b.ts'] },
-  { sha: 'ccc333', abbrevSha: 'ccc', subject: 'chore: third commit', author: 'Carol', date: '2026-04-01T08:00:00+00:00', files: ['src/c.ts'] },
+  {
+    sha: 'aaa111',
+    abbrevSha: 'aaa',
+    subject: 'feat: first commit',
+    author: 'Alice',
+    date: '2026-04-03T10:00:00+00:00',
+    files: ['src/a.ts'],
+  },
+  {
+    sha: 'bbb222',
+    abbrevSha: 'bbb',
+    subject: 'fix: second commit',
+    author: 'Bob',
+    date: '2026-04-02T09:00:00+00:00',
+    files: ['src/b.ts'],
+  },
+  {
+    sha: 'ccc333',
+    abbrevSha: 'ccc',
+    subject: 'chore: third commit',
+    author: 'Carol',
+    date: '2026-04-01T08:00:00+00:00',
+    files: ['src/c.ts'],
+  },
 ];
 
 const defaultProps = {
@@ -91,6 +111,56 @@ describe('CommitList', () => {
     await user.click(within(row).getByRole('button'));
 
     expect(screen.getByText('src/a.ts')).toBeDefined();
+  });
+
+  it('marks commit-file rows whose sha:path key is in reviewedCommitFiles', async () => {
+    const user = userEvent.setup();
+    render(<CommitList {...defaultProps} reviewedCommitFiles={new Set(['aaa111:src/a.ts'])} />);
+
+    const row = screen.getByRole('row', { name: /feat: first commit/i });
+    await user.click(within(row).getByRole('button'));
+
+    const reviewedRow = screen.getByRole('row', { name: /src\/a\.ts/ });
+    expect(reviewedRow.getAttribute('data-reviewed')).toBe('true');
+  });
+
+  it('does not mark commit-file rows for the same path under a different sha', async () => {
+    const user = userEvent.setup();
+    const sharedPathCommits: CommitEntry[] = [
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'feat: first commit',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/shared.ts'],
+      },
+      {
+        sha: 'bbb222',
+        abbrevSha: 'bbb',
+        subject: 'fix: second commit',
+        author: 'Bob',
+        date: '2026-04-02T09:00:00+00:00',
+        files: ['src/shared.ts'],
+      },
+    ];
+    render(
+      <CommitList
+        {...defaultProps}
+        commits={sharedPathCommits}
+        reviewedCommitFiles={new Set(['aaa111:src/shared.ts'])}
+      />,
+    );
+
+    const firstCommitRow = screen.getByRole('row', { name: /feat: first commit/i });
+    const secondCommitRow = screen.getByRole('row', { name: /fix: second commit/i });
+    await user.click(within(firstCommitRow).getByRole('button'));
+    await user.click(within(secondCommitRow).getByRole('button'));
+
+    const fileRows = screen.getAllByRole('row', { name: /src\/shared\.ts/ });
+    expect(fileRows).toHaveLength(2);
+    const reviewedRows = fileRows.filter((r) => r.getAttribute('data-reviewed') === 'true');
+    expect(reviewedRows).toHaveLength(1);
   });
 
   it('should render a file icon on each expanded commit file row', async () => {
@@ -176,7 +246,7 @@ describe('CommitList', () => {
     expect(unselectedChild.getAttribute('aria-selected')).toBe('false');
   });
 
-  it('should drop commit highlights when only some of a commit\'s files are selected', () => {
+  it("should drop commit highlights when only some of a commit's files are selected", () => {
     const commitsWithMultipleFiles: CommitEntry[] = [
       {
         sha: 'aaa111',
@@ -253,11 +323,10 @@ describe('CommitList', () => {
     onSelectCommit.mockClear();
     await user.click(screen.getByText('feat: first commit'));
 
-    expect(onSelectAllFilesInCommit).toHaveBeenCalledWith(
-      'aaa111',
-      ['src/a.ts'],
-      { shiftKey: false, metaKey: false },
-    );
+    expect(onSelectAllFilesInCommit).toHaveBeenCalledWith('aaa111', ['src/a.ts'], {
+      shiftKey: false,
+      metaKey: false,
+    });
     expect(onSelectCommit).not.toHaveBeenCalled();
   });
 
@@ -281,11 +350,10 @@ describe('CommitList', () => {
     await user.click(screen.getByText('feat: first commit'));
     await user.keyboard('{/Shift}');
 
-    expect(onSelectAllFilesInCommit).toHaveBeenCalledWith(
-      'aaa111',
-      ['src/a.ts'],
-      { shiftKey: true, metaKey: false },
-    );
+    expect(onSelectAllFilesInCommit).toHaveBeenCalledWith('aaa111', ['src/a.ts'], {
+      shiftKey: true,
+      metaKey: false,
+    });
     expect(onSelectCommit).not.toHaveBeenCalled();
   });
 
@@ -313,8 +381,12 @@ describe('CommitList', () => {
     await user.click(within(commitRow).getByRole('button'));
 
     expect(commitRow.getAttribute('aria-selected')).toBe('false');
-    expect(screen.getByRole('row', { name: /src\/a\.ts/ }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('row', { name: /src\/b\.ts/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('row', { name: /src\/a\.ts/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('row', { name: /src\/b\.ts/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
   });
 
   it('should not highlight an expanded commit when file selection moved to another commit', async () => {
@@ -334,8 +406,12 @@ describe('CommitList', () => {
 
     expect(firstRow.getAttribute('aria-selected')).toBe('false');
     expect(secondRow.getAttribute('aria-selected')).toBe('false');
-    expect(screen.getByRole('row', { name: /src\/a\.ts/ }).getAttribute('aria-selected')).toBe('false');
-    expect(screen.getByRole('row', { name: /src\/b\.ts/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('row', { name: /src\/a\.ts/ }).getAttribute('aria-selected')).toBe(
+      'false',
+    );
+    expect(screen.getByRole('row', { name: /src\/b\.ts/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
   });
 
   it('should still call onSelectCommit when a modifier is held but the commit is collapsed', async () => {
@@ -356,5 +432,147 @@ describe('CommitList', () => {
 
     expect(onSelectCommit).toHaveBeenCalledWith('aaa111', { shiftKey: true, metaKey: false });
     expect(onSelectAllFilesInCommit).not.toHaveBeenCalled();
+  });
+
+  describe('with visibleFilesBySha (filter active)', () => {
+    const filterCommits: CommitEntry[] = [
+      {
+        sha: 'aaa111',
+        abbrevSha: 'aaa',
+        subject: 'feat: a',
+        author: 'Alice',
+        date: '2026-04-03T10:00:00+00:00',
+        files: ['src/a.ts', 'src/a2.ts', 'src/a3.ts'],
+      },
+      {
+        sha: 'bbb222',
+        abbrevSha: 'bbb',
+        subject: 'fix: b',
+        author: 'Bob',
+        date: '2026-04-02T09:00:00+00:00',
+        files: ['src/b.ts'],
+      },
+    ];
+
+    it('annotates commit rows with (n / m matching) when filter is active', () => {
+      render(
+        <CommitList
+          {...defaultProps}
+          commits={filterCommits}
+          visibleFilesBySha={
+            new Map([
+              ['aaa111', ['src/a.ts']],
+              ['bbb222', []],
+            ])
+          }
+        />,
+      );
+
+      expect(screen.getByText(/\(1 \/ 3 matching\)/)).toBeDefined();
+      expect(screen.getByText(/\(0 \/ 1 matching\)/)).toBeDefined();
+    });
+
+    it('marks commits with zero visible files as dimmed', () => {
+      render(
+        <CommitList
+          {...defaultProps}
+          commits={filterCommits}
+          visibleFilesBySha={
+            new Map([
+              ['aaa111', ['src/a.ts']],
+              ['bbb222', []],
+            ])
+          }
+        />,
+      );
+
+      const dimmedRow = screen.getByRole('row', { name: /fix: b/i });
+      expect(dimmedRow.getAttribute('data-dimmed')).toBe('true');
+      const visibleRow = screen.getByRole('row', { name: /feat: a/i });
+      expect(visibleRow.getAttribute('data-dimmed')).toBeNull();
+    });
+
+    it('renders only visible files inside an expanded commit', async () => {
+      const user = userEvent.setup();
+      render(
+        <CommitList
+          {...defaultProps}
+          commits={filterCommits}
+          visibleFilesBySha={
+            new Map([
+              ['aaa111', ['src/a.ts', 'src/a3.ts']],
+              ['bbb222', ['src/b.ts']],
+            ])
+          }
+        />,
+      );
+
+      const row = screen.getByRole('row', { name: /feat: a/i });
+      await user.click(within(row).getByRole('button'));
+
+      expect(screen.queryByText('src/a2.ts')).toBeNull();
+      expect(screen.getByText('src/a.ts')).toBeDefined();
+      expect(screen.getByText('src/a3.ts')).toBeDefined();
+    });
+
+    it('passes only visible filtered entries to onSelectCommitFile (shift-range scope)', async () => {
+      const user = userEvent.setup();
+      const onSelectCommitFile = vi.fn();
+      render(
+        <CommitList
+          {...defaultProps}
+          commits={filterCommits}
+          onSelectCommitFile={onSelectCommitFile}
+          visibleFilesBySha={
+            new Map([
+              ['aaa111', ['src/a.ts', 'src/a3.ts']],
+              ['bbb222', ['src/b.ts']],
+            ])
+          }
+        />,
+      );
+
+      const row = screen.getByRole('row', { name: /feat: a/i });
+      await user.click(within(row).getByRole('button'));
+      await user.click(screen.getByText('src/a.ts'));
+
+      expect(onSelectCommitFile).toHaveBeenCalledWith(
+        'aaa111',
+        'src/a.ts',
+        [
+          { sha: 'aaa111', path: 'src/a.ts' },
+          { sha: 'aaa111', path: 'src/a3.ts' },
+          { sha: 'bbb222', path: 'src/b.ts' },
+        ],
+        { shiftKey: false, metaKey: false },
+      );
+    });
+
+    it('passes only visible filtered files to onSelectAllFilesInCommit', async () => {
+      const user = userEvent.setup();
+      const onSelectAllFilesInCommit = vi.fn();
+      render(
+        <CommitList
+          {...defaultProps}
+          commits={filterCommits}
+          onSelectAllFilesInCommit={onSelectAllFilesInCommit}
+          visibleFilesBySha={
+            new Map([
+              ['aaa111', ['src/a.ts']],
+              ['bbb222', ['src/b.ts']],
+            ])
+          }
+        />,
+      );
+
+      const row = screen.getByRole('row', { name: /feat: a/i });
+      await user.click(within(row).getByRole('button'));
+      await user.click(screen.getByText('feat: a'));
+
+      expect(onSelectAllFilesInCommit).toHaveBeenCalledWith('aaa111', ['src/a.ts'], {
+        shiftKey: false,
+        metaKey: false,
+      });
+    });
   });
 });

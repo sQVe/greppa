@@ -44,9 +44,7 @@ describe('useWorktreeFiles', () => {
         status: 500,
       } as Response);
 
-      await expect(fetchWorktreeFiles()).rejects.toThrow(
-        'Failed to fetch working tree files: 500',
-      );
+      await expect(fetchWorktreeFiles()).rejects.toThrow('Failed to fetch working tree files: 500');
     });
   });
 });

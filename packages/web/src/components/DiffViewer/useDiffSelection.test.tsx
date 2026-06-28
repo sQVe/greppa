@@ -3,8 +3,9 @@ import { cleanup, fireEvent, render } from '@testing-library/react';
 import { useRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import styles from './DiffViewer.module.css';
 import { useDiffSelection } from './useDiffSelection';
+
+import styles from './DiffViewer.module.css';
 
 const TestHost = ({ enabled = true }: { enabled?: boolean }) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -172,9 +173,7 @@ describe('useDiffSelection', () => {
       viewer.dispatchEvent(copyEvent);
 
       expect(copyEvent.defaultPrevented).toBe(true);
-      expect(clipboardData.getData('text/plain')).toBe(
-        'left line 1\nleft line 2',
-      );
+      expect(clipboardData.getData('text/plain')).toBe('left line 1\nleft line 2');
     });
 
     it('skips empty cells during copy', () => {
@@ -193,9 +192,7 @@ describe('useDiffSelection', () => {
       });
       viewer.dispatchEvent(copyEvent);
 
-      expect(clipboardData.getData('text/plain')).toBe(
-        'right line 1\nright line 2\nright line 3',
-      );
+      expect(clipboardData.getData('text/plain')).toBe('right line 1\nright line 2\nright line 3');
     });
 
     it('does not intercept copy when no side is active', () => {

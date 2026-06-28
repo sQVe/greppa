@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -8,6 +6,8 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { zodValidator, fallback } from '@tanstack/zod-adapter';
+// @vitest-environment happy-dom
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import type { RefObject } from 'react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -114,7 +114,9 @@ describe('useMultiSelect', () => {
     });
 
     it('should read multiple files from URL', async () => {
-      const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts', 'README.md'] }));
+      const { result } = await renderMultiSelect(
+        sectionUrl({ file: ['src/index.ts', 'README.md'] }),
+      );
 
       expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts', 'README.md']));
       expect(result.current.isMultiSelect).toBe(true);
@@ -145,7 +147,9 @@ describe('useMultiSelect', () => {
     it('should replace selection with a single path', async () => {
       const { result } = await renderMultiSelect();
 
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
@@ -154,12 +158,16 @@ describe('useMultiSelect', () => {
 
     it('should clear previous selection', async () => {
       const { result } = await renderMultiSelect();
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
       });
 
-      act(() => { result.current.select('src/utils.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/utils.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/utils.ts']));
@@ -169,7 +177,9 @@ describe('useMultiSelect', () => {
     it('should set active source', async () => {
       const { result } = await renderMultiSelect();
 
-      act(() => { result.current.select('config.ts', 'worktree'); });
+      act(() => {
+        result.current.select('config.ts', 'worktree');
+      });
 
       await waitFor(() => {
         expect(result.current.activeSource).toBe('worktree');
@@ -179,7 +189,9 @@ describe('useMultiSelect', () => {
     it('should report not multi-selecting for single selection', async () => {
       const { result } = await renderMultiSelect();
 
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.isMultiSelect).toBe(false);
@@ -189,13 +201,17 @@ describe('useMultiSelect', () => {
     it('should use pushState for navigation', async () => {
       const { result, router } = await renderMultiSelect();
 
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
       });
 
-      act(() => { result.current.select('src/utils.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/utils.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/utils.ts']));
@@ -210,7 +226,9 @@ describe('useMultiSelect', () => {
     it('should produce short URL with s param', async () => {
       const { result, router } = await renderMultiSelect();
 
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
 
       await waitFor(() => {
         const search = router.state.location.search as Record<string, unknown>;
@@ -223,7 +241,9 @@ describe('useMultiSelect', () => {
     it('should navigate to /changes for committed files', async () => {
       const { result, router } = await renderMultiSelect();
 
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/changes');
@@ -233,7 +253,9 @@ describe('useMultiSelect', () => {
     it('should navigate to /worktree for worktree files', async () => {
       const { result, router } = await renderMultiSelect();
 
-      act(() => { result.current.select('config.ts', 'worktree'); });
+      act(() => {
+        result.current.select('config.ts', 'worktree');
+      });
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/worktree');
@@ -245,7 +267,9 @@ describe('useMultiSelect', () => {
     it('should add a path to the selection', async () => {
       const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts'] }));
 
-      act(() => { result.current.toggle('src/utils.ts', 'committed'); });
+      act(() => {
+        result.current.toggle('src/utils.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts', 'src/utils.ts']));
@@ -253,9 +277,13 @@ describe('useMultiSelect', () => {
     });
 
     it('should remove a path already in the selection', async () => {
-      const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts', 'src/utils.ts'] }));
+      const { result } = await renderMultiSelect(
+        sectionUrl({ file: ['src/index.ts', 'src/utils.ts'] }),
+      );
 
-      act(() => { result.current.toggle('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.toggle('src/index.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/utils.ts']));
@@ -265,7 +293,9 @@ describe('useMultiSelect', () => {
     it('should report multi-selecting when more than one selected', async () => {
       const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts'] }));
 
-      act(() => { result.current.toggle('src/utils.ts', 'committed'); });
+      act(() => {
+        result.current.toggle('src/utils.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.isMultiSelect).toBe(true);
@@ -275,7 +305,9 @@ describe('useMultiSelect', () => {
     it('should reset selection when toggling from a different source', async () => {
       const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts'] }));
 
-      act(() => { result.current.toggle('config.ts', 'worktree'); });
+      act(() => {
+        result.current.toggle('config.ts', 'worktree');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['config.ts']));
@@ -285,12 +317,16 @@ describe('useMultiSelect', () => {
 
     it('should use replaceState for navigation', async () => {
       const { result, router } = await renderMultiSelect();
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
       });
 
-      act(() => { result.current.toggle('src/utils.ts', 'committed'); });
+      act(() => {
+        result.current.toggle('src/utils.ts', 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts', 'src/utils.ts']));
@@ -307,7 +343,9 @@ describe('useMultiSelect', () => {
     it('should write * sentinel to URL', async () => {
       const { result, router } = await renderMultiSelect();
 
-      act(() => { result.current.selectAll(committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectAll(committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(router.state.location.search).toMatchObject({ file: ['*'] });
@@ -317,7 +355,9 @@ describe('useMultiSelect', () => {
     it('should resolve * sentinel to all committed file paths', async () => {
       const { result } = await renderMultiSelect();
 
-      act(() => { result.current.selectAll(committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectAll(committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(committedFilePaths));
@@ -327,7 +367,9 @@ describe('useMultiSelect', () => {
     it('should set active source', async () => {
       const { result } = await renderMultiSelect();
 
-      act(() => { result.current.selectAll(worktreeFilePaths, 'worktree'); });
+      act(() => {
+        result.current.selectAll(worktreeFilePaths, 'worktree');
+      });
 
       await waitFor(() => {
         expect(result.current.activeSource).toBe('worktree');
@@ -337,7 +379,9 @@ describe('useMultiSelect', () => {
     it('should report multi-selecting when given multiple paths', async () => {
       const { result } = await renderMultiSelect();
 
-      act(() => { result.current.selectAll(committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectAll(committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.isMultiSelect).toBe(true);
@@ -346,12 +390,16 @@ describe('useMultiSelect', () => {
 
     it('should use replaceState for navigation', async () => {
       const { result, router } = await renderMultiSelect();
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
       });
 
-      act(() => { result.current.selectAll(committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectAll(committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(committedFilePaths));
@@ -368,7 +416,9 @@ describe('useMultiSelect', () => {
     it('should add all given paths to existing selection', async () => {
       const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts'] }));
 
-      act(() => { result.current.toggleAll(['src/utils.ts', 'README.md'], 'committed'); });
+      act(() => {
+        result.current.toggleAll(['src/utils.ts', 'README.md'], 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(
@@ -382,7 +432,9 @@ describe('useMultiSelect', () => {
         sectionUrl({ file: ['src/index.ts', 'src/utils.ts', 'README.md'] }),
       );
 
-      act(() => { result.current.toggleAll(['src/index.ts', 'src/utils.ts'], 'committed'); });
+      act(() => {
+        result.current.toggleAll(['src/index.ts', 'src/utils.ts'], 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['README.md']));
@@ -390,9 +442,13 @@ describe('useMultiSelect', () => {
     });
 
     it('should add paths when not all are already selected', async () => {
-      const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts', 'src/utils.ts'] }));
+      const { result } = await renderMultiSelect(
+        sectionUrl({ file: ['src/index.ts', 'src/utils.ts'] }),
+      );
 
-      act(() => { result.current.toggleAll(['src/utils.ts', 'README.md'], 'committed'); });
+      act(() => {
+        result.current.toggleAll(['src/utils.ts', 'README.md'], 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(
@@ -404,7 +460,9 @@ describe('useMultiSelect', () => {
     it('should reset selection when toggling from a different source', async () => {
       const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts'] }));
 
-      act(() => { result.current.toggleAll(['config.ts', 'lib/helpers.ts'], 'worktree'); });
+      act(() => {
+        result.current.toggleAll(['config.ts', 'lib/helpers.ts'], 'worktree');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['config.ts', 'lib/helpers.ts']));
@@ -416,12 +474,16 @@ describe('useMultiSelect', () => {
   describe('selectRange', () => {
     it('should select all paths between anchor and target inclusive', async () => {
       const { result } = await renderMultiSelect();
-      act(() => { result.current.select('src/utils.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/utils.ts', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/utils.ts']));
       });
 
-      act(() => { result.current.selectRange('README.md', committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectRange('README.md', committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/utils.ts', 'README.md']));
@@ -430,12 +492,16 @@ describe('useMultiSelect', () => {
 
     it('should select range in reverse direction', async () => {
       const { result } = await renderMultiSelect();
-      act(() => { result.current.select('README.md', 'committed'); });
+      act(() => {
+        result.current.select('README.md', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['README.md']));
       });
 
-      act(() => { result.current.selectRange('src/index.ts', committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectRange('src/index.ts', committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(committedFilePaths));
@@ -445,7 +511,9 @@ describe('useMultiSelect', () => {
     it('should select only target when no anchor exists', async () => {
       const { result } = await renderMultiSelect();
 
-      act(() => { result.current.selectRange('src/utils.ts', committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectRange('src/utils.ts', committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/utils.ts']));
@@ -454,17 +522,23 @@ describe('useMultiSelect', () => {
 
     it('should preserve anchor for subsequent range selections', async () => {
       const { result } = await renderMultiSelect();
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
       });
 
-      act(() => { result.current.selectRange('src/utils.ts', committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectRange('src/utils.ts', committedFilePaths, 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts', 'src/utils.ts']));
       });
 
-      act(() => { result.current.selectRange('README.md', committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectRange('README.md', committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(committedFilePaths));
@@ -473,12 +547,16 @@ describe('useMultiSelect', () => {
 
     it('should reset selection when source changes', async () => {
       const { result } = await renderMultiSelect();
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
       });
 
-      act(() => { result.current.selectRange('lib/helpers.ts', worktreeFilePaths, 'worktree'); });
+      act(() => {
+        result.current.selectRange('lib/helpers.ts', worktreeFilePaths, 'worktree');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['lib/helpers.ts']));
@@ -488,12 +566,16 @@ describe('useMultiSelect', () => {
 
     it('should use replaceState for navigation', async () => {
       const { result, router } = await renderMultiSelect();
-      act(() => { result.current.select('src/index.ts', 'committed'); });
+      act(() => {
+        result.current.select('src/index.ts', 'committed');
+      });
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(['src/index.ts']));
       });
 
-      act(() => { result.current.selectRange('README.md', committedFilePaths, 'committed'); });
+      act(() => {
+        result.current.selectRange('README.md', committedFilePaths, 'committed');
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set(committedFilePaths));
@@ -508,9 +590,13 @@ describe('useMultiSelect', () => {
 
   describe('clear', () => {
     it('should empty the selection', async () => {
-      const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts', 'src/utils.ts'] }));
+      const { result } = await renderMultiSelect(
+        sectionUrl({ file: ['src/index.ts', 'src/utils.ts'] }),
+      );
 
-      act(() => { result.current.clear(); });
+      act(() => {
+        result.current.clear();
+      });
 
       await waitFor(() => {
         expect(result.current.selectedPaths).toEqual(new Set());
@@ -520,7 +606,9 @@ describe('useMultiSelect', () => {
     it('should reset active source', async () => {
       const { result } = await renderMultiSelect(sectionUrl({ file: ['src/index.ts'] }));
 
-      act(() => { result.current.clear(); });
+      act(() => {
+        result.current.clear();
+      });
 
       await waitFor(() => {
         expect(result.current.activeSource).toBeNull();

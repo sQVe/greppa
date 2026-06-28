@@ -16,7 +16,12 @@ const isChangedRow = (item: VirtualItem) => {
   const leftType = item.row.left?.type;
   const rightType = item.row.right?.type;
 
-  return leftType === 'removed' || leftType === 'added' || rightType === 'removed' || rightType === 'added';
+  return (
+    leftType === 'removed' ||
+    leftType === 'added' ||
+    rightType === 'removed' ||
+    rightType === 'added'
+  );
 };
 
 const findNextHunk = (items: VirtualItem[], currentIndex: number): number | null => {

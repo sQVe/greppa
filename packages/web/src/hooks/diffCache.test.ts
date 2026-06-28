@@ -1,9 +1,7 @@
 import 'fake-indexeddb/auto';
-
+import type { DiffResponse } from '@greppa/core';
 import type * as IdbKeyval from 'idb-keyval';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { DiffResponse } from '@greppa/core';
 
 vi.mock('idb-keyval', async () => {
   const actual = await vi.importActual<typeof IdbKeyval>('idb-keyval');
@@ -87,8 +85,8 @@ describe('diffCache', () => {
 
     const { getDiff } = await import('./diffCache');
 
-    await expect(
-      getDiff({ oldRef: 'a', newRef: 'b', path: 'c' }),
-    ).rejects.toThrow('transaction aborted');
+    await expect(getDiff({ oldRef: 'a', newRef: 'b', path: 'c' })).rejects.toThrow(
+      'transaction aborted',
+    );
   });
 });

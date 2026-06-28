@@ -30,19 +30,21 @@ const sampleChanges: DiffMapping[] = [
 vi.stubGlobal(
   'Worker',
   class {
-    postMessage = mockPostMessage.mockImplementation((request: { requestId: string; filePath: string }) => {
-      const response: DiffWorkerResponse = {
-        type: 'diff-result',
-        requestId: request.requestId,
-        filePath: request.filePath,
-        changes: sampleChanges,
-        hitTimeout: false,
-        error: null,
-      };
-      setTimeout(() => {
-        messageHandler?.({ data: response } as MessageEvent);
-      }, 0);
-    });
+    postMessage = mockPostMessage.mockImplementation(
+      (request: { requestId: string; filePath: string }) => {
+        const response: DiffWorkerResponse = {
+          type: 'diff-result',
+          requestId: request.requestId,
+          filePath: request.filePath,
+          changes: sampleChanges,
+          hitTimeout: false,
+          error: null,
+        };
+        setTimeout(() => {
+          messageHandler?.({ data: response } as MessageEvent);
+        }, 0);
+      },
+    );
     addEventListener = mockAddEventListener.mockImplementation(
       (type: string, handler: (event: MessageEvent) => void) => {
         if (type === 'message') {
@@ -87,9 +89,7 @@ describe('useDiffComputation', () => {
   });
 
   it('returns null when filePath is null', () => {
-    const { result } = renderHook(() =>
-      useDiffComputation(null, null, null),
-    );
+    const { result } = renderHook(() => useDiffComputation(null, null, null));
 
     expect(result.current.changes).toBeNull();
   });
@@ -107,9 +107,7 @@ describe('useDiffComputation', () => {
   });
 
   it('posts diff request to worker', () => {
-    renderHook(() =>
-      useDiffComputation('src/foo.ts', 'old content', 'new content'),
-    );
+    renderHook(() => useDiffComputation('src/foo.ts', 'old content', 'new content'));
 
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -122,10 +120,9 @@ describe('useDiffComputation', () => {
   });
 
   it('reuses the same worker across renders', () => {
-    const { rerender } = renderHook(
-      ({ path }) => useDiffComputation(path, 'old', 'new'),
-      { initialProps: { path: 'src/foo.ts' as string | null } },
-    );
+    const { rerender } = renderHook(({ path }) => useDiffComputation(path, 'old', 'new'), {
+      initialProps: { path: 'src/foo.ts' as string | null },
+    });
 
     rerender({ path: 'src/bar.ts' });
 
@@ -133,10 +130,9 @@ describe('useDiffComputation', () => {
   });
 
   it('ignores stale responses after filePath changes', async () => {
-    const { result, rerender } = renderHook(
-      ({ path }) => useDiffComputation(path, 'old', 'new'),
-      { initialProps: { path: 'src/foo.ts' as string | null } },
-    );
+    const { result, rerender } = renderHook(({ path }) => useDiffComputation(path, 'old', 'new'), {
+      initialProps: { path: 'src/foo.ts' as string | null },
+    });
 
     mockPostMessage.mockImplementation(() => {});
     rerender({ path: 'src/bar.ts' });

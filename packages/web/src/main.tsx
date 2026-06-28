@@ -7,7 +7,6 @@ import { createRoot } from 'react-dom/client';
 import './reset.css';
 // oxlint-disable-next-line no-unassigned-import
 import '@greppa/ui';
-
 import { router } from './router';
 
 const queryClient = new QueryClient();

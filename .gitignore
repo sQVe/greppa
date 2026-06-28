@@ -1,6 +1,10 @@
 # AI
-.code-review-graph
-.code-review-graph/
+.beads
+.beads/
+graphify-out/manifest.json
+graphify-out/cache/
+graphify-out/cost.json
+graphify-out/graph.html
 
 # Design.
 .mockups/
@@ -10,7 +14,6 @@ node_modules/
 
 # Build
 dist/
-coverage/
 
 # Environment
 .env.local

@@ -1,6 +1,14 @@
 packages:
   - 'packages/*'
 
+onlyBuiltDependencies:
+  - '@ast-grep/cli'
+  - fallow
+
+peerDependencyRules:
+  allowedVersions:
+    '@tanstack/zod-adapter>zod': '4'
+
 overrides:
   vite: 'npm:@voidzero-dev/vite-plus-core@latest'
   vitest: 'npm:@voidzero-dev/vite-plus-test@latest'

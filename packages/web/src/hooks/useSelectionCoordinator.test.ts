@@ -118,7 +118,7 @@ describe('useSelectionCoordinator', () => {
 
   it('prefetches the two committed files following the selection at depth 2', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery');
+    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery').mockResolvedValue();
     const files = [file('src/a.ts'), file('src/b.ts'), file('src/c.ts'), file('src/d.ts')];
 
     renderHook(
@@ -210,7 +210,7 @@ describe('useSelectionCoordinator', () => {
 
   it('does not prefetch when refs are unset', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery');
+    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery').mockResolvedValue();
     const files = [file('src/a.ts'), file('src/b.ts'), file('src/c.ts')];
 
     renderHook(

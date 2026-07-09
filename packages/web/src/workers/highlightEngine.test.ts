@@ -16,6 +16,7 @@ vi.mock('shiki', () => ({
 
 const makeRequest = (overrides: Partial<HighlightRequest> = {}): HighlightRequest => ({
   type: 'highlight',
+  requestId: 1,
   filePath: 'src/foo.ts',
   language: 'typescript',
   theme: 'catppuccin-mocha',

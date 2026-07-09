@@ -14,7 +14,7 @@ import type { FileEntry } from '@greppa/core';
 import { Api } from './Api';
 import { CacheService, CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
 import { GitError, GitService, GitServiceLive, RefsConfig } from './GitService';
-import type { RefsConfigValue, RepoPath } from './GitService';
+import type { RefsConfigValue } from './GitService';
 
 interface CacheEntry<T> {
   value: T;
@@ -32,6 +32,8 @@ interface StoredState {
   commits: string[];
   commitFile: string[];
 }
+
+type WarmupServices = GitService | CacheService | ChildProcessSpawner;
 
 const isDiffContent = (value: unknown): value is DiffContent =>
   typeof value === 'object' &&
@@ -307,8 +309,6 @@ const encodeSseData = (payload: unknown): Uint8Array =>
 const SSE_DONE_EVENT = sseEncoder.encode('event: done\ndata: {}\n\n');
 
 const WARMUP_CONCURRENCY = 2;
-
-type WarmupServices = GitService | CacheService | ChildProcessSpawner | typeof RepoPath;
 
 const makeWarmupHandler = (services: ServiceMap.ServiceMap<WarmupServices>) =>
   Effect.gen(function* () {

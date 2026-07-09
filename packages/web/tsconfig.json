@@ -10,5 +10,5 @@
     "outDir": "dist"
   },
   "include": ["src", "src/**/*.json"],
-  "references": [{ "path": "../ui" }]
+  "references": [{ "path": "../core" }, { "path": "../ui" }]
 }

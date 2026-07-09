@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
+  test: {
+    setupFiles: ['./packages/web/src/test/setup.ts'],
+  },
   staged: {
     '*.{ts,tsx}': [
       'vp lint --fix',

@@ -366,6 +366,6 @@ export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDist
     Layer.provide(GitServiceLive),
     Layer.provide(CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG)),
     Layer.provide(Layer.succeed(RefsConfig, refsConfig)),
-    Layer.provide(NodeHttpServer.layer(createServer, { port })),
+    Layer.provide(NodeHttpServer.layer(createServer, { port, host: '127.0.0.1' })),
   );
 };

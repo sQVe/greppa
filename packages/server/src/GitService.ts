@@ -73,25 +73,31 @@ const statusMap: Record<string, FileEntry['changeType']> = {
   U: 'modified',
 };
 
-export const parseNameStatus = (output: string): NameStatusEntry[] =>
-  output
-    .split('\n')
-    .filter((line) => line.trim() !== '')
-    .flatMap((line): NameStatusEntry[] => {
-      const parts = line.split('\t');
-      const status = parts[0] ?? '';
+export const parseNameStatus = (output: string): NameStatusEntry[] => {
+  const entries: NameStatusEntry[] = [];
+  const fields = output.split('\0');
+  let i = 0;
 
-      if (status.startsWith('R') || status.startsWith('C')) {
-        return [{ path: parts[2] ?? '', changeType: 'renamed', oldPath: parts[1] }];
-      }
+  while (i < fields.length) {
+    const status = fields[i++] ?? '';
+    if (status === '') {
+      continue;
+    }
+    const path = fields[i++] ?? '';
 
-      const changeType = statusMap[status];
-      if (changeType == null) {
-        return [];
-      }
+    if (status.startsWith('R') || status.startsWith('C')) {
+      entries.push({ path: fields[i++] ?? '', changeType: 'renamed', oldPath: path });
+      continue;
+    }
 
-      return [{ path: parts[1] ?? '', changeType }];
-    });
+    const changeType = statusMap[status];
+    if (changeType != null) {
+      entries.push({ path, changeType });
+    }
+  }
+
+  return entries;
+};
 
 const parseNumstatCount = (raw: string | undefined): number => {
   if (raw == null || raw === '-') {
@@ -270,7 +276,7 @@ export const GitServiceLive = Layer.succeed(
       Effect.all([validateRef(oldRef), validateRef(newRef)]).pipe(
         Effect.flatMap(() =>
           Effect.all([
-            runGit(['diff', '--name-status', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
+            runGit(['diff', '--name-status', '-z', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
             runGit(['diff', '--numstat', '-z', oldRef, newRef]).pipe(Effect.map(parseNumstat)),
           ]),
         ),
@@ -322,7 +328,7 @@ export const GitServiceLive = Layer.succeed(
       ),
     listWorkingTreeFiles: () =>
       Effect.all([
-        runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
+        runGit(['diff', '--name-status', '-z', 'HEAD']).pipe(Effect.map(parseNameStatus)),
         runGit(['diff', '--numstat', '-z', 'HEAD']).pipe(Effect.map(parseNumstat)),
         runGit(['ls-files', '--others', '--exclude-standard', '-z']).pipe(
           Effect.map((output) => output.split('\0').filter((path) => path !== '')),

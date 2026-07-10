@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -72,7 +73,7 @@ const runGitService = <A, E, R>(
 describe('GitService', () => {
   describe('parseNameStatus', () => {
     it('should parse modified file', () => {
-      const result = parseNameStatus('M\tsrc/index.ts');
+      const result = parseNameStatus('M\0src/index.ts\0');
 
       expect(result).toEqual([
         { path: 'src/index.ts', changeType: 'modified' },
@@ -80,7 +81,7 @@ describe('GitService', () => {
     });
 
     it('should parse added file', () => {
-      const result = parseNameStatus('A\tnew-file.ts');
+      const result = parseNameStatus('A\0new-file.ts\0');
 
       expect(result).toEqual([
         { path: 'new-file.ts', changeType: 'added' },
@@ -88,7 +89,7 @@ describe('GitService', () => {
     });
 
     it('should parse deleted file', () => {
-      const result = parseNameStatus('D\told-file.ts');
+      const result = parseNameStatus('D\0old-file.ts\0');
 
       expect(result).toEqual([
         { path: 'old-file.ts', changeType: 'deleted' },
@@ -96,7 +97,7 @@ describe('GitService', () => {
     });
 
     it('should parse renamed file with similarity', () => {
-      const result = parseNameStatus('R100\told.ts\tnew.ts');
+      const result = parseNameStatus('R100\0old.ts\0new.ts\0');
 
       expect(result).toEqual([
         { path: 'new.ts', changeType: 'renamed', oldPath: 'old.ts' },
@@ -104,7 +105,7 @@ describe('GitService', () => {
     });
 
     it('should parse multiple lines', () => {
-      const output = 'M\ta.ts\nA\tb.ts\nD\tc.ts';
+      const output = 'M\0a.ts\0A\0b.ts\0D\0c.ts\0';
       const result = parseNameStatus(output);
 
       expect(result).toEqual([
@@ -115,7 +116,7 @@ describe('GitService', () => {
     });
 
     it('should parse copied file with similarity', () => {
-      const result = parseNameStatus('C100\told.ts\tnew.ts');
+      const result = parseNameStatus('C100\0old.ts\0new.ts\0');
 
       expect(result).toEqual([
         { path: 'new.ts', changeType: 'renamed', oldPath: 'old.ts' },
@@ -123,7 +124,7 @@ describe('GitService', () => {
     });
 
     it('should parse type-change as modified', () => {
-      const result = parseNameStatus('T\tpath/to/file');
+      const result = parseNameStatus('T\0path/to/file\0');
 
       expect(result).toEqual([
         { path: 'path/to/file', changeType: 'modified' },
@@ -131,7 +132,7 @@ describe('GitService', () => {
     });
 
     it('should parse unmerged file as modified', () => {
-      const result = parseNameStatus('U\tconflict.ts');
+      const result = parseNameStatus('U\0conflict.ts\0');
 
       expect(result).toEqual([
         { path: 'conflict.ts', changeType: 'modified' },
@@ -139,15 +140,15 @@ describe('GitService', () => {
     });
 
     it('should skip truly unknown status letters', () => {
-      const result = parseNameStatus('Z\tfile.ts\nM\ta.ts');
+      const result = parseNameStatus('Z\0file.ts\0M\0a.ts\0');
 
       expect(result).toEqual([
         { path: 'a.ts', changeType: 'modified' },
       ]);
     });
 
-    it('should skip empty lines', () => {
-      const result = parseNameStatus('M\ta.ts\n\nA\tb.ts\n');
+    it('should skip empty records', () => {
+      const result = parseNameStatus('M\0a.ts\0\0A\0b.ts\0');
 
       expect(result).toEqual([
         { path: 'a.ts', changeType: 'modified' },
@@ -203,6 +204,50 @@ describe('GitService', () => {
       expect(deriveSizeTier(499)).toBe('medium');
       expect(deriveSizeTier(500)).toBe('large');
       expect(deriveSizeTier(9999)).toBe('large');
+    });
+  });
+
+  describe('name-status integration', () => {
+    it('preserves tabs and newlines in commit and worktree paths', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-name-status-'));
+      const repoPath = join(tempDir, 'repo');
+      const modifiedPath = 'modified\tfile\nname.txt';
+      const oldPath = 'old\tfile\nname.txt';
+      const newPath = 'renamed\tfile\nname.txt';
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, modifiedPath), 'before\n');
+        writeFileSync(join(repoPath, oldPath), 'rename me\n');
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git config diff.renames true', { cwd: repoPath });
+        execSync('git add -A', { cwd: repoPath });
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+          cwd: repoPath,
+        });
+
+        writeFileSync(join(repoPath, modifiedPath), 'after\n');
+        renameSync(join(repoPath, oldPath), join(repoPath, newPath));
+        execSync('git add -A', { cwd: repoPath });
+
+        const worktree = await runGitService((git) => git.listWorkingTreeFiles(), repoPath);
+
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm changed', {
+          cwd: repoPath,
+        });
+        const committed = await runGitService((git) => git.listFiles('HEAD~1', 'HEAD'), repoPath);
+        const expected = [
+          { path: modifiedPath, changeType: 'modified', sizeTier: 'small' },
+          { path: newPath, changeType: 'renamed', oldPath, sizeTier: 'small' },
+        ];
+
+        expect(worktree).toHaveLength(expected.length);
+        expect(worktree).toEqual(expect.arrayContaining(expected));
+        expect(committed).toHaveLength(expected.length);
+        expect(committed).toEqual(expect.arrayContaining(expected));
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 

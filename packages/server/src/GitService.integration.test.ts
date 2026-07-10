@@ -422,6 +422,33 @@ describe('GitService', () => {
   });
 
   describe('listWorkingTreeFiles', () => {
+    it('includes untracked files as additions without changing tracked entries', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-list-'));
+      const repoPath = join(tempDir, 'repo');
+      const untrackedPath = 'untracked\tfile\nname.txt';
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, 'tracked.txt'), 'before\n');
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git add tracked.txt', { cwd: repoPath });
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+          cwd: repoPath,
+        });
+        writeFileSync(join(repoPath, 'tracked.txt'), 'after\n');
+        writeFileSync(join(repoPath, untrackedPath), 'new\n');
+
+        const result = await runGitService((git) => git.listWorkingTreeFiles(), repoPath);
+
+        expect(result).toEqual([
+          { path: 'tracked.txt', changeType: 'modified', sizeTier: 'small' },
+          { path: untrackedPath, changeType: 'added', sizeTier: 'small' },
+        ]);
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
     it('should return an array of FileEntry', async () => {
       const result = (await runGitService((git) => git.listWorkingTreeFiles())) as FileEntry[];
 

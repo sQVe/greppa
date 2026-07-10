@@ -324,9 +324,17 @@ export const GitServiceLive = Layer.succeed(
       Effect.all([
         runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
         runGit(['diff', '--numstat', '-z', 'HEAD']).pipe(Effect.map(parseNumstat)),
+        runGit(['ls-files', '--others', '--exclude-standard', '-z']).pipe(
+          Effect.map((output) => output.split('\0').filter((path) => path !== '')),
+        ),
       ]).pipe(
-        Effect.map(([nameStatus, numstat]) =>
-          nameStatus.map((entry): FileEntry => {
+        Effect.map(([nameStatus, numstat, untracked]) =>
+          [
+            ...nameStatus,
+            ...untracked.map(
+              (path): NameStatusEntry => ({ path, changeType: 'added' }),
+            ),
+          ].map((entry): FileEntry => {
             const lineCount = numstat.get(entry.path) ?? 0;
             return {
               ...entry,

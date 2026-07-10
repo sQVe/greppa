@@ -1,5 +1,14 @@
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { CommitEntry, FileEntry } from '@greppa/core';
 import { NodeServices } from '@effect/platform-node';
@@ -40,22 +49,23 @@ const hasDefaultBranchRef =
   resolveRef('refs/remotes/origin/main') != null ||
   resolveRef('refs/remotes/origin/master') != null;
 
-const TestLayer = Layer.mergeAll(
-  GitServiceLive,
-  Layer.succeed(RepoPath, monorepoRoot),
-  NodeServices.layer,
-);
-
 type Git = InstanceType<typeof GitService>;
 
-const runGitService = <A, E, R>(fn: (git: Git) => Effect.Effect<A, E, R>): Promise<A> =>
+const runGitService = <A, E, R>(
+  fn: (git: Git) => Effect.Effect<A, E, R>,
+  repoPath = monorepoRoot,
+): Promise<A> =>
   Effect.runPromise(
     Effect.provide(
       Effect.gen(function* () {
         const git = yield* GitService;
         return yield* fn(git);
       }),
-      TestLayer,
+      Layer.mergeAll(
+        GitServiceLive,
+        Layer.succeed(RepoPath, repoPath),
+        NodeServices.layer,
+      ),
     ) as Effect.Effect<A, E>,
   );
 
@@ -467,6 +477,39 @@ describe('GitService', () => {
 
       const expected = readFileSync(`${monorepoRoot}/package.json`, 'utf-8');
       expect(result).toBe(expected);
+    });
+
+    it('should reject a staged symlink without returning external content', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-read-'));
+      const repoPath = join(tempDir, 'repo');
+      const sentinelPath = join(tempDir, 'sentinel.txt');
+      const sentinelContent = 'ABU-218 external sentinel';
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, 'normal.txt'), 'normal file');
+        writeFileSync(sentinelPath, sentinelContent);
+        symlinkSync(sentinelPath, join(repoPath, 'staged-link.txt'));
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git add normal.txt staged-link.txt', { cwd: repoPath });
+
+        await expect(
+          runGitService((git) => git.getWorkingTreeFileContent('normal.txt'), repoPath),
+        ).resolves.toBe('normal file');
+
+        const [result] = await Promise.allSettled([
+          runGitService((git) => git.getWorkingTreeFileContent('staged-link.txt'), repoPath),
+        ]);
+        expect(result).not.toEqual({ status: 'fulfilled', value: sentinelContent });
+        expect(result).toEqual({
+          status: 'rejected',
+          reason: expect.objectContaining({
+            message: expect.stringContaining('symbolic link'),
+          }),
+        });
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
     });
 
     it('should fail for non-existent file', async () => {

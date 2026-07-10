@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { lstat, readFile } from 'node:fs/promises';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 import type { CommitEntry, FileEntry, SizeTier } from '@greppa/core';
 import { Brand, Data, Effect, Layer, ServiceMap, Stream } from 'effect';
@@ -339,9 +339,26 @@ export const GitServiceLive = Layer.succeed(
       validatePath(path).pipe(
         Effect.flatMap(() =>
           Effect.gen(function* () {
-            const repoPath = yield* RepoPath;
+            const repoPath = resolve(yield* RepoPath);
+            const filePath = resolve(repoPath, path);
+            const relativePath = relative(repoPath, filePath);
+
+            if (
+              relativePath === '..' ||
+              relativePath.startsWith(`..${sep}`) ||
+              isAbsolute(relativePath)
+            ) {
+              return yield* new GitError({ message: `Path escapes repository: ${path}` });
+            }
+
             return yield* Effect.tryPromise({
-              try: () => readFile(resolve(repoPath, path), 'utf-8'),
+              try: async () => {
+                const stats = await lstat(filePath);
+                if (stats.isSymbolicLink()) {
+                  throw new Error(`Refusing to read symbolic link: ${path}`);
+                }
+                return readFile(filePath, 'utf-8');
+              },
               catch: (error) =>
                 new GitError({
                   message: error instanceof Error ? error.message : `Failed to read file: ${path}`,

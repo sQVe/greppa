@@ -22,6 +22,7 @@ export const FileEntry = Schema.Struct({
   changeType: ChangeType,
   oldPath: Schema.optional(Schema.String),
   sizeTier: SizeTier,
+  binary: Schema.optional(Schema.Boolean),
 });
 export type FileEntry = typeof FileEntry.Type;
 

@@ -173,10 +173,10 @@ describe('GitService', () => {
       expect(result.size).toBe(3);
     });
 
-    it('treats binary diff as zero lines', () => {
+    it('preserves binary diff status', () => {
       const result = parseNumstat('-\t-\tassets/logo.png\0');
 
-      expect(result.get('assets/logo.png')).toBe(0);
+      expect(result.get('assets/logo.png')).toBeNull();
     });
 
     it('keys renamed files by the new path', () => {

@@ -99,45 +99,59 @@ export const parseNameStatus = (output: string): NameStatusEntry[] => {
   return entries;
 };
 
-const parseNumstatCount = (raw: string | undefined): number => {
-  if (raw == null || raw === '-') {
+const parseNumstatCount = (raw: string | undefined): number | null => {
+  if (raw === '-') {
+    return null;
+  }
+  if (raw == null) {
     return 0;
   }
   const value = Number(raw);
   return Number.isFinite(value) ? value : 0;
 };
 
+const combineNumstatCounts = (
+  added: string | undefined,
+  deleted: string | undefined,
+): number | null => {
+  const addedCount = parseNumstatCount(added);
+  const deletedCount = parseNumstatCount(deleted);
+  return addedCount === null || deletedCount === null ? null : addedCount + deletedCount;
+};
+
+const setRenameEntry = (
+  result: Map<string, number | null>,
+  newPath: string | undefined,
+  count: number | null,
+): void => {
+  if (newPath != null && newPath !== '') {
+    result.set(newPath, count);
+    return;
+  }
+  // A rename header (trailing tab) without a follow-up path token indicates
+  // truncated or corrupt git output — surface it so a silently-miskeyed
+  // cache entry doesn't become a debugging rabbit hole later.
+  // oxlint-disable-next-line no-console -- pure parser; no logger plumbed in
+  console.warn(`parseNumstat: malformed rename record, missing newPath token (added+deleted=${count})`);
+};
+
 // git diff --numstat -z emits records terminated by NUL. Regular entries look
 // like `added\tdeleted\tpath\0`. Renames are spread across three NUL-separated
 // tokens: `added\tdeleted\t\0`, `oldpath\0`, `newpath\0`. Keying by the new
 // path keeps the count aligned with the post-rename FileEntry.path.
-export const parseNumstat = (output: string): Map<string, number> => {
-  const result = new Map<string, number>();
+export const parseNumstat = (output: string): Map<string, number | null> => {
+  const result = new Map<string, number | null>();
   const tokens = output.split('\0');
   let i = 0;
   while (i < tokens.length) {
-    const token = tokens[i] ?? '';
-    if (token === '') {
-      i += 1;
-      continue;
-    }
-    const parts = token.split('\t');
+    const parts = (tokens[i] ?? '').split('\t');
     if (parts.length < 3) {
       i += 1;
       continue;
     }
-    const count = parseNumstatCount(parts[0]) + parseNumstatCount(parts[1]);
+    const count = combineNumstatCounts(parts[0], parts[1]);
     if (parts[2] === '') {
-      const newPath = tokens[i + 2];
-      if (newPath != null && newPath !== '') {
-        result.set(newPath, count);
-      } else {
-        // A rename header (trailing tab) without a follow-up path token indicates
-        // truncated or corrupt git output — surface it so a silently-miskeyed
-        // cache entry doesn't become a debugging rabbit hole later.
-        // oxlint-disable-next-line no-console -- pure parser; no logger plumbed in
-        console.warn(`parseNumstat: malformed rename record, missing newPath token (added+deleted=${count})`);
-      }
+      setRenameEntry(result, tokens[i + 2], count);
       i += 3;
       continue;
     }
@@ -147,7 +161,25 @@ export const parseNumstat = (output: string): Map<string, number> => {
   return result;
 };
 
+const toFileEntry = (
+  entry: NameStatusEntry,
+  lineCount: number | null | undefined,
+): FileEntry => ({
+  ...entry,
+  ...(lineCount === null ? { binary: true } : {}),
+  sizeTier: deriveSizeTier(lineCount ?? 0),
+});
+
 const COMMIT_FIELD_SEP = '\x1f';
+
+const parseCommitHeader = (parts: string[]): CommitEntry & { files: string[] } => ({
+  sha: parts[0] ?? '',
+  abbrevSha: parts[1] ?? '',
+  subject: parts[2] ?? '',
+  author: parts[3] ?? '',
+  date: parts[4] ?? '',
+  files: [],
+});
 
 export const parseCommitLog = (output: string): CommitEntry[] => {
   const commits: (CommitEntry & { files: string[] })[] = [];
@@ -159,14 +191,7 @@ export const parseCommitLog = (output: string): CommitEntry[] => {
     }
     const parts = line.split(COMMIT_FIELD_SEP);
     if (parts.length === 5) {
-      current = {
-        sha: parts[0] ?? '',
-        abbrevSha: parts[1] ?? '',
-        subject: parts[2] ?? '',
-        author: parts[3] ?? '',
-        date: parts[4] ?? '',
-        files: [],
-      };
+      current = parseCommitHeader(parts);
       commits.push(current);
     } else if (parts.length === 1 && current != null) {
       current.files.push(line);
@@ -281,13 +306,7 @@ export const GitServiceLive = Layer.succeed(
           ]),
         ),
         Effect.map(([nameStatus, numstat]) =>
-          nameStatus.map((entry): FileEntry => {
-            const lineCount = numstat.get(entry.path) ?? 0;
-            return {
-              ...entry,
-              sizeTier: deriveSizeTier(lineCount),
-            };
-          }),
+          nameStatus.map((entry) => toFileEntry(entry, numstat.get(entry.path))),
         ),
       ),
     getFileContent: (ref, path) =>
@@ -340,13 +359,7 @@ export const GitServiceLive = Layer.succeed(
             ...untracked.map(
               (path): NameStatusEntry => ({ path, changeType: 'added' }),
             ),
-          ].map((entry): FileEntry => {
-            const lineCount = numstat.get(entry.path) ?? 0;
-            return {
-              ...entry,
-              sizeTier: deriveSizeTier(lineCount),
-            };
-          }),
+          ].map((entry) => toFileEntry(entry, numstat.get(entry.path))),
         ),
       ),
     getWorkingTreeFileContent: (path) =>

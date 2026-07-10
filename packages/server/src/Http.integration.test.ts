@@ -403,6 +403,57 @@ describe('Http', () => {
   });
 });
 
+describe('GET /api/warmup binary filtering', () => {
+  it('excludes binary files and still streams text files', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'greppa-warmup-binary-'));
+    const repoPath = join(tempDir, 'repo');
+    let disposeBinaryApp: (() => Promise<void>) | undefined;
+
+    try {
+      mkdirSync(repoPath);
+      execSync('git init -q', { cwd: repoPath });
+      writeFileSync(join(repoPath, 'asset.bin'), Buffer.from([0, 1, 2]));
+      writeFileSync(join(repoPath, 'notes.txt'), 'before\n');
+      execSync('git add -A', { cwd: repoPath });
+      execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+        cwd: repoPath,
+      });
+      writeFileSync(join(repoPath, 'asset.bin'), Buffer.from([0, 3, 2]));
+      writeFileSync(join(repoPath, 'notes.txt'), 'after\n');
+      execSync('git add -A', { cwd: repoPath });
+      execSync('git -c user.name=Test -c user.email=test@example.com commit -qm changed', {
+        cwd: repoPath,
+      });
+
+      const BinaryPlatformLayer = Layer.mergeAll(
+        NodeServices.layer,
+        NodeHttpPlatform.layer,
+        EtagLayer,
+        GitServiceLive,
+        CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG),
+        Layer.succeed(RepoPath, repoPath),
+      );
+      const app = HttpRouter.toWebHandler(
+        WarmupRoute.pipe(Layer.provide(BinaryPlatformLayer)),
+      );
+      disposeBinaryApp = app.dispose;
+      const binaryHandler = app.handler as (request: Request) => Promise<Response>;
+      const response = await binaryHandler(
+        new Request('http://localhost/api/warmup/HEAD~1/HEAD'),
+      );
+      const events = await readSseEvents<{ path: string }>(response);
+      const paths = events
+        .filter((event) => event.type === 'message')
+        .map((event) => event.data.path);
+
+      expect(paths).toEqual(['notes.txt']);
+    } finally {
+      await disposeBinaryApp?.();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('static file serving', () => {
   const tmpDir = mkdtempSync(join(tmpdir(), 'greppa-static-'));
   const indexContent = '<html><body>greppa</body></html>';

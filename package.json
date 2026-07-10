@@ -19,7 +19,7 @@
     "lint:rules": "ast-grep scan",
     "prepare": "vp config",
     "test": "vp test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc -b --pretty false"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.42.0",
@@ -35,17 +35,6 @@
     "tsx": "4.21.0",
     "vite-plus": "0.1.14",
     "vitest": "4.1.1"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@ast-grep/cli",
-      "fallow"
-    ],
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "@tanstack/zod-adapter>zod": "4"
-      }
-    }
   },
   "engines": {
     "node": ">=22"

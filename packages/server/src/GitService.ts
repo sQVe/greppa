@@ -199,7 +199,7 @@ const validatePath = (path: string): Effect.Effect<void, GitError> => {
 
 const runGit = (
   args: string[],
-): Effect.Effect<string, GitError, ChildProcessSpawner | typeof RepoPath> =>
+): Effect.Effect<string, GitError, ChildProcessSpawner> =>
   Effect.gen(function* () {
     const repoPath = yield* RepoPath;
     const cmd = ChildProcess.make('git', args, { cwd: repoPath });
@@ -231,35 +231,35 @@ export class GitService extends ServiceMap.Service<
     listFiles: (
       oldRef: string,
       newRef: string,
-    ) => Effect.Effect<FileEntry[], GitError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<FileEntry[], GitError, ChildProcessSpawner>;
     getFileContent: (
       ref: string,
       path: string,
-    ) => Effect.Effect<string, GitError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<string, GitError, ChildProcessSpawner>;
     resolveRef: (
       ref: string,
-    ) => Effect.Effect<Sha, ResolveRefError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<Sha, ResolveRefError, ChildProcessSpawner>;
     detectDefaultBranch: () => Effect.Effect<
       string,
       DetectDefaultBranchError,
-      ChildProcessSpawner | typeof RepoPath
+      ChildProcessSpawner
     >;
     mergeBase: (
       ref1: string,
       ref2: string,
-    ) => Effect.Effect<Sha, MergeBaseError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<Sha, MergeBaseError, ChildProcessSpawner>;
     listWorkingTreeFiles: () => Effect.Effect<
       FileEntry[],
       GitError,
-      ChildProcessSpawner | typeof RepoPath
+      ChildProcessSpawner
     >;
     getWorkingTreeFileContent: (
       path: string,
-    ) => Effect.Effect<string, GitError, typeof RepoPath>;
+    ) => Effect.Effect<string, GitError>;
     listCommits: (
       oldRef: string,
       newRef: string,
-    ) => Effect.Effect<CommitEntry[], GitError, ChildProcessSpawner | typeof RepoPath>;
+    ) => Effect.Effect<CommitEntry[], GitError, ChildProcessSpawner>;
   }
 >()('greppa/GitService') {}
 

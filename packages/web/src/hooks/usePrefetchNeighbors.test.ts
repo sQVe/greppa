@@ -33,7 +33,7 @@ describe('usePrefetchNeighbors', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery');
+    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery').mockResolvedValue();
     const files = [file('a.ts'), file('b.ts'), file('c.ts'), file('d.ts')];
 
     renderHook(
@@ -68,7 +68,7 @@ describe('usePrefetchNeighbors', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery');
+    const prefetchSpy = vi.spyOn(queryClient, 'prefetchQuery').mockResolvedValue();
     const wrapper = createWrapper(queryClient);
 
     const { rerender } = renderHook(

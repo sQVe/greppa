@@ -6,7 +6,8 @@
     { "path": "packages/server" },
     { "path": "packages/cli" },
     { "path": "packages/web" },
-    { "path": "packages/ui" }
+    { "path": "packages/ui" },
+    { "path": "scripts" }
   ],
   "files": []
 }

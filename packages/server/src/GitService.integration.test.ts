@@ -194,6 +194,14 @@ describe('GitService', () => {
       expect(result.get('regular/b.ts')).toBe(10);
       expect(result.size).toBe(2);
     });
+
+    it('preserves tab-containing paths', () => {
+      const result = parseNumstat('3\t2\ta\tb.txt\x00-\t-\tbin\tfile.png\x00');
+
+      expect(result.get('a\tb.txt')).toBe(5);
+      expect(result.get('bin\tfile.png')).toBeNull();
+      expect(result.size).toBe(2);
+    });
   });
 
   describe('deriveSizeTier', () => {
@@ -208,7 +216,8 @@ describe('GitService', () => {
   });
 
   describe('name-status integration', () => {
-    it('preserves tabs and newlines in commit and worktree paths', async () => {
+    // Filenames containing \n are invalid on win32 filesystems.
+    it.runIf(process.platform !== 'win32')('preserves tabs and newlines in commit and worktree paths', async () => {
       const tempDir = mkdtempSync(join(tmpdir(), 'greppa-name-status-'));
       const repoPath = join(tempDir, 'repo');
       const modifiedPath = 'modified\tfile\nname.txt';
@@ -467,7 +476,8 @@ describe('GitService', () => {
   });
 
   describe('listWorkingTreeFiles', () => {
-    it('includes untracked files as additions without changing tracked entries', async () => {
+    // Filenames containing \n are invalid on win32 filesystems.
+    it.runIf(process.platform !== 'win32')('includes untracked files as additions without changing tracked entries', async () => {
       const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-list-'));
       const repoPath = join(tempDir, 'repo');
       const untrackedPath = 'untracked\tfile\nname.txt';
@@ -489,6 +499,31 @@ describe('GitService', () => {
           { path: 'tracked.txt', changeType: 'modified', sizeTier: 'small' },
           { path: untrackedPath, changeType: 'added', sizeTier: 'small' },
         ]);
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it('does not duplicate a file removed from the index but kept on disk', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-dedupe-'));
+      const repoPath = join(tempDir, 'repo');
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, 'kept.txt'), 'content\n');
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git add kept.txt', { cwd: repoPath });
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+          cwd: repoPath,
+        });
+        execSync('git rm --cached -q kept.txt', { cwd: repoPath });
+
+        const result = (await runGitService(
+          (git) => git.listWorkingTreeFiles(),
+          repoPath,
+        )) as FileEntry[];
+
+        expect(result.filter((entry) => entry.path === 'kept.txt')).toHaveLength(1);
       } finally {
         rmSync(tempDir, { recursive: true, force: true });
       }
@@ -579,6 +614,32 @@ describe('GitService', () => {
             message: expect.stringContaining('symbolic link'),
           }),
         });
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it('should reject a path under a symlinked directory without returning external content', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-linkdir-'));
+      const repoPath = join(tempDir, 'repo');
+      const outsideDir = join(tempDir, 'outside');
+      const sentinelContent = 'ABU-198 parent symlink sentinel';
+
+      try {
+        mkdirSync(repoPath);
+        mkdirSync(outsideDir);
+        writeFileSync(join(outsideDir, 'sentinel.txt'), sentinelContent);
+        symlinkSync(outsideDir, join(repoPath, 'link-dir'));
+        execSync('git init -q', { cwd: repoPath });
+
+        const [result] = await Promise.allSettled([
+          runGitService(
+            (git) => git.getWorkingTreeFileContent('link-dir/sentinel.txt'),
+            repoPath,
+          ),
+        ]);
+        expect(result).not.toEqual({ status: 'fulfilled', value: sentinelContent });
+        expect(result.status).toBe('rejected');
       } finally {
         rmSync(tempDir, { recursive: true, force: true });
       }

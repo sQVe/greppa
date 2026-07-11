@@ -1,5 +1,6 @@
-import { lstat, readFile } from 'node:fs/promises';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { constants } from 'node:fs';
+import { lstat, open, realpath } from 'node:fs/promises';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 import type { CommitEntry, FileEntry, SizeTier } from '@greppa/core';
 import { Brand, Data, Effect, Layer, ServiceMap, Stream } from 'effect';
@@ -144,18 +145,22 @@ export const parseNumstat = (output: string): Map<string, number | null> => {
   const tokens = output.split('\0');
   let i = 0;
   while (i < tokens.length) {
-    const parts = (tokens[i] ?? '').split('\t');
-    if (parts.length < 3) {
+    // Only the first two tabs delimit fields; the path keeps any further tabs.
+    const token = tokens[i] ?? '';
+    const firstTab = token.indexOf('\t');
+    const secondTab = firstTab === -1 ? -1 : token.indexOf('\t', firstTab + 1);
+    if (secondTab === -1) {
       i += 1;
       continue;
     }
-    const count = combineNumstatCounts(parts[0], parts[1]);
-    if (parts[2] === '') {
+    const count = combineNumstatCounts(token.slice(0, firstTab), token.slice(firstTab + 1, secondTab));
+    const path = token.slice(secondTab + 1);
+    if (path === '') {
       setRenameEntry(result, tokens[i + 2], count);
       i += 3;
       continue;
     }
-    result.set(parts[2] ?? '', count);
+    result.set(path, count);
     i += 1;
   }
   return result;
@@ -219,6 +224,36 @@ const validateRef = (ref: string): Effect.Effect<void, GitError> => {
     return Effect.fail(new GitError({ message: `Invalid ref: ${ref}` }));
   }
   return Effect.void;
+};
+
+const escapesRepo = (relativePath: string): boolean =>
+  relativePath === '..' || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath);
+
+// Reject symlinks at every path level: lstat the final component, canonicalize
+// the parent (a symlinked ancestor passes string containment), and open with
+// O_NOFOLLOW to close the lstat-then-read race.
+const readWorktreeFileNoFollow = async (
+  repoPath: string,
+  filePath: string,
+  path: string,
+): Promise<string> => {
+  const stats = await lstat(filePath);
+  if (stats.isSymbolicLink()) {
+    throw new Error(`Refusing to read symbolic link: ${path}`);
+  }
+  const [realParent, realRepo] = await Promise.all([
+    realpath(dirname(filePath)),
+    realpath(repoPath),
+  ]);
+  if (escapesRepo(relative(realRepo, realParent))) {
+    throw new Error(`Path escapes repository via symbolic link: ${path}`);
+  }
+  const handle = await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    return await handle.readFile('utf-8');
+  } finally {
+    await handle.close();
+  }
 };
 
 const validatePath = (path: string): Effect.Effect<void, GitError> => {
@@ -353,14 +388,17 @@ export const GitServiceLive = Layer.succeed(
           Effect.map((output) => output.split('\0').filter((path) => path !== '')),
         ),
       ]).pipe(
-        Effect.map(([nameStatus, numstat, untracked]) =>
-          [
+        Effect.map(([nameStatus, numstat, untracked]) => {
+          // A file removed from the index but kept on disk (git rm --cached)
+          // shows up in both lists; keep the diff entry.
+          const tracked = new Set(nameStatus.map((entry) => entry.path));
+          return [
             ...nameStatus,
-            ...untracked.map(
-              (path): NameStatusEntry => ({ path, changeType: 'added' }),
-            ),
-          ].map((entry) => toFileEntry(entry, numstat.get(entry.path))),
-        ),
+            ...untracked
+              .filter((path) => !tracked.has(path))
+              .map((path): NameStatusEntry => ({ path, changeType: 'added' })),
+          ].map((entry) => toFileEntry(entry, numstat.get(entry.path)));
+        }),
       ),
     getWorkingTreeFileContent: (path) =>
       validatePath(path).pipe(
@@ -368,24 +406,12 @@ export const GitServiceLive = Layer.succeed(
           Effect.gen(function* () {
             const repoPath = resolve(yield* RepoPath);
             const filePath = resolve(repoPath, path);
-            const relativePath = relative(repoPath, filePath);
-
-            if (
-              relativePath === '..' ||
-              relativePath.startsWith(`..${sep}`) ||
-              isAbsolute(relativePath)
-            ) {
+            if (escapesRepo(relative(repoPath, filePath))) {
               return yield* new GitError({ message: `Path escapes repository: ${path}` });
             }
 
             return yield* Effect.tryPromise({
-              try: async () => {
-                const stats = await lstat(filePath);
-                if (stats.isSymbolicLink()) {
-                  throw new Error(`Refusing to read symbolic link: ${path}`);
-                }
-                return readFile(filePath, 'utf-8');
-              },
+              try: () => readWorktreeFileNoFollow(repoPath, filePath, path),
               catch: (error) =>
                 new GitError({
                   message: error instanceof Error ? error.message : `Failed to read file: ${path}`,

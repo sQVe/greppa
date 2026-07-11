@@ -158,16 +158,16 @@ describe('worktree-env', () => {
   });
 
   describe('reloadCaddy', () => {
-    it('does not throw when caddy is not installed', () => {
-      const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
 
-      try {
-        expect(() => {
-          reloadCaddy('/nonexistent/path/Caddyfile');
-        }).not.toThrow();
-      } finally {
-        stderr.mockRestore();
-      }
+    it('does not throw when caddy is not installed', () => {
+      vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      expect(() => {
+        reloadCaddy('/nonexistent/path/Caddyfile');
+      }).not.toThrow();
     });
   });
 

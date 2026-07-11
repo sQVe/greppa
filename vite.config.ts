@@ -2,6 +2,9 @@ import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
   test: {
+    // Required for root `vp test` runs: packages/web/vitest.config.ts setupFiles
+    // are not applied there, and without the fetch mock web tests spam
+    // ECONNREFUSED noise from happy-dom resolving relative fetches.
     setupFiles: ['./packages/web/src/test/setup.ts'],
   },
   staged: {

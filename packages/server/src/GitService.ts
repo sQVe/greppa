@@ -1,5 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { constants } from 'node:fs';
+import { lstat, open, realpath } from 'node:fs/promises';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 import type { CommitEntry, FileEntry, SizeTier } from '@greppa/core';
 import { Brand, Data, Effect, Layer, ServiceMap, Stream } from 'effect';
@@ -73,75 +74,117 @@ const statusMap: Record<string, FileEntry['changeType']> = {
   U: 'modified',
 };
 
-export const parseNameStatus = (output: string): NameStatusEntry[] =>
-  output
-    .split('\n')
-    .filter((line) => line.trim() !== '')
-    .flatMap((line): NameStatusEntry[] => {
-      const parts = line.split('\t');
-      const status = parts[0] ?? '';
+export const parseNameStatus = (output: string): NameStatusEntry[] => {
+  const entries: NameStatusEntry[] = [];
+  const fields = output.split('\0');
+  let i = 0;
 
-      if (status.startsWith('R') || status.startsWith('C')) {
-        return [{ path: parts[2] ?? '', changeType: 'renamed', oldPath: parts[1] }];
-      }
+  while (i < fields.length) {
+    const status = fields[i++] ?? '';
+    if (status === '') {
+      continue;
+    }
+    const path = fields[i++] ?? '';
 
-      const changeType = statusMap[status];
-      if (changeType == null) {
-        return [];
-      }
+    if (status.startsWith('R') || status.startsWith('C')) {
+      entries.push({ path: fields[i++] ?? '', changeType: 'renamed', oldPath: path });
+      continue;
+    }
 
-      return [{ path: parts[1] ?? '', changeType }];
-    });
+    const changeType = statusMap[status];
+    if (changeType != null) {
+      entries.push({ path, changeType });
+    }
+  }
 
-const parseNumstatCount = (raw: string | undefined): number => {
-  if (raw == null || raw === '-') {
+  return entries;
+};
+
+const parseNumstatCount = (raw: string | undefined): number | null => {
+  if (raw === '-') {
+    return null;
+  }
+  if (raw == null) {
     return 0;
   }
   const value = Number(raw);
   return Number.isFinite(value) ? value : 0;
 };
 
+const combineNumstatCounts = (
+  added: string | undefined,
+  deleted: string | undefined,
+): number | null => {
+  const addedCount = parseNumstatCount(added);
+  const deletedCount = parseNumstatCount(deleted);
+  return addedCount === null || deletedCount === null ? null : addedCount + deletedCount;
+};
+
+const setRenameEntry = (
+  result: Map<string, number | null>,
+  newPath: string | undefined,
+  count: number | null,
+): void => {
+  if (newPath != null && newPath !== '') {
+    result.set(newPath, count);
+    return;
+  }
+  // A rename header (trailing tab) without a follow-up path token indicates
+  // truncated or corrupt git output — surface it so a silently-miskeyed
+  // cache entry doesn't become a debugging rabbit hole later.
+  // oxlint-disable-next-line no-console -- pure parser; no logger plumbed in
+  console.warn(`parseNumstat: malformed rename record, missing newPath token (added+deleted=${count})`);
+};
+
 // git diff --numstat -z emits records terminated by NUL. Regular entries look
 // like `added\tdeleted\tpath\0`. Renames are spread across three NUL-separated
 // tokens: `added\tdeleted\t\0`, `oldpath\0`, `newpath\0`. Keying by the new
 // path keeps the count aligned with the post-rename FileEntry.path.
-export const parseNumstat = (output: string): Map<string, number> => {
-  const result = new Map<string, number>();
+export const parseNumstat = (output: string): Map<string, number | null> => {
+  const result = new Map<string, number | null>();
   const tokens = output.split('\0');
   let i = 0;
   while (i < tokens.length) {
+    // Only the first two tabs delimit fields; the path keeps any further tabs.
     const token = tokens[i] ?? '';
-    if (token === '') {
+    const firstTab = token.indexOf('\t');
+    const secondTab = firstTab === -1 ? -1 : token.indexOf('\t', firstTab + 1);
+    if (secondTab === -1) {
       i += 1;
       continue;
     }
-    const parts = token.split('\t');
-    if (parts.length < 3) {
-      i += 1;
-      continue;
-    }
-    const count = parseNumstatCount(parts[0]) + parseNumstatCount(parts[1]);
-    if (parts[2] === '') {
-      const newPath = tokens[i + 2];
-      if (newPath != null && newPath !== '') {
-        result.set(newPath, count);
-      } else {
-        // A rename header (trailing tab) without a follow-up path token indicates
-        // truncated or corrupt git output — surface it so a silently-miskeyed
-        // cache entry doesn't become a debugging rabbit hole later.
-        // oxlint-disable-next-line no-console -- pure parser; no logger plumbed in
-        console.warn(`parseNumstat: malformed rename record, missing newPath token (added+deleted=${count})`);
-      }
+    const count = combineNumstatCounts(token.slice(0, firstTab), token.slice(firstTab + 1, secondTab));
+    const path = token.slice(secondTab + 1);
+    if (path === '') {
+      setRenameEntry(result, tokens[i + 2], count);
       i += 3;
       continue;
     }
-    result.set(parts[2] ?? '', count);
+    result.set(path, count);
     i += 1;
   }
   return result;
 };
 
+const toFileEntry = (
+  entry: NameStatusEntry,
+  lineCount: number | null | undefined,
+): FileEntry => ({
+  ...entry,
+  ...(lineCount === null ? { binary: true } : {}),
+  sizeTier: deriveSizeTier(lineCount ?? 0),
+});
+
 const COMMIT_FIELD_SEP = '\x1f';
+
+const parseCommitHeader = (parts: string[]): CommitEntry & { files: string[] } => ({
+  sha: parts[0] ?? '',
+  abbrevSha: parts[1] ?? '',
+  subject: parts[2] ?? '',
+  author: parts[3] ?? '',
+  date: parts[4] ?? '',
+  files: [],
+});
 
 export const parseCommitLog = (output: string): CommitEntry[] => {
   const commits: (CommitEntry & { files: string[] })[] = [];
@@ -153,14 +196,7 @@ export const parseCommitLog = (output: string): CommitEntry[] => {
     }
     const parts = line.split(COMMIT_FIELD_SEP);
     if (parts.length === 5) {
-      current = {
-        sha: parts[0] ?? '',
-        abbrevSha: parts[1] ?? '',
-        subject: parts[2] ?? '',
-        author: parts[3] ?? '',
-        date: parts[4] ?? '',
-        files: [],
-      };
+      current = parseCommitHeader(parts);
       commits.push(current);
     } else if (parts.length === 1 && current != null) {
       current.files.push(line);
@@ -188,6 +224,36 @@ const validateRef = (ref: string): Effect.Effect<void, GitError> => {
     return Effect.fail(new GitError({ message: `Invalid ref: ${ref}` }));
   }
   return Effect.void;
+};
+
+const escapesRepo = (relativePath: string): boolean =>
+  relativePath === '..' || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath);
+
+// Reject symlinks at every path level: lstat the final component, canonicalize
+// the parent (a symlinked ancestor passes string containment), and open with
+// O_NOFOLLOW to close the lstat-then-read race.
+const readWorktreeFileNoFollow = async (
+  repoPath: string,
+  filePath: string,
+  path: string,
+): Promise<string> => {
+  const stats = await lstat(filePath);
+  if (stats.isSymbolicLink()) {
+    throw new Error(`Refusing to read symbolic link: ${path}`);
+  }
+  const [realParent, realRepo] = await Promise.all([
+    realpath(dirname(filePath)),
+    realpath(repoPath),
+  ]);
+  if (escapesRepo(relative(realRepo, realParent))) {
+    throw new Error(`Path escapes repository via symbolic link: ${path}`);
+  }
+  const handle = await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    return await handle.readFile('utf-8');
+  } finally {
+    await handle.close();
+  }
 };
 
 const validatePath = (path: string): Effect.Effect<void, GitError> => {
@@ -270,18 +336,12 @@ export const GitServiceLive = Layer.succeed(
       Effect.all([validateRef(oldRef), validateRef(newRef)]).pipe(
         Effect.flatMap(() =>
           Effect.all([
-            runGit(['diff', '--name-status', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
+            runGit(['diff', '--name-status', '-z', oldRef, newRef]).pipe(Effect.map(parseNameStatus)),
             runGit(['diff', '--numstat', '-z', oldRef, newRef]).pipe(Effect.map(parseNumstat)),
           ]),
         ),
         Effect.map(([nameStatus, numstat]) =>
-          nameStatus.map((entry): FileEntry => {
-            const lineCount = numstat.get(entry.path) ?? 0;
-            return {
-              ...entry,
-              sizeTier: deriveSizeTier(lineCount),
-            };
-          }),
+          nameStatus.map((entry) => toFileEntry(entry, numstat.get(entry.path))),
         ),
       ),
     getFileContent: (ref, path) =>
@@ -322,26 +382,36 @@ export const GitServiceLive = Layer.succeed(
       ),
     listWorkingTreeFiles: () =>
       Effect.all([
-        runGit(['diff', '--name-status', 'HEAD']).pipe(Effect.map(parseNameStatus)),
+        runGit(['diff', '--name-status', '-z', 'HEAD']).pipe(Effect.map(parseNameStatus)),
         runGit(['diff', '--numstat', '-z', 'HEAD']).pipe(Effect.map(parseNumstat)),
-      ]).pipe(
-        Effect.map(([nameStatus, numstat]) =>
-          nameStatus.map((entry): FileEntry => {
-            const lineCount = numstat.get(entry.path) ?? 0;
-            return {
-              ...entry,
-              sizeTier: deriveSizeTier(lineCount),
-            };
-          }),
+        runGit(['ls-files', '--others', '--exclude-standard', '-z']).pipe(
+          Effect.map((output) => output.split('\0').filter((path) => path !== '')),
         ),
+      ]).pipe(
+        Effect.map(([nameStatus, numstat, untracked]) => {
+          // A file removed from the index but kept on disk (git rm --cached)
+          // shows up in both lists; keep the diff entry.
+          const tracked = new Set(nameStatus.map((entry) => entry.path));
+          return [
+            ...nameStatus,
+            ...untracked
+              .filter((path) => !tracked.has(path))
+              .map((path): NameStatusEntry => ({ path, changeType: 'added' })),
+          ].map((entry) => toFileEntry(entry, numstat.get(entry.path)));
+        }),
       ),
     getWorkingTreeFileContent: (path) =>
       validatePath(path).pipe(
         Effect.flatMap(() =>
           Effect.gen(function* () {
-            const repoPath = yield* RepoPath;
+            const repoPath = resolve(yield* RepoPath);
+            const filePath = resolve(repoPath, path);
+            if (escapesRepo(relative(repoPath, filePath))) {
+              return yield* new GitError({ message: `Path escapes repository: ${path}` });
+            }
+
             return yield* Effect.tryPromise({
-              try: () => readFile(resolve(repoPath, path), 'utf-8'),
+              try: () => readWorktreeFileNoFollow(repoPath, filePath, path),
               catch: (error) =>
                 new GitError({
                   message: error instanceof Error ? error.message : `Failed to read file: ${path}`,

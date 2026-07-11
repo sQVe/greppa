@@ -319,13 +319,15 @@ const makeWarmupHandler = (services: ServiceMap.ServiceMap<WarmupServices>) =>
       return yield* Effect.fail(new GitError({ message: 'oldRef and newRef are required' }));
     }
     const entries = yield* getFileList(oldRef, newRef).pipe(Effect.provideServices(services));
-    const nonLarge = entries.filter((entry) => entry.sizeTier !== 'large');
+    const warmupEntries = entries.filter(
+      (entry) => entry.sizeTier !== 'large' && entry.binary !== true,
+    );
 
-    // A single bad file (binary, encoding error, missing blob) must not terminate the
+    // A single bad file (encoding error, missing blob) must not terminate the
     // stream — the browser would read a mid-stream close as a disconnect and reconnect,
     // re-running warm-up against the same bad file forever. Log the failure so a
     // partially-broken warm-up is debuggable rather than silent.
-    const diffs = Stream.fromIterable(nonLarge).pipe(
+    const diffs = Stream.fromIterable(warmupEntries).pipe(
       Stream.mapEffect(
         (entry) =>
           computeDiffForEntry(oldRef, newRef, entry).pipe(
@@ -366,6 +368,6 @@ export const makeHttpLayer = (port: number, refsConfig: RefsConfigValue, webDist
     Layer.provide(GitServiceLive),
     Layer.provide(CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG)),
     Layer.provide(Layer.succeed(RefsConfig, refsConfig)),
-    Layer.provide(NodeHttpServer.layer(createServer, { port })),
+    Layer.provide(NodeHttpServer.layer(createServer, { port, host: '127.0.0.1' })),
   );
 };

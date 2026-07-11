@@ -1,5 +1,15 @@
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { CommitEntry, FileEntry } from '@greppa/core';
 import { NodeServices } from '@effect/platform-node';
@@ -40,29 +50,30 @@ const hasDefaultBranchRef =
   resolveRef('refs/remotes/origin/main') != null ||
   resolveRef('refs/remotes/origin/master') != null;
 
-const TestLayer = Layer.mergeAll(
-  GitServiceLive,
-  Layer.succeed(RepoPath, monorepoRoot),
-  NodeServices.layer,
-);
-
 type Git = InstanceType<typeof GitService>;
 
-const runGitService = <A, E, R>(fn: (git: Git) => Effect.Effect<A, E, R>): Promise<A> =>
+const runGitService = <A, E, R>(
+  fn: (git: Git) => Effect.Effect<A, E, R>,
+  repoPath = monorepoRoot,
+): Promise<A> =>
   Effect.runPromise(
     Effect.provide(
       Effect.gen(function* () {
         const git = yield* GitService;
         return yield* fn(git);
       }),
-      TestLayer,
+      Layer.mergeAll(
+        GitServiceLive,
+        Layer.succeed(RepoPath, repoPath),
+        NodeServices.layer,
+      ),
     ) as Effect.Effect<A, E>,
   );
 
 describe('GitService', () => {
   describe('parseNameStatus', () => {
     it('should parse modified file', () => {
-      const result = parseNameStatus('M\tsrc/index.ts');
+      const result = parseNameStatus('M\0src/index.ts\0');
 
       expect(result).toEqual([
         { path: 'src/index.ts', changeType: 'modified' },
@@ -70,7 +81,7 @@ describe('GitService', () => {
     });
 
     it('should parse added file', () => {
-      const result = parseNameStatus('A\tnew-file.ts');
+      const result = parseNameStatus('A\0new-file.ts\0');
 
       expect(result).toEqual([
         { path: 'new-file.ts', changeType: 'added' },
@@ -78,7 +89,7 @@ describe('GitService', () => {
     });
 
     it('should parse deleted file', () => {
-      const result = parseNameStatus('D\told-file.ts');
+      const result = parseNameStatus('D\0old-file.ts\0');
 
       expect(result).toEqual([
         { path: 'old-file.ts', changeType: 'deleted' },
@@ -86,7 +97,7 @@ describe('GitService', () => {
     });
 
     it('should parse renamed file with similarity', () => {
-      const result = parseNameStatus('R100\told.ts\tnew.ts');
+      const result = parseNameStatus('R100\0old.ts\0new.ts\0');
 
       expect(result).toEqual([
         { path: 'new.ts', changeType: 'renamed', oldPath: 'old.ts' },
@@ -94,7 +105,7 @@ describe('GitService', () => {
     });
 
     it('should parse multiple lines', () => {
-      const output = 'M\ta.ts\nA\tb.ts\nD\tc.ts';
+      const output = 'M\0a.ts\0A\0b.ts\0D\0c.ts\0';
       const result = parseNameStatus(output);
 
       expect(result).toEqual([
@@ -105,7 +116,7 @@ describe('GitService', () => {
     });
 
     it('should parse copied file with similarity', () => {
-      const result = parseNameStatus('C100\told.ts\tnew.ts');
+      const result = parseNameStatus('C100\0old.ts\0new.ts\0');
 
       expect(result).toEqual([
         { path: 'new.ts', changeType: 'renamed', oldPath: 'old.ts' },
@@ -113,7 +124,7 @@ describe('GitService', () => {
     });
 
     it('should parse type-change as modified', () => {
-      const result = parseNameStatus('T\tpath/to/file');
+      const result = parseNameStatus('T\0path/to/file\0');
 
       expect(result).toEqual([
         { path: 'path/to/file', changeType: 'modified' },
@@ -121,7 +132,7 @@ describe('GitService', () => {
     });
 
     it('should parse unmerged file as modified', () => {
-      const result = parseNameStatus('U\tconflict.ts');
+      const result = parseNameStatus('U\0conflict.ts\0');
 
       expect(result).toEqual([
         { path: 'conflict.ts', changeType: 'modified' },
@@ -129,15 +140,15 @@ describe('GitService', () => {
     });
 
     it('should skip truly unknown status letters', () => {
-      const result = parseNameStatus('Z\tfile.ts\nM\ta.ts');
+      const result = parseNameStatus('Z\0file.ts\0M\0a.ts\0');
 
       expect(result).toEqual([
         { path: 'a.ts', changeType: 'modified' },
       ]);
     });
 
-    it('should skip empty lines', () => {
-      const result = parseNameStatus('M\ta.ts\n\nA\tb.ts\n');
+    it('should skip empty records', () => {
+      const result = parseNameStatus('M\0a.ts\0\0A\0b.ts\0');
 
       expect(result).toEqual([
         { path: 'a.ts', changeType: 'modified' },
@@ -162,10 +173,10 @@ describe('GitService', () => {
       expect(result.size).toBe(3);
     });
 
-    it('treats binary diff as zero lines', () => {
+    it('preserves binary diff status', () => {
       const result = parseNumstat('-\t-\tassets/logo.png\0');
 
-      expect(result.get('assets/logo.png')).toBe(0);
+      expect(result.get('assets/logo.png')).toBeNull();
     });
 
     it('keys renamed files by the new path', () => {
@@ -183,6 +194,14 @@ describe('GitService', () => {
       expect(result.get('regular/b.ts')).toBe(10);
       expect(result.size).toBe(2);
     });
+
+    it('preserves tab-containing paths', () => {
+      const result = parseNumstat('3\t2\ta\tb.txt\x00-\t-\tbin\tfile.png\x00');
+
+      expect(result.get('a\tb.txt')).toBe(5);
+      expect(result.get('bin\tfile.png')).toBeNull();
+      expect(result.size).toBe(2);
+    });
   });
 
   describe('deriveSizeTier', () => {
@@ -193,6 +212,51 @@ describe('GitService', () => {
       expect(deriveSizeTier(499)).toBe('medium');
       expect(deriveSizeTier(500)).toBe('large');
       expect(deriveSizeTier(9999)).toBe('large');
+    });
+  });
+
+  describe('name-status integration', () => {
+    // Filenames containing \n are invalid on win32 filesystems.
+    it.runIf(process.platform !== 'win32')('preserves tabs and newlines in commit and worktree paths', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-name-status-'));
+      const repoPath = join(tempDir, 'repo');
+      const modifiedPath = 'modified\tfile\nname.txt';
+      const oldPath = 'old\tfile\nname.txt';
+      const newPath = 'renamed\tfile\nname.txt';
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, modifiedPath), 'before\n');
+        writeFileSync(join(repoPath, oldPath), 'rename me\n');
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git config diff.renames true', { cwd: repoPath });
+        execSync('git add -A', { cwd: repoPath });
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+          cwd: repoPath,
+        });
+
+        writeFileSync(join(repoPath, modifiedPath), 'after\n');
+        renameSync(join(repoPath, oldPath), join(repoPath, newPath));
+        execSync('git add -A', { cwd: repoPath });
+
+        const worktree = await runGitService((git) => git.listWorkingTreeFiles(), repoPath);
+
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm changed', {
+          cwd: repoPath,
+        });
+        const committed = await runGitService((git) => git.listFiles('HEAD~1', 'HEAD'), repoPath);
+        const expected = [
+          { path: modifiedPath, changeType: 'modified', sizeTier: 'small' },
+          { path: newPath, changeType: 'renamed', oldPath, sizeTier: 'small' },
+        ];
+
+        expect(worktree).toHaveLength(expected.length);
+        expect(worktree).toEqual(expect.arrayContaining(expected));
+        expect(committed).toHaveLength(expected.length);
+        expect(committed).toEqual(expect.arrayContaining(expected));
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 
@@ -412,6 +476,59 @@ describe('GitService', () => {
   });
 
   describe('listWorkingTreeFiles', () => {
+    // Filenames containing \n are invalid on win32 filesystems.
+    it.runIf(process.platform !== 'win32')('includes untracked files as additions without changing tracked entries', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-list-'));
+      const repoPath = join(tempDir, 'repo');
+      const untrackedPath = 'untracked\tfile\nname.txt';
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, 'tracked.txt'), 'before\n');
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git add tracked.txt', { cwd: repoPath });
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+          cwd: repoPath,
+        });
+        writeFileSync(join(repoPath, 'tracked.txt'), 'after\n');
+        writeFileSync(join(repoPath, untrackedPath), 'new\n');
+
+        const result = await runGitService((git) => git.listWorkingTreeFiles(), repoPath);
+
+        expect(result).toEqual([
+          { path: 'tracked.txt', changeType: 'modified', sizeTier: 'small' },
+          { path: untrackedPath, changeType: 'added', sizeTier: 'small' },
+        ]);
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it('does not duplicate a file removed from the index but kept on disk', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-dedupe-'));
+      const repoPath = join(tempDir, 'repo');
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, 'kept.txt'), 'content\n');
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git add kept.txt', { cwd: repoPath });
+        execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+          cwd: repoPath,
+        });
+        execSync('git rm --cached -q kept.txt', { cwd: repoPath });
+
+        const result = (await runGitService(
+          (git) => git.listWorkingTreeFiles(),
+          repoPath,
+        )) as FileEntry[];
+
+        expect(result.filter((entry) => entry.path === 'kept.txt')).toHaveLength(1);
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
     it('should return an array of FileEntry', async () => {
       const result = (await runGitService((git) => git.listWorkingTreeFiles())) as FileEntry[];
 
@@ -467,6 +584,65 @@ describe('GitService', () => {
 
       const expected = readFileSync(`${monorepoRoot}/package.json`, 'utf-8');
       expect(result).toBe(expected);
+    });
+
+    it('should reject a staged symlink without returning external content', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-read-'));
+      const repoPath = join(tempDir, 'repo');
+      const sentinelPath = join(tempDir, 'sentinel.txt');
+      const sentinelContent = 'ABU-218 external sentinel';
+
+      try {
+        mkdirSync(repoPath);
+        writeFileSync(join(repoPath, 'normal.txt'), 'normal file');
+        writeFileSync(sentinelPath, sentinelContent);
+        symlinkSync(sentinelPath, join(repoPath, 'staged-link.txt'));
+        execSync('git init -q', { cwd: repoPath });
+        execSync('git add normal.txt staged-link.txt', { cwd: repoPath });
+
+        await expect(
+          runGitService((git) => git.getWorkingTreeFileContent('normal.txt'), repoPath),
+        ).resolves.toBe('normal file');
+
+        const [result] = await Promise.allSettled([
+          runGitService((git) => git.getWorkingTreeFileContent('staged-link.txt'), repoPath),
+        ]);
+        expect(result).not.toEqual({ status: 'fulfilled', value: sentinelContent });
+        expect(result).toEqual({
+          status: 'rejected',
+          reason: expect.objectContaining({
+            message: expect.stringContaining('symbolic link'),
+          }),
+        });
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it('should reject a path under a symlinked directory without returning external content', async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'greppa-worktree-linkdir-'));
+      const repoPath = join(tempDir, 'repo');
+      const outsideDir = join(tempDir, 'outside');
+      const sentinelContent = 'ABU-198 parent symlink sentinel';
+
+      try {
+        mkdirSync(repoPath);
+        mkdirSync(outsideDir);
+        writeFileSync(join(outsideDir, 'sentinel.txt'), sentinelContent);
+        symlinkSync(outsideDir, join(repoPath, 'link-dir'));
+        execSync('git init -q', { cwd: repoPath });
+
+        const [result] = await Promise.allSettled([
+          runGitService(
+            (git) => git.getWorkingTreeFileContent('link-dir/sentinel.txt'),
+            repoPath,
+          ),
+        ]);
+        expect(result).not.toEqual({ status: 'fulfilled', value: sentinelContent });
+        expect(result.status).toBe('rejected');
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
     });
 
     it('should fail for non-existent file', async () => {

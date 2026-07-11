@@ -1,18 +1,19 @@
 import { execSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { NodeHttpPlatform, NodeServices } from '@effect/platform-node';
-import { Layer } from 'effect';
+import { Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/unstable/http';
 import { layer as EtagLayer } from 'effect/unstable/http/Etag';
 import * as HttpStaticServer from 'effect/unstable/http/HttpStaticServer';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { CacheServiceLive, DEFAULT_DIFF_CACHE_CONFIG } from './CacheService';
 import { GitServiceLive, RefsConfig, RepoPath, Sha } from './GitService';
-import { ApiRoutes, WarmupRoute } from './Http';
+import { ApiRoutes, makeHttpLayer, WarmupRoute } from './Http';
 
 const monorepoRoot = process.cwd().replace(/\/packages\/server$/, '');
 
@@ -90,6 +91,38 @@ afterAll(async () => {
 });
 
 describe('Http', () => {
+  describe('server startup', () => {
+    it('should listen on IPv4 loopback only', async () => {
+      const listen = vi.spyOn(Server.prototype, 'listen');
+
+      try {
+        const address = await Effect.runPromise(
+          Effect.scoped(
+            Effect.gen(function* () {
+              yield* Layer.build(
+                makeHttpLayer(
+                  0,
+                  {
+                    oldRef: Sha('main'),
+                    newRef: Sha('HEAD'),
+                    mergeBaseRef: Sha(parentSha ?? ''),
+                  },
+                  monorepoRoot,
+                ).pipe(Layer.provide(Layer.succeed(RepoPath, monorepoRoot))),
+              );
+              const server = listen.mock.instances.at(-1);
+              return server instanceof Server ? server.address() : null;
+            }),
+          ),
+        );
+
+        expect(address).toMatchObject({ address: '127.0.0.1' });
+      } finally {
+        listen.mockRestore();
+      }
+    });
+  });
+
   describe('GET /api/health', () => {
     it('should return 200 with { status: ok }', async () => {
       const response = await handler(new Request('http://localhost/api/health'));
@@ -367,6 +400,57 @@ describe('Http', () => {
 
       expect(response.status).toBe(404);
     });
+  });
+});
+
+describe('GET /api/warmup binary filtering', () => {
+  it('excludes binary files and still streams text files', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'greppa-warmup-binary-'));
+    const repoPath = join(tempDir, 'repo');
+    let disposeBinaryApp: (() => Promise<void>) | undefined;
+
+    try {
+      mkdirSync(repoPath);
+      execSync('git init -q', { cwd: repoPath });
+      writeFileSync(join(repoPath, 'asset.bin'), Buffer.from([0, 1, 2]));
+      writeFileSync(join(repoPath, 'notes.txt'), 'before\n');
+      execSync('git add -A', { cwd: repoPath });
+      execSync('git -c user.name=Test -c user.email=test@example.com commit -qm initial', {
+        cwd: repoPath,
+      });
+      writeFileSync(join(repoPath, 'asset.bin'), Buffer.from([0, 3, 2]));
+      writeFileSync(join(repoPath, 'notes.txt'), 'after\n');
+      execSync('git add -A', { cwd: repoPath });
+      execSync('git -c user.name=Test -c user.email=test@example.com commit -qm changed', {
+        cwd: repoPath,
+      });
+
+      const BinaryPlatformLayer = Layer.mergeAll(
+        NodeServices.layer,
+        NodeHttpPlatform.layer,
+        EtagLayer,
+        GitServiceLive,
+        CacheServiceLive(DEFAULT_DIFF_CACHE_CONFIG),
+        Layer.succeed(RepoPath, repoPath),
+      );
+      const app = HttpRouter.toWebHandler(
+        WarmupRoute.pipe(Layer.provide(BinaryPlatformLayer)),
+      );
+      disposeBinaryApp = app.dispose;
+      const binaryHandler = app.handler as (request: Request) => Promise<Response>;
+      const response = await binaryHandler(
+        new Request('http://localhost/api/warmup/HEAD~1/HEAD'),
+      );
+      const events = await readSseEvents<{ path: string }>(response);
+      const paths = events
+        .filter((event) => event.type === 'message')
+        .map((event) => event.data.path);
+
+      expect(paths).toEqual(['notes.txt']);
+    } finally {
+      await disposeBinaryApp?.();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });
 

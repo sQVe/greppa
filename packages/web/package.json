@@ -16,7 +16,7 @@
     "@tanstack/react-router": "1.168.8",
     "@tanstack/react-virtual": "3.13.23",
     "@tanstack/zod-adapter": "1.166.9",
-    "effect": "4.0.0-beta.40",
+    "effect": "4.0.0-rc.115",
     "idb-keyval": "6.2.2",
     "motion": "12.38.0",
     "nanoid": "5.1.7",

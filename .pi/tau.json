@@ -1,0 +1,4 @@
+{
+  "fullCheck": { "argv": ["cargo", "xtask", "check"] },
+  "mutation": { "argv": ["cargo", "xtask", "mutation"] }
+}

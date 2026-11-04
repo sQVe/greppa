@@ -20,12 +20,10 @@ enum Mode {
 #[derive(Debug, PartialEq, Eq)]
 struct Request {
     mode: Mode,
-    /// The base commit in changed mode, or the files in audit mode.
     targets: Vec<String>,
     max_mutants: Option<usize>,
 }
 
-/// Which mutants cargo-mutants should consider.
 struct Scope {
     diff: Option<PathBuf>,
     files: Vec<String>,
@@ -123,7 +121,6 @@ impl Scope {
     }
 }
 
-/// Writes the diff from `base` to the working tree, or returns `None` when nothing changed.
 fn write_diff(root: &Path, output: &Path, base: &str) -> Result<Option<PathBuf>, String> {
     let diff = Command::new("git")
         .args(["diff", "--no-ext-diff", base, "--"])
@@ -148,7 +145,6 @@ fn write_diff(root: &Path, output: &Path, base: &str) -> Result<Option<PathBuf>,
     Ok(Some(path))
 }
 
-/// Counts the mutants of each file in scope, in path order.
 fn count_mutants(root: &Path, scope: &Scope) -> Result<BTreeMap<String, usize>, String> {
     let listing = Command::new("cargo")
         .args(["mutants", "--workspace", "--list", "--json"])
@@ -185,8 +181,6 @@ fn count_mutants(root: &Path, scope: &Scope) -> Result<BTreeMap<String, usize>, 
     Ok(counts)
 }
 
-/// Gives files their mutant budget in path order. A file that does not fit stays unmutated, and
-/// later files that fit still run. Returns the selected and the unmutated files.
 fn apply_cap(
     counts: &BTreeMap<String, usize>,
     max_mutants: Option<usize>,
@@ -240,7 +234,6 @@ fn read_position(value: &Value) -> Option<Position> {
     Some(Position { line, column })
 }
 
-/// Returns the source text between two 1-based positions. The end column is exclusive.
 fn span_text(source: &str, start: Position, end: Position) -> String {
     let lines: Vec<&str> = source.lines().collect();
     let mut text = String::new();
@@ -296,7 +289,6 @@ fn read_survivor(root: &Path, mutant: &Value) -> Result<Survivor, String> {
     })
 }
 
-/// Reads the missed mutants from cargo-mutants' `outcomes.json`.
 fn read_survivors(root: &Path, output: &Path) -> Result<Vec<Survivor>, String> {
     let path = output.join("mutants.out").join("outcomes.json");
 
@@ -377,7 +369,6 @@ fn error_report(message: &str) -> Value {
     })
 }
 
-/// Builds the report and the exit code for a finished run.
 fn ran_report(mode: Mode, survivors: &[Survivor], unmutated: &[String]) -> (Value, u8) {
     let survivor_values: Vec<Value> = survivors
         .iter()

@@ -2,7 +2,6 @@
 all-features = true
 
 [advisories]
-# Unmaintained crates fail the check only when the workspace uses them directly.
 unmaintained = "workspace"
 yanked = "deny"
 

@@ -59,13 +59,10 @@ Mutation testing changes the code in small ways and reports each change that no 
 in the format Tau's `mutation_check` tool reads.
 
 ```sh
-# Mutate the lines changed since main.
 cargo xtask mutation changed main
 
-# Mutate whole files.
 cargo xtask mutation audit crates/greppa-core/src/lib.rs
 
-# Test at most 50 mutants. Files that do not fit are listed as unmutated.
 cargo xtask mutation changed main --max-mutants 50
 ```
 

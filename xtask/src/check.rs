@@ -1,5 +1,3 @@
-//! `cargo xtask check`: every read-only check that CI runs.
-
 use std::path::Path;
 use std::process::{Command, ExitCode};
 
@@ -7,7 +5,6 @@ use std::process::{Command, ExitCode};
 enum Group {
     /// Checks whose result does not depend on the operating system.
     Tidy,
-    /// Checks that compile code, so CI runs them on every operating system.
     Build,
 }
 
@@ -99,7 +96,6 @@ fn parse_groups(arguments: &[String]) -> Result<Vec<Group>, String> {
     }
 }
 
-/// Runs one step and reports whether it passed. A step that cannot start fails.
 fn run_step(root: &Path, step: &Step) -> bool {
     eprintln!("==> {}", step.name);
 

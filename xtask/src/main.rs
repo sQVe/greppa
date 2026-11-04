@@ -1,5 +1,3 @@
-//! Repository tasks for greppa, run as `cargo xtask <task>`.
-
 mod check;
 mod mutation;
 
@@ -12,7 +10,6 @@ Usage:
   cargo xtask mutation changed <base> [--max-mutants N]
   cargo xtask mutation audit <file>... [--max-mutants N]";
 
-/// The workspace root, which every task runs in.
 fn workspace_root() -> PathBuf {
     let manifest_directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "timezone": "Europe/Stockholm",
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "3 days",
+  "prConcurrentLimit": 10,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"],
+    "automerge": true
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the workspace rust-version together with rust-toolchain.toml",
+      "managerFilePatterns": ["/^Cargo\\.toml$/"],
+      "matchStrings": ["rust-version = \"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "rust",
+      "datasourceTemplate": "rust-version"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Group and automerge non-major GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"],
+      "groupName": "GitHub Actions",
+      "automerge": true
+    },
+    {
+      "description": "Require dashboard approval for major GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Group non-major crate updates",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"],
+      "groupName": "Rust crates (non-major)"
+    },
+    {
+      "description": "Require dashboard approval for major crate updates",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Update the pinned toolchain and rust-version in one pull request, without automerge, because new Rust releases add lints",
+      "matchDatasources": ["rust-version"],
+      "groupName": "Rust toolchain",
+      "automerge": false
+    }
+  ]
+}

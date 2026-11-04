@@ -1,0 +1,9 @@
+exclude_globs = [
+  "crates/greppa/**",
+  "xtask/**",
+  "**/tests/**",
+  "**/test_support.rs",
+  "**/test_support/**",
+]
+test_tool = "nextest"
+timeout_multiplier = 3.0

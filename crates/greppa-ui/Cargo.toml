@@ -1,0 +1,11 @@
+[package]
+name = "greppa-ui"
+version = "0.0.0"
+description = "GPUI views for greppa."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

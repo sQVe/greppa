@@ -1,0 +1,25 @@
+repos:
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: rustfmt
+        entry: cargo fmt --all --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: clippy
+        name: clippy
+        entry: cargo clippy --workspace --all-targets --locked --config 'build.warnings="deny"'
+        language: system
+        types_or: [rust, toml]
+        pass_filenames: false
+      - id: typos
+        name: typos
+        entry: typos --force-exclude
+        language: system
+        types: [text]
+      - id: taplo
+        name: taplo
+        entry: taplo fmt --check
+        language: system
+        types: [toml]

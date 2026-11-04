@@ -1,0 +1,11 @@
+[package]
+name = "greppa-core"
+version = "0.0.0"
+description = "Review logic for greppa, with no GPUI dependency."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

@@ -115,6 +115,6 @@ design. They are not results from a judge run.
 | `smoke-1` | fail             | No section header, and no row is selected.                 |
 | `smoke-2` | pass             | Clean: a section header, a selected first row, all labels. |
 | `smoke-3` | fail             | Every file label is blank.                                 |
-| `smoke-4` | pass             | One row is a little smaller than its neighbors.            |
+| `smoke-4` | pass             | One row is a little shorter than its neighbors.            |
 
 Run the smoke test again when a judge model, `judge.md`, or what step 5 gives the judges changes.

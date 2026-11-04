@@ -75,20 +75,14 @@ pub struct Radius {
 pub struct TextSizes {
     /// A section header.
     pub section: Pixels,
-    /// A file label in a medium row.
+    /// A file label in a row.
     pub row: Pixels,
-    /// A file label in a small row.
-    pub row_small: Pixels,
-    /// A status mark next to a medium label.
+    /// A status mark next to a label.
     pub mark: Pixels,
-    /// A status mark next to a small label.
-    pub mark_small: Pixels,
     /// The selected row's label weight, so selection is not color alone.
     pub selected_weight: FontWeight,
-    /// Line counts in a medium row.
+    /// Line counts in a row.
     pub counts: Pixels,
-    /// Line counts in a small row.
-    pub counts_small: Pixels,
 }
 
 /// Border widths.
@@ -138,12 +132,9 @@ impl Theme {
             text: TextSizes {
                 section: px(14.0),
                 row: px(13.0),
-                row_small: px(11.0),
                 mark: px(13.0),
-                mark_small: px(11.0),
                 selected_weight: FontWeight::SEMIBOLD,
                 counts: px(12.0),
-                counts_small: px(10.0),
             },
             border: Border { width: px(1.0) },
             sizing: Sizing {

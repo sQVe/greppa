@@ -39,7 +39,7 @@ impl FileStatus {
 pub enum RowSize {
     /// The default row.
     Medium,
-    /// A slightly smaller row.
+    /// A slightly shorter row, with the same text.
     Small,
 }
 
@@ -86,26 +86,16 @@ impl ChangedFileRow {
         self
     }
 
-    /// Draws the row a little smaller.
+    /// Draws the row a little shorter, with the same text.
     pub fn small(mut self) -> Self {
         self.size = RowSize::Small;
         self
     }
 
     fn render(&self, theme: &Theme) -> Div {
-        let (height, label_size, mark_size, counts_size) = match self.size {
-            RowSize::Medium => (
-                theme.sizing.row_height,
-                theme.text.row,
-                theme.text.mark,
-                theme.text.counts,
-            ),
-            RowSize::Small => (
-                theme.sizing.row_height_small,
-                theme.text.row_small,
-                theme.text.mark_small,
-                theme.text.counts_small,
-            ),
+        let height = match self.size {
+            RowSize::Medium => theme.sizing.row_height,
+            RowSize::Small => theme.sizing.row_height_small,
         };
         let background = if self.selected {
             theme.colors.selected
@@ -115,7 +105,7 @@ impl ChangedFileRow {
         let mut label = div()
             .flex_1()
             .min_w(theme.sizing.none)
-            .text_size(label_size)
+            .text_size(theme.text.row)
             .text_color(theme.colors.foreground);
 
         if self.selected {
@@ -129,21 +119,23 @@ impl ChangedFileRow {
             .px(theme.spacing.small)
             .rounded(theme.radius.small)
             .bg(background)
-            .child(mark(self.status, mark_size, theme))
+            .child(mark(self.status, theme))
             .child(label.child(self.label.clone()))
-            .child(counts(self, counts_size, theme))
+            .child(counts(self, theme))
     }
 }
 
-fn mark(status: FileStatus, size: Pixels, theme: &Theme) -> Div {
+fn mark(status: FileStatus, theme: &Theme) -> Div {
     div()
-        .text_size(size)
+        .text_size(theme.text.mark)
         .text_color(status.color(theme))
         .child(status.mark())
 }
 
-fn counts(row: &ChangedFileRow, size: Pixels, theme: &Theme) -> Div {
-    let mut counts = h_flex().gap(theme.spacing.tiny).text_size(size);
+fn counts(row: &ChangedFileRow, theme: &Theme) -> Div {
+    let mut counts = h_flex()
+        .gap(theme.spacing.tiny)
+        .text_size(theme.text.counts);
 
     if row.added_lines > 0 {
         counts = counts.child(

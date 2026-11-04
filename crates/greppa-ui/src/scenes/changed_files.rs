@@ -6,7 +6,7 @@ use crate::parts::{ChangedFileRow, ChangedFilesPanel, FileStatus};
 use crate::scenes::SceneName;
 use crate::theme::Theme;
 
-/// The row that draws a little smaller in the small-row scene.
+/// The row that draws a little shorter in the small-row scene.
 const SMALL_ROW_INDEX: usize = 2;
 
 /// The quality a smoke scene is designed to show.

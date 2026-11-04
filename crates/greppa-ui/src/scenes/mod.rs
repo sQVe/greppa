@@ -17,7 +17,7 @@ pub enum SceneName {
     Smoke2,
     /// A changed files panel whose file labels are all blank.
     Smoke3,
-    /// A clean changed files panel with one smaller row.
+    /// A clean changed files panel with one shorter row.
     Smoke4,
 }
 

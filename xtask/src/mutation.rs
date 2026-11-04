@@ -121,6 +121,30 @@ impl Scope {
     }
 }
 
+/// cargo-mutants matches `--file` as a glob against workspace-relative paths, so `./a.rs` or an
+/// absolute path would match nothing and wrongly report `nothing`.
+fn workspace_relative_path(root: &Path, path: &str) -> Result<String, String> {
+    let file = root
+        .join(path)
+        .canonicalize()
+        .map_err(|error| format!("Could not find {path}: {error}"))?;
+
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("Could not resolve {}: {error}", root.display()))?;
+
+    let relative = file
+        .strip_prefix(&canonical_root)
+        .map_err(|_| format!("{path} is outside the workspace."))?;
+
+    let parts: Vec<String> = relative
+        .components()
+        .map(|part| part.as_os_str().to_string_lossy().into_owned())
+        .collect();
+
+    Ok(parts.join("/"))
+}
+
 fn write_diff(root: &Path, output: &Path, base: &str) -> Result<Option<PathBuf>, String> {
     let diff = Command::new("git")
         .args(["diff", "--no-ext-diff", base, "--"])
@@ -219,7 +243,8 @@ fn run_mutants(root: &Path, output: &Path, scope: &Scope) -> Result<(), String> 
         .status()
         .map_err(|error| format!("Could not start cargo mutants: {error}"))?;
 
-    // cargo-mutants exits 2 for missed mutants and 3 for timeouts; outcomes.json holds both.
+    // cargo-mutants exits 2 for missed mutants and 3 for timeouts. A timed-out mutant counts as
+    // caught, as Stryker counts it in Tau's own mutation script, so only missed mutants survive.
     match status.code() {
         Some(0 | 2 | 3) => Ok(()),
         Some(4) => Err("The unmutated tree fails to build or pass its tests.".to_string()),
@@ -325,7 +350,11 @@ fn mutate(root: &Path, request: &Request) -> Result<Outcome, String> {
         },
         Mode::Audit => Scope {
             diff: None,
-            files: request.targets.clone(),
+            files: request
+                .targets
+                .iter()
+                .map(|path| workspace_relative_path(root, path))
+                .collect::<Result<_, _>>()?,
         },
     };
 
@@ -500,6 +529,68 @@ mod tests {
         assert_eq!(
             apply_cap(&counts, None),
             (strings(&["a.rs", "b.rs", "c.rs"]), vec![])
+        );
+    }
+
+    #[test]
+    fn workspace_relative_path_normalizes_existing_files() {
+        let root = crate::workspace_root();
+        let expected = Ok("crates/greppa-core/src/lib.rs".to_string());
+        let absolute = root.join("crates/greppa-core/src/lib.rs");
+
+        assert_eq!(
+            workspace_relative_path(&root, "./crates/greppa-core/src/lib.rs"),
+            expected
+        );
+        assert_eq!(
+            workspace_relative_path(&root, &absolute.display().to_string()),
+            expected
+        );
+        assert!(workspace_relative_path(&root, "crates/missing.rs").is_err());
+    }
+
+    #[test]
+    fn read_survivors_keeps_only_missed_mutants() {
+        let root = std::env::temp_dir().join(format!("greppa-xtask-{}", std::process::id()));
+        let output = root.join("out");
+        let mutant = |summary: &str, replacement: &str| {
+            json!({
+                "summary": summary,
+                "scenario": { "Mutant": {
+                    "file": "lib.rs",
+                    "genre": "BinaryOperator",
+                    "replacement": replacement,
+                    "span": { "start": { "line": 1, "column": 3 }, "end": { "line": 1, "column": 5 } },
+                } },
+            })
+        };
+        let outcomes = json!({ "outcomes": [
+            { "scenario": "Baseline", "summary": "Success" },
+            mutant("CaughtMutant", "||"),
+            mutant("MissedMutant", ">"),
+            mutant("Timeout", "<"),
+        ] });
+
+        fs::create_dir_all(output.join("mutants.out")).expect("create output");
+        fs::write(root.join("lib.rs"), "a <= b\n").expect("write source");
+        fs::write(
+            output.join("mutants.out/outcomes.json"),
+            outcomes.to_string(),
+        )
+        .expect("write outcomes");
+
+        let survivors = read_survivors(&root, &output);
+
+        fs::remove_dir_all(&root).expect("remove temporary directory");
+        assert_eq!(
+            survivors,
+            Ok(vec![Survivor {
+                file: "lib.rs".to_string(),
+                line: 1,
+                mutator: "BinaryOperator".to_string(),
+                original: "<=".to_string(),
+                replacement: ">".to_string(),
+            }])
         );
     }
 

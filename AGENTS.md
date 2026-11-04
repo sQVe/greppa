@@ -19,8 +19,6 @@ verification.
 
 - greppa is one native process on GPUI and gpui-component, with no server and no browser. See
   [ADR 0002](docs/adr/0002-native-rust-gpui.md).
-- Never depend on Zed's `editor` crate or any other GPL crate. greppa is MIT. See
-  [ADR 0002](docs/adr/0002-native-rust-gpui.md).
 - The diff viewer is gpui-component's `Diff`, from a vendored copy that greppa owns and patches.
   Record each local patch, with its reason, next to the vendored code. See
   [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
@@ -29,5 +27,5 @@ verification.
 - The toolchain is pinned in `rust-toolchain.toml`. Lint levels live in `[workspace.lints]`, and CI
   fails on warnings. Add single clippy lints, not whole groups. See
   [ADR 0004](docs/adr/0004-toolchain-and-quality-gates.md).
-- The app is MIT. Keep the Apache-2.0 license and notices of vendored code. See
-  [ADR 0004](docs/adr/0004-toolchain-and-quality-gates.md).
+- The app is MIT. Never depend on a GPL crate, such as Zed's `editor`. Keep the Apache-2.0 license
+  and notices of vendored code. See [ADR 0004](docs/adr/0004-toolchain-and-quality-gates.md).

@@ -29,11 +29,7 @@ greppa is a native desktop app written in Rust on GPUI and gpui-component. The a
 renders the review in one process, with no server and no browser.
 
 GPUI is the UI framework Zed is built on. It renders on the GPU and is made for views that show a
-lot of code. gpui-component adds the widgets greppa needs, including a diff viewer, under
-Apache-2.0.
-
-greppa does not use Zed's `editor` crate or any other GPL-3.0 crate from Zed. greppa is MIT, and a
-GPL-3.0 dependency would force the whole app under GPL-3.0.
+lot of code. gpui-component adds the widgets greppa needs, including a diff viewer.
 
 ## Consequences
 
@@ -61,5 +57,5 @@ transport, and the browser together, and the native path removed the main risk o
 
 ### Build the viewer on Zed's `editor` crate
 
-Use the text editor that Zed itself uses for diffs. Rejected because the crate is GPL-3.0, which is
-not compatible with an MIT app.
+Use the text editor that Zed itself uses for diffs. Rejected because the crate is GPL-3.0, which
+[ADR 0004](./0004-toolchain-and-quality-gates.md) rules out.

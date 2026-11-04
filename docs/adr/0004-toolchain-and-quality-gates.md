@@ -13,8 +13,7 @@ Zed, gpui-component, uv, Ruff, Helix, rust-analyzer, Tauri, and Bevy. The GPUI p
 warnings. Most use edition 2024 and shared workspace lints. Few turn on the whole clippy pedantic
 group.
 
-greppa is MIT, but its vendored gpui-component is Apache-2.0. Every dependency must keep the app
-under a license greppa can ship.
+greppa ships under MIT, so every dependency must have a license that allows it.
 
 ## Decision
 
@@ -93,4 +92,4 @@ change formatting, so the same code passes on one machine and fails on another.
 ### No license and advisory checks
 
 Rely on review to catch a bad dependency. Rejected because the license of a transitive dependency
-is easy to miss, and a GPL crate would change the license of the whole app.
+is easy to miss.

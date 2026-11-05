@@ -13,8 +13,6 @@ pub enum SceneName {
     Smoke4,
 }
 
-pub const SCENE_NAMES: &[&str] = &["smoke-1", "smoke-2", "smoke-3", "smoke-4"];
-
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum SceneError {
     #[error("Type a scene name. Known scenes: {}.", known_scenes())]
@@ -24,6 +22,13 @@ pub enum SceneError {
 }
 
 impl SceneName {
+    pub const ALL: [SceneName; 4] = [
+        SceneName::Smoke1,
+        SceneName::Smoke2,
+        SceneName::Smoke3,
+        SceneName::Smoke4,
+    ];
+
     pub fn from_argument(argument: Option<&str>) -> Result<SceneName, SceneError> {
         let Some(name) = argument.map(str::trim) else {
             return Err(SceneError::Missing);
@@ -48,13 +53,9 @@ impl SceneName {
     }
 
     fn from_name(name: &str) -> Option<SceneName> {
-        match name {
-            "smoke-1" => Some(SceneName::Smoke1),
-            "smoke-2" => Some(SceneName::Smoke2),
-            "smoke-3" => Some(SceneName::Smoke3),
-            "smoke-4" => Some(SceneName::Smoke4),
-            _ => None,
-        }
+        SceneName::ALL
+            .into_iter()
+            .find(|scene| scene.as_str() == name)
     }
 }
 
@@ -63,7 +64,9 @@ pub fn render_scene(name: SceneName, theme: &Theme) -> Div {
 }
 
 fn known_scenes() -> String {
-    SCENE_NAMES.join(", ")
+    let names: Vec<&str> = SceneName::ALL.into_iter().map(SceneName::as_str).collect();
+
+    names.join(", ")
 }
 
 #[cfg(test)]
@@ -72,13 +75,13 @@ mod tests {
 
     #[test]
     fn from_argument_reads_every_scene_name_and_trims() {
-        for name in SCENE_NAMES {
-            let parsed = SceneName::from_argument(Some(name)).expect("a known scene parses");
+        for scene in SceneName::ALL {
+            let name = scene.as_str();
 
-            assert_eq!(parsed.as_str(), *name);
+            assert_eq!(SceneName::from_argument(Some(name)), Ok(scene));
             assert_eq!(
                 SceneName::from_argument(Some(&format!("  {name}  "))),
-                Ok(parsed)
+                Ok(scene)
             );
         }
     }
@@ -109,17 +112,36 @@ mod tests {
     }
 
     #[test]
-    fn unknown_scene_message_names_every_scene() {
+    fn unknown_scene_error_names_the_rejected_name() {
         let error = SceneError::Unknown {
             name: "smoke-9".to_string(),
         };
-        let message = error.to_string();
 
-        for name in SCENE_NAMES {
-            assert!(
-                message.contains(name),
-                "the message does not name the scene {name}"
-            );
+        assert!(
+            error.to_string().contains("smoke-9"),
+            "the message does not name the rejected scene"
+        );
+    }
+
+    #[test]
+    fn scene_errors_name_every_scene() {
+        let errors = [
+            SceneError::Missing,
+            SceneError::Unknown {
+                name: "smoke-9".to_string(),
+            },
+        ];
+
+        for error in errors {
+            let message = error.to_string();
+
+            for scene in SceneName::ALL {
+                assert!(
+                    message.contains(scene.as_str()),
+                    "the {error:?} message does not name the scene {}",
+                    scene.as_str()
+                );
+            }
         }
     }
 }

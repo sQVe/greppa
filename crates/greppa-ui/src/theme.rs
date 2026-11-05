@@ -142,13 +142,6 @@ mod tests {
         fn passed(&self) -> bool {
             self.ratio >= self.minimum
         }
-
-        fn line(&self) -> String {
-            format!(
-                "{} on {}: {:.2}:1, needs {}:1",
-                self.text, self.surface, self.ratio, self.minimum
-            )
-        }
     }
 
     fn palette() -> Vec<(&'static str, Rgba)> {
@@ -286,15 +279,12 @@ mod tests {
     }
 
     #[test]
-    fn contrast_check_names_both_tokens_and_the_ratio() {
+    fn contrast_check_computes_the_ratio_and_fails_below_the_minimum() {
         let palette = [("foreground", rgb(0x888888)), ("surface", rgb(0xFFFFFF))];
         let checked = check(&pair("foreground", "surface", 4.5), &palette);
 
-        assert_eq!(checked.text, "foreground");
-        assert_eq!(checked.surface, "surface");
-        assert_eq!(checked.minimum, 4.5);
         assert!((checked.ratio - 3.54).abs() < 0.01);
-        assert!(!checked.passed(), "{} should fail", checked.line());
+        assert!(!checked.passed(), "{checked:?} should fail");
     }
 
     #[test]

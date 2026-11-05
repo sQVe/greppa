@@ -1,7 +1,7 @@
 use std::process::ExitCode;
 
 use gpui_kit::*;
-use greppa_ui::scenes::{SCENE_NAMES, SceneName, render_scene};
+use greppa_ui::scenes::{SceneName, render_scene};
 use greppa_ui::theme::{layout, theme};
 
 struct SceneView {
@@ -63,8 +63,8 @@ fn main() -> ExitCode {
     let argument = std::env::args().nth(1);
 
     if argument.as_deref() == Some("--list") {
-        for name in SCENE_NAMES {
-            println!("{name}");
+        for name in SceneName::ALL {
+            println!("{}", name.as_str());
         }
 
         return ExitCode::SUCCESS;

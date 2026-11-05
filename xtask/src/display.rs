@@ -2,12 +2,12 @@ use std::fs;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
 
 use crate::cleanup;
-use crate::process::{POLL, TOOL_TIMEOUT, run_with_timeout};
+use crate::process::{TOOL_TIMEOUT, poll_until, run_with_timeout};
 
 pub(crate) const WESTON_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -133,14 +133,11 @@ fn clean_display_files_in(folder: &Path, display: &str, timeout: Duration) {
     let owner = lock_owner(&lock);
 
     if let Some(pid) = owner {
-        let deadline = Instant::now() + timeout;
+        let stopped = poll_until(timeout, || Ok((!lock_owner_is_alive(pid)).then_some(())))
+            .expect("the wait for the lock owner cannot fail");
 
-        while lock_owner_is_alive(pid) {
-            if Instant::now() >= deadline {
-                return;
-            }
-
-            std::thread::sleep(POLL);
+        if stopped.is_none() {
+            return;
         }
     }
 
@@ -234,24 +231,22 @@ pub(crate) fn display_from_log(log: &str) -> Option<String> {
 }
 
 pub(crate) fn wait_for_display(log_path: &Path, timeout: Duration) -> anyhow::Result<String> {
-    let deadline = Instant::now() + timeout;
-
-    loop {
+    let display = poll_until(timeout, || {
         if let Ok(log) = fs::read_to_string(log_path)
             && let Some(display) = display_from_log(&log)
         {
-            return Ok(display);
+            return Ok(Some(display));
         }
 
-        if Instant::now() >= deadline {
-            anyhow::bail!(
-                "weston did not print a display within {} seconds.",
-                timeout.as_secs()
-            );
-        }
+        Ok(None)
+    })?;
 
-        std::thread::sleep(POLL);
-    }
+    display.ok_or_else(|| {
+        anyhow::anyhow!(
+            "weston did not print a display within {} seconds.",
+            timeout.as_secs()
+        )
+    })
 }
 
 pub(crate) fn import_window(
@@ -285,6 +280,7 @@ mod tests {
     use std::ffi::OsStr;
 
     use super::*;
+    use crate::process::POLL;
 
     #[test]
     fn runtime_dir_is_private_and_removed_on_drop() {

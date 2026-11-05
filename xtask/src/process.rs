@@ -8,6 +8,25 @@ use thiserror::Error;
 pub(crate) const POLL: Duration = Duration::from_millis(100);
 pub(crate) const TOOL_TIMEOUT: Duration = Duration::from_secs(20);
 
+pub(crate) fn poll_until<T>(
+    timeout: Duration,
+    mut attempt: impl FnMut() -> anyhow::Result<Option<T>>,
+) -> anyhow::Result<Option<T>> {
+    let deadline = Instant::now() + timeout;
+
+    loop {
+        if let Some(value) = attempt()? {
+            return Ok(Some(value));
+        }
+
+        if Instant::now() >= deadline {
+            return Ok(None);
+        }
+
+        std::thread::sleep(POLL);
+    }
+}
+
 #[derive(Debug, Error)]
 pub(crate) enum ProcessError {
     #[error("{program} timed out after {} seconds.", duration.as_secs())]
@@ -152,5 +171,46 @@ mod tests {
             1,
             "rendered: {rendered}"
         );
+    }
+
+    #[test]
+    fn poll_until_returns_the_value_of_a_later_attempt() {
+        let mut attempts = 0;
+        let value = poll_until(Duration::from_secs(1), || {
+            attempts += 1;
+
+            Ok((attempts == 3).then_some(attempts))
+        })
+        .expect("the attempt cannot fail");
+
+        assert_eq!(value, Some(3));
+    }
+
+    #[test]
+    fn poll_until_passes_an_attempt_error_through_at_once() {
+        let mut attempts = 0;
+        let error = poll_until::<()>(Duration::from_secs(1), || {
+            attempts += 1;
+
+            Err(anyhow::anyhow!("attempt failed"))
+        })
+        .expect_err("the attempt error is returned");
+
+        assert_eq!(error.to_string(), "attempt failed");
+        assert_eq!(attempts, 1, "poll_until stops at the first error");
+    }
+
+    #[test]
+    fn poll_until_returns_none_after_a_short_timeout() {
+        let mut attempts = 0;
+        let value = poll_until(Duration::from_millis(250), || {
+            attempts += 1;
+
+            Ok(None::<()>)
+        })
+        .expect("the attempt cannot fail");
+
+        assert_eq!(value, None);
+        assert!(attempts >= 2, "poll_until keeps trying until the deadline");
     }
 }

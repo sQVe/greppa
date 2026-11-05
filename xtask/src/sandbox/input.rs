@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
 
-use crate::process;
+use crate::process::{self, poll_until};
 
 use super::environment::sandbox_environment;
 
@@ -41,10 +41,11 @@ pub(super) fn focus_window(root: &Path, display: &str, title: &str) -> anyhow::R
 }
 
 fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String> {
-    let deadline = Instant::now() + WINDOW_TIMEOUT;
+    let started = Instant::now();
     let environment = sandbox_environment(root, display);
+    let timeout = WINDOW_TIMEOUT.saturating_sub(started.elapsed());
 
-    loop {
+    let window = poll_until(timeout, || {
         let mut command = Command::new("xdotool");
         command
             .args(["search", "--onlyvisible", "--name", title])
@@ -61,7 +62,7 @@ fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String
                 .collect();
 
             match ids.as_slice() {
-                [id] => return Ok(id.clone()),
+                [id] => return Ok(Some(id.clone())),
                 [] => {}
                 _ => {
                     anyhow::bail!(
@@ -72,15 +73,15 @@ fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String
             }
         }
 
-        if Instant::now() >= deadline {
-            anyhow::bail!(
-                "The window titled \"{title}\" did not appear within {} seconds.",
-                WINDOW_TIMEOUT.as_secs()
-            );
-        }
+        Ok(None)
+    })?;
 
-        std::thread::sleep(process::POLL);
-    }
+    window.ok_or_else(|| {
+        anyhow::anyhow!(
+            "The window titled \"{title}\" did not appear within {} seconds.",
+            WINDOW_TIMEOUT.as_secs()
+        )
+    })
 }
 
 pub(super) fn warm_up(root: &Path, display: &str, window: &str) -> anyhow::Result<()> {

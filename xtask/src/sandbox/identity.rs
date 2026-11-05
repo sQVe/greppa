@@ -1,22 +1,20 @@
 use std::fs;
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::Context as _;
 
 use crate::cleanup;
-use crate::process;
+use crate::process::poll_until;
 
-const STOP_TIMEOUT: Duration = Duration::from_secs(5);
+pub(super) const STOP_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub(super) fn record_xwayland(root: &Path, display: &str) -> anyhow::Result<()> {
     let Some((weston, _)) = read_record(&root.join("weston.pid")) else {
         return Ok(());
     };
 
-    let deadline = Instant::now() + STOP_TIMEOUT;
-
-    loop {
+    poll_until(STOP_TIMEOUT, || {
         for pid in child_pids(weston) {
             let Ok(cmdline) = fs::read(format!("/proc/{pid}/cmdline")) else {
                 continue;
@@ -24,17 +22,15 @@ pub(super) fn record_xwayland(root: &Path, display: &str) -> anyhow::Result<()> 
             let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
 
             if cmdline.contains("Xwayland") && cmdline.contains(display) {
-                record_process(&root.join("xwayland.pid"), pid, "Xwayland")?;
-                return Ok(());
+                record_process(&root.join("xwayland.pid"), pid, "Xwayland", STOP_TIMEOUT)?;
+                return Ok(Some(()));
             }
         }
 
-        if Instant::now() >= deadline {
-            return Ok(());
-        }
+        Ok(None)
+    })?;
 
-        std::thread::sleep(process::POLL);
-    }
+    Ok(())
 }
 
 fn child_pids(parent: u32) -> Vec<u32> {
@@ -85,18 +81,23 @@ fn identity_still_matches(pid: u32, started: u64) -> bool {
     process_start(pid) == Some(started)
 }
 
-pub(super) fn record_process(path: &Path, pid: u32, expected: &str) -> anyhow::Result<()> {
-    let deadline = Instant::now() + STOP_TIMEOUT;
-
-    loop {
+pub(super) fn record_process(
+    path: &Path,
+    pid: u32,
+    expected: &str,
+    timeout: Duration,
+) -> anyhow::Result<()> {
+    let recorded = poll_until(timeout, || {
         if let Some(started) = process_start(pid) {
             let cmdline = fs::read(format!("/proc/{pid}/cmdline"))
                 .with_context(|| format!("Could not read the process {pid}"))?;
             let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
 
             if cmdline.contains(expected) {
-                return fs::write(path, format!("{pid} {started}\n"))
-                    .with_context(|| format!("Could not record the {expected} process"));
+                fs::write(path, format!("{pid} {started}\n"))
+                    .with_context(|| format!("Could not record the {expected} process"))?;
+
+                return Ok(Some(()));
             }
 
             if !cmdline.trim().is_empty() {
@@ -108,12 +109,14 @@ pub(super) fn record_process(path: &Path, pid: u32, expected: &str) -> anyhow::R
             anyhow::bail!("The {expected} process {pid} is gone before it could be recorded.");
         }
 
-        if Instant::now() >= deadline {
-            anyhow::bail!("The {expected} process {pid} did not name itself in time.");
-        }
+        Ok(None)
+    })?;
 
-        std::thread::sleep(process::POLL);
+    if recorded.is_none() {
+        anyhow::bail!("The {expected} process {pid} did not name itself in time.");
     }
+
+    Ok(())
 }
 
 fn read_record(path: &Path) -> Option<(u32, u64)> {
@@ -152,7 +155,7 @@ pub(super) fn stop_window(root: &Path) -> anyhow::Result<()> {
     };
 
     if process_start(pid) == Some(started) && process_is_ours(pid, root) {
-        return stop_process(&path, pid, started);
+        return stop_process(&path, pid, started, STOP_TIMEOUT);
     }
 
     cleanup::remove_file(&path);
@@ -167,7 +170,7 @@ pub(super) fn stop_recorded(path: &Path) -> anyhow::Result<()> {
     };
 
     if process_start(pid) == Some(started) {
-        return stop_process(path, pid, started);
+        return stop_process(path, pid, started, STOP_TIMEOUT);
     }
 
     cleanup::remove_file(path);
@@ -175,7 +178,7 @@ pub(super) fn stop_recorded(path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn stop_process(path: &Path, pid: u32, started: u64) -> anyhow::Result<()> {
+fn stop_process(path: &Path, pid: u32, started: u64, timeout: Duration) -> anyhow::Result<()> {
     if !identity_still_matches(pid, started) {
         cleanup::remove_file(path);
         return Ok(());
@@ -197,7 +200,7 @@ fn stop_process(path: &Path, pid: u32, started: u64) -> anyhow::Result<()> {
         }
     };
 
-    stop_after_open(path, pid, started, process_start(pid), || {
+    stop_after_open(path, pid, started, process_start(pid), timeout, || {
         send_term(pid, &pidfd);
     })
 }
@@ -222,6 +225,7 @@ fn stop_after_open(
     pid: u32,
     started: u64,
     after_open: Option<u64>,
+    timeout: Duration,
     signal: impl FnOnce(),
 ) -> anyhow::Result<()> {
     if after_open != Some(started) {
@@ -230,80 +234,25 @@ fn stop_after_open(
     }
 
     signal();
-    stop_loop(path, pid, started)
+    stop_loop(path, pid, started, timeout)
 }
 
-fn stop_loop(path: &Path, pid: u32, started: u64) -> anyhow::Result<()> {
-    let deadline = Instant::now() + STOP_TIMEOUT;
-
-    loop {
+fn stop_loop(path: &Path, pid: u32, started: u64, timeout: Duration) -> anyhow::Result<()> {
+    let stopped = poll_until(timeout, || {
         if !identity_still_matches(pid, started) || process_is_zombie(pid) {
             cleanup::remove_file(path);
-            return Ok(());
+            return Ok(Some(()));
         }
 
-        if Instant::now() >= deadline {
-            anyhow::bail!("The process {pid} did not stop; keeping {}", path.display());
-        }
+        Ok(None)
+    })?;
 
-        std::thread::sleep(process::POLL);
+    if stopped.is_none() {
+        anyhow::bail!("The process {pid} did not stop; keeping {}", path.display());
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn identity_still_matches_rejects_a_changed_start_time() {
-        let pid = std::process::id();
-        let started = process_start(pid).expect("the test process has a start time");
-
-        assert!(identity_still_matches(pid, started));
-        assert!(!identity_still_matches(pid, started + 1));
-    }
-
-    #[test]
-    fn record_matches_rejects_a_changed_start_time() {
-        let directory = crate::test_support::temporary_directory();
-        let path = directory.path().join("record");
-        let pid = std::process::id();
-        let started = process_start(pid).expect("the test process has a start time");
-
-        fs::write(&path, format!("{pid} {started}\n")).expect("write the matching record");
-        assert!(record_matches(&path));
-
-        fs::write(&path, format!("{pid} {}\n", started + 1)).expect("write the changed record");
-        assert!(!record_matches(&path));
-    }
-
-    #[test]
-    fn stop_process_skips_a_mismatched_start_time() {
-        let directory = crate::test_support::temporary_directory();
-        let path = directory.path().join("record");
-        let pid = std::process::id();
-        let started = process_start(pid).expect("the test process has a start time");
-
-        fs::write(&path, format!("{pid} {started}\n")).expect("write the record");
-        let result = stop_process(&path, pid, started + 1);
-
-        assert!(result.is_ok());
-        assert!(!path.exists(), "a mismatched record is removed");
-    }
-
-    #[test]
-    fn stop_after_open_refuses_a_changed_identity_without_signaling() {
-        let directory = crate::test_support::temporary_directory();
-        let path = directory.path().join("record");
-        let pid = std::process::id();
-        let started = process_start(pid).expect("the test process has a start time");
-        fs::write(&path, format!("{pid} {started}\n")).expect("write the record");
-
-        let mut signaled = false;
-        let result = stop_after_open(&path, pid, started, Some(started + 1), || signaled = true);
-
-        assert!(result.is_ok());
-        assert!(!signaled, "a changed identity must not signal");
-        assert!(!path.exists(), "the stale record is removed");
-    }
-}
+mod tests;

@@ -9,7 +9,7 @@ use crate::cleanup;
 use crate::display;
 
 use super::environment::{nested_weston_environment, weston_environment};
-use super::identity::{record_matches, record_process, stop_recorded};
+use super::identity::{STOP_TIMEOUT, record_matches, record_process, stop_recorded};
 use super::root::{prepare_root, socket_name};
 
 const WINDOW_WIDTH: u32 = 1400;
@@ -65,7 +65,7 @@ pub(super) fn ensure_display(name: &str, root: &Path, headed: bool) -> anyhow::R
     let mut child = command.spawn().with_context(|| "Could not start weston")?;
     let pid = child.id();
 
-    if let Err(error) = record_process(&root.join("weston.pid"), pid, "weston") {
+    if let Err(error) = record_process(&root.join("weston.pid"), pid, "weston", STOP_TIMEOUT) {
         cleanup::stop_child(&mut child);
         return Err(error);
     }

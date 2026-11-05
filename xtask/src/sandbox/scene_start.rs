@@ -2,16 +2,16 @@ use std::fs;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::Context as _;
 
 use crate::cleanup;
-use crate::process;
+use crate::process::poll_until;
 use crate::scene::{self, Ready};
 
 use super::environment::sandbox_environment;
-use super::identity::{process_start, record_process, stop_window};
+use super::identity::{STOP_TIMEOUT, process_start, record_process, stop_window};
 
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -46,7 +46,12 @@ pub(super) fn start_scene(
         .with_context(|| "Could not start the scene")?;
     let pid = child.id();
 
-    if let Err(error) = record_process(&root.join("pid"), pid, &binary.to_string_lossy()) {
+    if let Err(error) = record_process(
+        &root.join("pid"),
+        pid,
+        &binary.to_string_lossy(),
+        STOP_TIMEOUT,
+    ) {
         cleanup::stop_child(&mut child);
         return Err(error);
     }
@@ -62,13 +67,11 @@ pub(super) fn start_scene(
 }
 
 fn wait_for_ready(log_path: &Path, pid: u32, timeout: Duration) -> anyhow::Result<Ready> {
-    let deadline = Instant::now() + timeout;
-
-    loop {
+    let ready = poll_until(timeout, || {
         if let Ok(log) = fs::read_to_string(log_path) {
             for line in log.lines() {
                 if let Ok(ready) = scene::parse_ready(line) {
-                    return Ok(ready);
+                    return Ok(Some(ready));
                 }
             }
         }
@@ -80,14 +83,14 @@ fn wait_for_ready(log_path: &Path, pid: u32, timeout: Duration) -> anyhow::Resul
             );
         }
 
-        if Instant::now() >= deadline {
-            anyhow::bail!(
-                "The scene did not print a ready line within {} seconds; see {}",
-                timeout.as_secs(),
-                log_path.display()
-            );
-        }
+        Ok(None)
+    })?;
 
-        std::thread::sleep(process::POLL);
-    }
+    ready.ok_or_else(|| {
+        anyhow::anyhow!(
+            "The scene did not print a ready line within {} seconds; see {}",
+            timeout.as_secs(),
+            log_path.display()
+        )
+    })
 }

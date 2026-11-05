@@ -67,6 +67,15 @@ says why the call cannot fail, so a panic message points at the broken assumptio
 `Result` hides failures, as Zed's rules warn, so `let _ =` on a `Result` is not allowed. `_ =`,
 `drop(result)`, and an unused `.ok()` hide a failure the same way, so the rule names them too.
 
+`xtask` counts as app code. Its tasks only report errors, and no caller reads a `String` error's
+text to decide what to do. The automation crates of
+[rust-analyzer](https://github.com/rust-lang/rust-analyzer/blob/6e37b2d62127d445d77069031b416c48c9b0b4f2/xtask/src/main.rs#L33-L90),
+[Zed](https://github.com/zed-industries/zed/blob/4ba7d82f6872cb5ee8adc122529e49ba28057c3a/tooling/xtask/src/main.rs#L4-L55),
+[uv](https://github.com/astral-sh/uv/blob/4470c33bd7115dfb75922a59280e445d05cc181e/crates/uv-dev/src/main.rs#L18-L77),
+and [Ruff](https://github.com/astral-sh/ruff/blob/8960d6db60e495867635b8aaedbe90e352b4b19f/crates/ruff_dev/src/main.rs#L93-L129)
+also report with `anyhow`. An `xtask` error that a test tells apart gets a `thiserror` type, as
+anywhere else.
+
 `Drop` cannot return an error, so a cleanup error there goes to stderr with `eprintln!` under a
 narrow `#[expect(clippy::print_stderr)]`. greppa has no logger, so stderr is the one place such an
 error can go. One fixed form is easier to follow than a judgment of which errors are safe to drop,
@@ -196,6 +205,11 @@ and `expect` with a reason documents the assumption.
 
 Use only `thiserror` types, or only `anyhow`. Rejected because callers that branch need typed
 variants, while app code that only reports an error gains nothing from a new type.
+
+### `String` errors in `xtask`
+
+Exempt `xtask` and let its tasks keep returning `Result<_, String>`. Rejected because a `String`
+loses the cause chain that `anyhow` keeps, and its tests can only compare message text.
 
 ### Test case libraries and mocking frameworks
 

@@ -27,6 +27,7 @@ These names are exceptions to Tau's full-word naming rule.
 - Count a test that tells failures apart as a caller that branches.
 - In app code that only reports an error, use `anyhow::Result` and add context with `.context(...)`
   or `.with_context(...)`. App code is `main` and the code that only passes errors up to it.
+- Treat `xtask` as app code: its tasks report errors with `anyhow`, not with `String`.
 - Import anyhow's trait as `use anyhow::Context as _;`, because GPUI exports a type named
   `Context`.
 - Panic only on a bug. Use `expect` with a message that says why the call cannot fail, such as

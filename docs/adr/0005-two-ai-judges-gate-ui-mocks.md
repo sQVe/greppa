@@ -103,7 +103,7 @@ must give. Changing a judge model or the judge instructions requires a smoke tes
 - A scene cannot show the four usability categories. They wait for the real view.
 - Scenes must follow changes to the UI parts, or they show old parts.
 - Capture needs Linux with Weston, Xwayland, ImageMagick, and a Vulkan driver, so mocks cannot be
-  captured on macOS or Windows.
+  captured on macOS.
 - The pass rule is strict. One severity 2 finding from either judge fails the mock.
 - The raw-value rule is strict. A one-off size still needs a theme token.
 

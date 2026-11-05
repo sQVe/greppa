@@ -149,7 +149,8 @@ writes its logs to `target/mutants/mutants.out`.
 advisories fail cargo-deny without a code change.
 
 - `Check` runs `cargo xtask check tidy` on Linux.
-- `Test (Linux)`, `Test (macOS)`, and `Test (Windows)` run `cargo xtask check build`.
+- `Test (Linux)` and `Test (macOS)` run `cargo xtask check build`. greppa does not support
+  Windows; see [ADR 0007](adr/0007-linux-and-macos-only.md).
 
 Only runs on `main` save the build cache. Renovate updates dependencies, actions, and the toolchain
 every Monday, after a release is three days old.

@@ -3,15 +3,16 @@ name: CI
 on:
   push:
     branches: [main]
+  # Every base branch, so pull requests stacked on another pull request run CI too.
   pull_request:
-    branches: [main]
   schedule:
     # Weekly, so new security advisories fail cargo-deny without a code change.
     - cron: "0 5 * * 1"
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # The event is part of the group, so a push to main does not cancel the scheduled audit.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

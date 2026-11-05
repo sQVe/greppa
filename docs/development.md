@@ -42,7 +42,8 @@ builds GPUI. The check job does not compile code and needs no display.
 
 The `dev` profile keeps only line tables for workspace crates and no debug info for dependencies,
 so panic backtraces show files and lines but a debugger cannot show variables. For full debugger
-support, build with `cargo build --profile debugging`. The binaries go to `target/debugging/`.
+support in workspace crates, build with `cargo build --profile debugging`. Dependencies still build
+without debug info. The binaries go to `target/debugging/`.
 
 ## Workspace
 

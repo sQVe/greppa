@@ -7,5 +7,12 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[dependencies]
+gpui-kit.workspace = true
+
+[[bin]]
+name = "greppa-scene"
+path = "src/bin/greppa-scene.rs"
+
 [lints]
 workspace = true

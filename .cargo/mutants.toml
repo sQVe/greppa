@@ -1,5 +1,7 @@
 exclude_globs = [
   "crates/greppa/**",
+  "crates/greppa-ui/src/bin/**",
+  "crates/greppa-ui/src/scenes/**",
   "xtask/**",
   "**/tests/**",
   "**/test_support.rs",

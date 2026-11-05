@@ -121,7 +121,6 @@ jobs:
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest
-      # Survivors are advice: exit 2 passes, and only exit 1 (an error or an unmutated file) fails.
       - name: Mutate the pull request's diff
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -145,7 +144,6 @@ jobs:
       (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
       && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # The audit's runtime on a runner is not measured yet; 180 minutes is a first guess.
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -179,8 +177,6 @@ jobs:
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest
-      # Survivors (exit 2) and timeouts (exit 3) are advice. Other exits, such as a failing
-      # baseline (exit 4), fail the job.
       - name: Mutate the whole workspace
         run: |
           status=0

@@ -53,8 +53,6 @@ impl Fixture {
             .to_string()
     }
 
-    // Logs each call's arguments to `cargo.log`, prints `listing` for `--list`, and otherwise runs
-    // `run`.
     fn cargo(&self, listing: &str, list_exit: u8, run: &str) -> String {
         let script = format!(
             "printf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/cargo.log\"\n\

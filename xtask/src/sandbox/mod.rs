@@ -1,5 +1,7 @@
 mod command;
 #[cfg(target_os = "linux")]
+mod display_start;
+#[cfg(target_os = "linux")]
 mod environment;
 #[cfg(target_os = "linux")]
 mod identity;
@@ -24,16 +26,16 @@ use command::{parse, sandbox_name};
 pub(crate) fn run(workspace: &Path, arguments: &[String]) -> ExitCode {
     let name = match sandbox_name(std::env::var("GREPPA_SANDBOX").ok().as_deref()) {
         Ok(name) => name,
-        Err(message) => {
-            eprintln!("{message}");
+        Err(error) => {
+            eprintln!("{error:#}");
             return ExitCode::FAILURE;
         }
     };
 
     let command = match parse(arguments) {
         Ok(command) => command,
-        Err(message) => {
-            eprintln!("{message}");
+        Err(error) => {
+            eprintln!("{error:#}");
             return ExitCode::FAILURE;
         }
     };

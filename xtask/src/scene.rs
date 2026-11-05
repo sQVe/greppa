@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+use anyhow::Context as _;
 use serde_json::Value;
+use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Point {
@@ -24,10 +26,17 @@ pub(crate) struct Ready {
     pub title: String,
 }
 
-pub(crate) fn parse_ready(line: &str) -> Result<Ready, String> {
-    let value: Value =
-        serde_json::from_str(line).map_err(|error| format!("Invalid ready line: {error}"))?;
-    let missing = |field: &str| format!("The ready line has no {field}.");
+#[derive(Debug, Error)]
+pub(crate) enum SceneError {
+    #[error("{}", unknown_scene_message(name, names))]
+    Unknown { name: String, names: Vec<String> },
+    #[error("{}", unknown_scene_message(name, names))]
+    Empty { name: String, names: Vec<String> },
+}
+
+pub(crate) fn parse_ready(line: &str) -> anyhow::Result<Ready> {
+    let value: Value = serde_json::from_str(line).context("Invalid ready line")?;
+    let missing = |field: &str| anyhow::anyhow!("The ready line has no {field}.");
 
     Ok(Ready {
         scene: value["scene"]
@@ -64,14 +73,27 @@ pub(crate) fn unknown_scene_message(name: &str, names: &[String]) -> String {
     }
 }
 
-pub(crate) fn validate_scene(name: &str, names: &[String]) -> Result<String, String> {
+pub(crate) fn validate_scene(name: &str, names: &[String]) -> Result<String, SceneError> {
     let trimmed = name.trim();
+    let requested = trimmed.to_string();
 
     names
         .iter()
         .find(|scene| scene.as_str() == trimmed)
         .cloned()
-        .ok_or_else(|| unknown_scene_message(name, names))
+        .ok_or_else(|| {
+            if trimmed.is_empty() {
+                SceneError::Empty {
+                    name: requested,
+                    names: names.to_vec(),
+                }
+            } else {
+                SceneError::Unknown {
+                    name: requested,
+                    names: names.to_vec(),
+                }
+            }
+        })
 }
 
 const DROPPED_SESSION: &[&str] = &[
@@ -93,7 +115,7 @@ pub(crate) fn build_environment(caller: &[(String, String)]) -> Vec<(String, Str
         .collect()
 }
 
-pub(crate) fn build(root: &Path) -> Result<PathBuf, String> {
+pub(crate) fn build(root: &Path) -> anyhow::Result<PathBuf> {
     let output = Command::new("cargo")
         .args([
             "build",
@@ -109,10 +131,10 @@ pub(crate) fn build(root: &Path) -> Result<PathBuf, String> {
         .envs(build_environment(&std::env::vars().collect::<Vec<_>>()))
         .stderr(Stdio::inherit())
         .output()
-        .map_err(|error| format!("Could not start cargo build: {error}"))?;
+        .context("Could not start cargo build")?;
 
     if !output.status.success() {
-        return Err("The scene binary did not build.".to_string());
+        anyhow::bail!("The scene binary did not build.");
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -120,7 +142,7 @@ pub(crate) fn build(root: &Path) -> Result<PathBuf, String> {
     executable_from_messages(&stdout)
 }
 
-pub(crate) fn executable_from_messages(output: &str) -> Result<PathBuf, String> {
+pub(crate) fn executable_from_messages(output: &str) -> anyhow::Result<PathBuf> {
     for line in output.lines() {
         let Ok(value) = serde_json::from_str::<Value>(line) else {
             continue;
@@ -135,23 +157,23 @@ pub(crate) fn executable_from_messages(output: &str) -> Result<PathBuf, String> 
         }
     }
 
-    Err("Cargo did not report a greppa-scene executable.".to_string())
+    anyhow::bail!("Cargo did not report a greppa-scene executable.")
 }
 
 pub(crate) fn names(
     binary: &Path,
     environment: &[(String, String)],
-) -> Result<Vec<String>, String> {
+) -> anyhow::Result<Vec<String>> {
     let mut command = Command::new(binary);
     command
         .arg("--list")
         .env_clear()
         .envs(environment.iter().cloned());
     let output = crate::process::run_with_timeout(command, crate::process::TOOL_TIMEOUT)
-        .map_err(|error| format!("Could not list the scenes: {error}"))?;
+        .context("Could not list the scenes")?;
 
     if !output.status.success() {
-        return Err("The scene binary did not list its scenes.".to_string());
+        anyhow::bail!("The scene binary did not list its scenes.");
     }
 
     let names: Vec<String> = String::from_utf8_lossy(&output.stdout)
@@ -162,7 +184,7 @@ pub(crate) fn names(
         .collect();
 
     if names.is_empty() {
-        return Err("The scene binary listed no scenes.".to_string());
+        anyhow::bail!("The scene binary listed no scenes.");
     }
 
     Ok(names)
@@ -177,8 +199,8 @@ mod tests {
         let line = "{\"scene\":\"demo\",\"origin\":{\"x\":60,\"y\":60},\"size\":{\"width\":420,\"height\":300},\"scale\":1,\"title\":\"greppa-scene-demo\"}";
 
         assert_eq!(
-            parse_ready(line),
-            Ok(Ready {
+            parse_ready(line).expect("a complete ready line"),
+            Ready {
                 scene: "demo".to_string(),
                 origin: Point { x: 60.0, y: 60.0 },
                 size: LogicalSize {
@@ -187,7 +209,7 @@ mod tests {
                 },
                 scale: 1.0,
                 title: "greppa-scene-demo".to_string(),
-            })
+            }
         );
     }
 
@@ -218,14 +240,26 @@ mod tests {
     fn validate_scene_names_the_known_scenes() {
         let names = known_names();
 
-        assert_eq!(validate_scene(" alpha ", &names), Ok("alpha".to_string()));
         assert_eq!(
-            validate_scene("missing", &names),
-            Err("No scene named \"missing\". Known scenes: alpha, beta.".to_string())
+            validate_scene(" alpha ", &names).expect("a known scene"),
+            "alpha"
+        );
+
+        let error = validate_scene("missing", &names).expect_err("an unknown scene fails");
+        assert!(
+            matches!(error, SceneError::Unknown { ref name, .. } if name == "missing"),
+            "unexpected error: {error}"
         );
         assert_eq!(
-            validate_scene("", &names),
-            Err("Type a scene name. Known scenes: alpha, beta.".to_string())
+            error.to_string(),
+            "No scene named \"missing\". Known scenes: alpha, beta."
+        );
+
+        let error = validate_scene("", &names).expect_err("an empty scene fails");
+        assert!(matches!(error, SceneError::Empty { .. }));
+        assert_eq!(
+            error.to_string(),
+            "Type a scene name. Known scenes: alpha, beta."
         );
     }
 
@@ -268,8 +302,8 @@ mod tests {
 {\"reason\":\"build-finished\",\"success\":true}\n";
 
         assert_eq!(
-            executable_from_messages(output),
-            Ok(PathBuf::from("/custom/target/debug/greppa-scene"))
+            executable_from_messages(output).expect("a compiler artifact"),
+            PathBuf::from("/custom/target/debug/greppa-scene")
         );
         assert!(executable_from_messages("not json").is_err());
         assert!(

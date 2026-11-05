@@ -1,27 +1,26 @@
 use std::fs;
-use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{ExitCode, Stdio};
+use std::process::ExitCode;
+
+use anyhow::Context as _;
 
 use crate::display;
 use crate::scene;
 
 use super::command::{Sandbox, require_program};
-use super::environment::{nested_weston_environment, sandbox_environment, weston_environment};
-use super::identity::{
-    record_matches, record_process, record_xwayland, stop_recorded, stop_window,
+use super::display_start::{
+    clean_display_files, display_up, ensure_display, recorded_mode, require_headed_session,
 };
+use super::environment::{sandbox_environment, weston_environment};
+use super::identity::{record_xwayland, stop_recorded, stop_window};
 use super::input::{
     CLICK_SETTLE, drag, focus_window, glide, move_pointer, warm_up, window_id, xdotool,
 };
 use super::root::{
     install_openers, prepare_root, refuse_linked_paths, refuse_unsafe_root, remove_root,
-    require_trusted_root, root_path, socket_name,
+    require_trusted_root, root_path,
 };
 use super::scene_start::start_scene;
-
-const WINDOW_WIDTH: u32 = 1400;
-const WINDOW_HEIGHT: u32 = 900;
 
 #[expect(
     clippy::print_stderr,
@@ -30,14 +29,14 @@ const WINDOW_HEIGHT: u32 = 900;
 pub(super) fn run(workspace: &Path, name: &str, command: Sandbox) -> ExitCode {
     match execute(workspace, name, command) {
         Ok(()) => ExitCode::SUCCESS,
-        Err(message) => {
-            eprintln!("{message}");
+        Err(error) => {
+            eprintln!("{error:#}");
             ExitCode::FAILURE
         }
     }
 }
 
-fn execute(workspace: &Path, name: &str, command: Sandbox) -> Result<(), String> {
+fn execute(workspace: &Path, name: &str, command: Sandbox) -> anyhow::Result<()> {
     let root = root_path(name);
 
     match command {
@@ -99,7 +98,7 @@ fn up(
     root: &Path,
     scene_name: &str,
     headed: bool,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     require_program("weston")?;
     require_program("Xwayland")?;
     require_program("xdotool")?;
@@ -114,7 +113,7 @@ fn restart(
     root: &Path,
     scene_name: Option<&str>,
     headed: Option<bool>,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     require_program("weston")?;
     require_program("Xwayland")?;
     require_program("xdotool")?;
@@ -129,42 +128,7 @@ fn restart(
     start_window(workspace, name, root, &scene, headed)
 }
 
-fn require_headed_session(headed: bool) -> Result<(), String> {
-    if headed {
-        wayland_display()?;
-        caller_runtime_dir()?;
-    }
-
-    Ok(())
-}
-
-fn recorded_mode(root: &Path) -> Option<String> {
-    fs::read_to_string(root.join("mode"))
-        .ok()
-        .map(|mode| mode.trim().to_string())
-}
-
-fn wayland_display() -> Result<String, String> {
-    match std::env::var("WAYLAND_DISPLAY") {
-        Ok(display) if !display.trim().is_empty() => Ok(display),
-        _ => Err(
-            "Headed mode needs WAYLAND_DISPLAY. Run it from the Wayland session, or leave out --headed."
-                .to_string(),
-        ),
-    }
-}
-
-fn caller_runtime_dir() -> Result<PathBuf, String> {
-    match std::env::var("XDG_RUNTIME_DIR") {
-        Ok(directory) if directory.starts_with('/') => Ok(PathBuf::from(directory)),
-        _ => Err(
-            "Headed mode needs an absolute XDG_RUNTIME_DIR to reach the Wayland socket."
-                .to_string(),
-        ),
-    }
-}
-
-fn recorded_scene(root: &Path, scene_name: Option<&str>) -> Result<String, String> {
+fn recorded_scene(root: &Path, scene_name: Option<&str>) -> anyhow::Result<String> {
     require_trusted_root(root)?;
 
     if let Some(scene) = scene_name {
@@ -174,7 +138,7 @@ fn recorded_scene(root: &Path, scene_name: Option<&str>) -> Result<String, Strin
     fs::read_to_string(root.join("scene"))
         .map(|scene| scene.trim().to_string())
         .map_err(|_| {
-            "The sandbox is not up; run 'cargo xtask sandbox up <scene>' first.".to_string()
+            anyhow::anyhow!("The sandbox is not up; run 'cargo xtask sandbox up <scene>' first")
         })
 }
 
@@ -183,11 +147,9 @@ fn prepare_scene(
     workspace: &Path,
     root: &Path,
     scene_name: &str,
-) -> Result<(PathBuf, String), String> {
+) -> anyhow::Result<(PathBuf, String)> {
     if scene_name == "app" {
-        return Err(
-            "The real app has no window yet. Use a scene name such as smoke-2.".to_string(),
-        );
+        anyhow::bail!("The real app has no window yet. Use a scene name such as smoke-2.");
     }
 
     let binary = scene::build(workspace)?;
@@ -197,21 +159,29 @@ fn prepare_scene(
     Ok((binary, scene))
 }
 
+#[expect(
+    clippy::print_stderr,
+    reason = "a cleanup failure after a failed start must not hide the start error"
+)]
 fn start_window(
     workspace: &Path,
     name: &str,
     root: &Path,
     scene_name: &str,
     headed: bool,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     let (binary, scene) = prepare_scene(workspace, root, scene_name)?;
-    let outcome = start_window_inner(name, root, &binary, &scene, headed);
 
-    if outcome.is_err() {
-        let _ = cleanup(root);
+    match start_window_inner(name, root, &binary, &scene, headed) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            if let Err(cleanup_error) = cleanup(root) {
+                eprintln!("Could not clean up after the failed start: {cleanup_error:#}");
+            }
+
+            Err(error)
+        }
     }
-
-    outcome
 }
 
 #[expect(
@@ -224,7 +194,7 @@ fn start_window_inner(
     binary: &Path,
     scene: &str,
     headed: bool,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     prepare_root(root)?;
 
     let display = ensure_display(name, root, headed)?;
@@ -232,7 +202,7 @@ fn start_window_inner(
     install_openers(root)?;
     let ready = start_scene(root, binary, scene, &display)?;
     focus_window(root, &display, &ready.title)?;
-    record_xwayland(root, &display);
+    record_xwayland(root, &display)?;
 
     println!(
         "sandbox {name} is up on {display} (log: {})",
@@ -242,89 +212,9 @@ fn start_window_inner(
     Ok(())
 }
 
-fn ensure_display(name: &str, root: &Path, headed: bool) -> Result<String, String> {
-    let mode = if headed { "headed" } else { "headless" };
-
-    if let Some(display) = display_up(root) {
-        if recorded_mode(root).as_deref() == Some(mode) {
-            return Ok(display);
-        }
-
-        stop_recorded(&root.join("weston.pid"))?;
-        clean_display_files(root);
-    }
-
-    prepare_root(root)?;
-
-    let log = root.join("weston.log");
-    let _ = fs::remove_file(&log);
-    let _ = fs::remove_file(root.join("display"));
-    let _ = fs::remove_file(root.join("xwayland.pid"));
-
-    let mut command = if headed {
-        let runtime = caller_runtime_dir()?;
-        let environment = nested_weston_environment(root, &runtime);
-
-        display::nested_weston_command(
-            &socket_name(name),
-            WINDOW_WIDTH,
-            WINDOW_HEIGHT,
-            &log,
-            &wayland_display()?,
-            &environment,
-        )
-    } else {
-        display::weston_command(
-            &socket_name(name),
-            WINDOW_WIDTH,
-            WINDOW_HEIGHT,
-            &log,
-            &weston_environment(root),
-        )
-    };
-
-    command
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .process_group(0);
-
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("Could not start weston: {error}"))?;
-    let pid = child.id();
-
-    if let Err(error) = record_process(&root.join("weston.pid"), pid, "weston") {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Err(error);
-    }
-
-    drop(child);
-
-    let display = display::wait_for_display(&log, display::WESTON_TIMEOUT)?;
-    fs::write(root.join("display"), format!("{display}\n"))
-        .map_err(|error| format!("Could not write the display file: {error}"))?;
-    fs::write(root.join("mode"), format!("{mode}\n"))
-        .map_err(|error| format!("Could not write the sandbox mode: {error}"))?;
-
-    Ok(display)
-}
-
-fn display_up(root: &Path) -> Option<String> {
-    if !record_matches(&root.join("weston.pid")) {
-        return None;
-    }
-
-    let display = fs::read_to_string(root.join("display")).ok()?;
-    let display = display.trim().to_string();
-
-    display.starts_with(':').then_some(display)
-}
-
-fn with_window<F>(name: &str, root: &Path, action: F) -> Result<(), String>
+fn with_window<F>(name: &str, root: &Path, action: F) -> anyhow::Result<()>
 where
-    F: FnOnce(&str, &str) -> Result<(), String>,
+    F: FnOnce(&str, &str) -> anyhow::Result<()>,
 {
     require_program("xdotool")?;
 
@@ -334,24 +224,22 @@ where
     action(&display, &window)
 }
 
-fn require_up(name: &str, root: &Path) -> Result<String, String> {
+fn require_up(name: &str, root: &Path) -> anyhow::Result<String> {
     require_trusted_root(root)?;
 
     let display = display_up(root).ok_or_else(|| {
-        format!("sandbox {name} is not up; run 'cargo xtask sandbox up <scene>' first")
+        anyhow::anyhow!("sandbox {name} is not up; run 'cargo xtask sandbox up <scene>' first")
     })?;
 
     if !root.join("window").is_file() {
-        return Err(format!(
-            "sandbox {name} is not up; run 'cargo xtask sandbox up <scene>' first"
-        ));
+        anyhow::bail!("sandbox {name} is not up; run 'cargo xtask sandbox up <scene>' first");
     }
 
     Ok(display)
 }
 
 #[expect(clippy::print_stdout, reason = "the shot path is the command's output")]
-fn shot(name: &str, root: &Path, file: Option<PathBuf>) -> Result<(), String> {
+fn shot(name: &str, root: &Path, file: Option<PathBuf>) -> anyhow::Result<()> {
     require_program("import")?;
 
     let display = require_up(name, root)?;
@@ -366,11 +254,11 @@ fn shot(name: &str, root: &Path, file: Option<PathBuf>) -> Result<(), String> {
 }
 
 #[expect(clippy::print_stdout, reason = "the scene log is the command's output")]
-fn log(root: &Path) -> Result<(), String> {
+fn log(root: &Path) -> anyhow::Result<()> {
     require_trusted_root(root)?;
 
     let log = fs::read_to_string(root.join("scene.log"))
-        .map_err(|error| format!("Could not read the scene log: {error}"))?;
+        .with_context(|| "Could not read the scene log")?;
 
     print!("{log}");
 
@@ -381,13 +269,13 @@ fn log(root: &Path) -> Result<(), String> {
     clippy::print_stdout,
     reason = "the opened links are the command's output"
 )]
-fn opened(root: &Path) -> Result<(), String> {
+fn opened(root: &Path) -> anyhow::Result<()> {
     require_trusted_root(root)?;
 
     match fs::read_to_string(root.join("opened")) {
         Ok(opened) => print!("{opened}"),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(format!("Could not read the opened links: {error}")),
+        Err(error) => anyhow::bail!("Could not read the opened links: {error}"),
     }
 
     Ok(())
@@ -397,7 +285,7 @@ fn opened(root: &Path) -> Result<(), String> {
     clippy::print_stdout,
     reason = "the sandbox state is the command's output"
 )]
-fn down(name: &str, root: &Path) -> Result<(), String> {
+fn down(name: &str, root: &Path) -> anyhow::Result<()> {
     if !root.exists() {
         println!("sandbox {name} is not up");
         return Ok(());
@@ -414,7 +302,7 @@ fn down(name: &str, root: &Path) -> Result<(), String> {
 /// Stops everything the sandbox recorded, then removes the root. It refuses a root that fails
 /// the owner, mode, or symlink checks, so a failed `up` cannot act on an untrusted path. A
 /// process that will not stop keeps the root so the retry has its record.
-fn cleanup(root: &Path) -> Result<(), String> {
+fn cleanup(root: &Path) -> anyhow::Result<()> {
     require_trusted_root(root)?;
 
     stop_window(root)?;
@@ -427,12 +315,6 @@ fn cleanup(root: &Path) -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn clean_display_files(root: &Path) {
-    if let Ok(display) = fs::read_to_string(root.join("display")) {
-        display::clean_display_files(display.trim());
-    }
 }
 
 #[cfg(test)]
@@ -452,7 +334,7 @@ mod tests {
     #[test]
     fn a_refused_scene_leaves_a_running_sandbox_alone() {
         let root = temporary_root("preflight");
-        let _ = fs::remove_dir_all(&root);
+        crate::test_support::remove_dir_all(&root);
         fs::create_dir(&root).expect("create the root");
         fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("make it private");
         let marker = root.join("scene");
@@ -461,13 +343,16 @@ mod tests {
         let error = start_window(Path::new("/nonexistent"), "preflight", &root, "app", false)
             .expect_err("the app scene is refused");
 
-        assert!(error.contains("no window yet"), "unexpected error: {error}");
+        assert_eq!(
+            error.to_string(),
+            "The real app has no window yet. Use a scene name such as smoke-2."
+        );
         assert!(
             marker.is_file(),
             "a refused scene must not tear the sandbox down"
         );
 
-        let _ = fs::remove_dir_all(&root);
+        crate::test_support::remove_dir_all(&root);
     }
 
     #[test]
@@ -475,8 +360,8 @@ mod tests {
         let root = temporary_root("symlink");
         let target =
             std::env::temp_dir().join(format!("greppa-sandbox-test-target-{}", std::process::id()));
-        let _ = fs::remove_file(&root);
-        let _ = fs::remove_dir_all(&target);
+        crate::test_support::remove_file(&root);
+        crate::test_support::remove_dir_all(&target);
         fs::create_dir_all(&target).expect("create the target");
         let marker = target.join("marker");
         fs::write(&marker, "keep").expect("write the marker");
@@ -484,7 +369,10 @@ mod tests {
 
         let error = cleanup(&root).expect_err("the symlink is refused");
 
-        assert!(error.contains("symlink"), "unexpected error: {error}");
+        assert!(
+            error.to_string().contains("symlink"),
+            "unexpected error: {error}"
+        );
         assert!(marker.is_file(), "cleanup must not touch the link target");
         assert!(
             fs::symlink_metadata(&root)
@@ -493,25 +381,28 @@ mod tests {
                 .is_symlink()
         );
 
-        let _ = fs::remove_file(&root);
-        let _ = fs::remove_dir_all(&target);
+        crate::test_support::remove_file(&root);
+        crate::test_support::remove_dir_all(&target);
     }
 
     #[test]
     fn cleanup_refuses_a_root_that_is_not_private() {
         let root = temporary_root("mode");
-        let _ = fs::remove_dir_all(&root);
+        crate::test_support::remove_dir_all(&root);
         fs::create_dir(&root).expect("create the root");
         fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).expect("set the mode");
 
         let error = cleanup(&root).expect_err("the mode is refused");
 
-        assert!(error.contains("755"), "unexpected error: {error}");
+        assert!(
+            error.to_string().contains("755"),
+            "unexpected error: {error}"
+        );
         let metadata = fs::symlink_metadata(&root).expect("the root");
         assert!(metadata.is_dir());
         assert_eq!(metadata.permissions().mode() & 0o777, 0o755);
 
-        let _ = fs::remove_dir_all(&root);
+        crate::test_support::remove_dir_all(&root);
     }
 
     #[test]
@@ -521,8 +412,8 @@ mod tests {
             "greppa-sandbox-test-up-target-{}",
             std::process::id()
         ));
-        let _ = fs::remove_file(&root);
-        let _ = fs::remove_dir_all(&target);
+        crate::test_support::remove_file(&root);
+        crate::test_support::remove_dir_all(&target);
         fs::create_dir_all(&target).expect("create the target");
         let marker = target.join("marker");
         fs::write(&marker, "keep").expect("write the marker");
@@ -530,7 +421,10 @@ mod tests {
 
         let error = require_up("test", &root).expect_err("the symlink is refused");
 
-        assert!(error.contains("symlink"), "unexpected error: {error}");
+        assert!(
+            error.to_string().contains("symlink"),
+            "unexpected error: {error}"
+        );
         assert!(marker.is_file(), "the target must not change");
         assert!(
             fs::symlink_metadata(&root)
@@ -539,7 +433,7 @@ mod tests {
                 .is_symlink()
         );
 
-        let _ = fs::remove_file(&root);
-        let _ = fs::remove_dir_all(&target);
+        crate::test_support::remove_file(&root);
+        crate::test_support::remove_dir_all(&target);
     }
 }

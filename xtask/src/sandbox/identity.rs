@@ -2,13 +2,16 @@ use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use anyhow::Context as _;
+
+use crate::cleanup;
 use crate::process;
 
 const STOP_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub(super) fn record_xwayland(root: &Path, display: &str) {
+pub(super) fn record_xwayland(root: &Path, display: &str) -> anyhow::Result<()> {
     let Some((weston, _)) = read_record(&root.join("weston.pid")) else {
-        return;
+        return Ok(());
     };
 
     let deadline = Instant::now() + STOP_TIMEOUT;
@@ -21,13 +24,13 @@ pub(super) fn record_xwayland(root: &Path, display: &str) {
             let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
 
             if cmdline.contains("Xwayland") && cmdline.contains(display) {
-                let _ = record_process(&root.join("xwayland.pid"), pid, "Xwayland");
-                return;
+                record_process(&root.join("xwayland.pid"), pid, "Xwayland")?;
+                return Ok(());
             }
         }
 
         if Instant::now() >= deadline {
-            return;
+            return Ok(());
         }
 
         std::thread::sleep(process::POLL);
@@ -82,35 +85,31 @@ fn identity_still_matches(pid: u32, started: u64) -> bool {
     process_start(pid) == Some(started)
 }
 
-pub(super) fn record_process(path: &Path, pid: u32, expected: &str) -> Result<(), String> {
+pub(super) fn record_process(path: &Path, pid: u32, expected: &str) -> anyhow::Result<()> {
     let deadline = Instant::now() + STOP_TIMEOUT;
 
     loop {
         if let Some(started) = process_start(pid) {
             let cmdline = fs::read(format!("/proc/{pid}/cmdline"))
-                .map_err(|error| format!("Could not read the process {pid}: {error}"))?;
+                .with_context(|| format!("Could not read the process {pid}"))?;
             let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
 
             if cmdline.contains(expected) {
                 return fs::write(path, format!("{pid} {started}\n"))
-                    .map_err(|error| format!("Could not record the {expected} process: {error}"));
+                    .with_context(|| format!("Could not record the {expected} process"));
             }
 
             if !cmdline.trim().is_empty() {
-                return Err(format!(
+                anyhow::bail!(
                     "The process {pid} is not the expected {expected}. Actual: {cmdline}"
-                ));
+                );
             }
         } else {
-            return Err(format!(
-                "The {expected} process {pid} is gone before it could be recorded."
-            ));
+            anyhow::bail!("The {expected} process {pid} is gone before it could be recorded.");
         }
 
         if Instant::now() >= deadline {
-            return Err(format!(
-                "The {expected} process {pid} did not name itself in time."
-            ));
+            anyhow::bail!("The {expected} process {pid} did not name itself in time.");
         }
 
         std::thread::sleep(process::POLL);
@@ -144,11 +143,11 @@ fn process_is_ours(pid: u32, root: &Path) -> bool {
         .any(|line| line == marker)
 }
 
-pub(super) fn stop_window(root: &Path) -> Result<(), String> {
+pub(super) fn stop_window(root: &Path) -> anyhow::Result<()> {
     let path = root.join("pid");
 
     let Some((pid, started)) = read_record(&path) else {
-        let _ = fs::remove_file(&path);
+        cleanup::remove_file(&path);
         return Ok(());
     };
 
@@ -156,14 +155,14 @@ pub(super) fn stop_window(root: &Path) -> Result<(), String> {
         return stop_process(&path, pid, started);
     }
 
-    let _ = fs::remove_file(&path);
+    cleanup::remove_file(&path);
 
     Ok(())
 }
 
-pub(super) fn stop_recorded(path: &Path) -> Result<(), String> {
+pub(super) fn stop_recorded(path: &Path) -> anyhow::Result<()> {
     let Some((pid, started)) = read_record(path) else {
-        let _ = fs::remove_file(path);
+        cleanup::remove_file(path);
         return Ok(());
     };
 
@@ -171,36 +170,48 @@ pub(super) fn stop_recorded(path: &Path) -> Result<(), String> {
         return stop_process(path, pid, started);
     }
 
-    let _ = fs::remove_file(path);
+    cleanup::remove_file(path);
 
     Ok(())
 }
 
-fn stop_process(path: &Path, pid: u32, started: u64) -> Result<(), String> {
+fn stop_process(path: &Path, pid: u32, started: u64) -> anyhow::Result<()> {
     if !identity_still_matches(pid, started) {
-        let _ = fs::remove_file(path);
+        cleanup::remove_file(path);
         return Ok(());
     }
 
     let Some(raw) = rustix::process::Pid::from_raw(pid as i32) else {
-        let _ = fs::remove_file(path);
+        cleanup::remove_file(path);
         return Ok(());
     };
     let pidfd = match rustix::process::pidfd_open(raw, rustix::process::PidfdFlags::empty()) {
         Ok(pidfd) => pidfd,
         Err(error) => {
             if !identity_still_matches(pid, started) {
-                let _ = fs::remove_file(path);
+                cleanup::remove_file(path);
                 return Ok(());
             }
 
-            return Err(format!("Could not open the process {pid}: {error}"));
+            anyhow::bail!("Could not open the process {pid}: {error}");
         }
     };
 
     stop_after_open(path, pid, started, process_start(pid), || {
-        let _ = rustix::process::pidfd_send_signal(&pidfd, rustix::process::Signal::TERM);
+        send_term(pid, &pidfd);
     })
+}
+
+#[expect(
+    clippy::print_stderr,
+    reason = "a cleanup failure must not hide the original error"
+)]
+fn send_term(pid: u32, pidfd: &rustix::fd::OwnedFd) {
+    if let Err(error) = rustix::process::pidfd_send_signal(pidfd, rustix::process::Signal::TERM)
+        && error != rustix::io::Errno::SRCH
+    {
+        eprintln!("Could not stop the process {pid}: {error}");
+    }
 }
 
 fn stop_after_open(
@@ -209,9 +220,9 @@ fn stop_after_open(
     started: u64,
     after_open: Option<u64>,
     signal: impl FnOnce(),
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     if after_open != Some(started) {
-        let _ = fs::remove_file(path);
+        cleanup::remove_file(path);
         return Ok(());
     }
 
@@ -219,20 +230,17 @@ fn stop_after_open(
     stop_loop(path, pid, started)
 }
 
-fn stop_loop(path: &Path, pid: u32, started: u64) -> Result<(), String> {
+fn stop_loop(path: &Path, pid: u32, started: u64) -> anyhow::Result<()> {
     let deadline = Instant::now() + STOP_TIMEOUT;
 
     loop {
         if !identity_still_matches(pid, started) || process_is_zombie(pid) {
-            let _ = fs::remove_file(path);
+            cleanup::remove_file(path);
             return Ok(());
         }
 
         if Instant::now() >= deadline {
-            return Err(format!(
-                "The process {pid} did not stop; keeping {}",
-                path.display()
-            ));
+            anyhow::bail!("The process {pid} did not stop; keeping {}", path.display());
         }
 
         std::thread::sleep(process::POLL);
@@ -265,7 +273,7 @@ mod tests {
         fs::write(&path, format!("{pid} {}\n", started + 1)).expect("write the changed record");
         assert!(!record_matches(&path));
 
-        let _ = fs::remove_file(&path);
+        crate::test_support::remove_file(&path);
     }
 
     #[test]

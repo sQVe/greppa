@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use thiserror::Error;
+
 const USAGE: &str = "\
 Usage:
   cargo xtask sandbox up [--headed] <scene>
@@ -56,10 +58,10 @@ pub(super) enum Sandbox {
     Down,
 }
 
-fn number(value: &str, name: &str) -> Result<i32, String> {
+fn number(value: &str, name: &str) -> anyhow::Result<i32> {
     value
         .parse()
-        .map_err(|_| format!("{name} must be a whole number, not \"{value}\""))
+        .map_err(|_| anyhow::anyhow!("{name} must be a whole number, not \"{value}\""))
 }
 
 fn split_headed(arguments: &[String]) -> (bool, Vec<String>) {
@@ -73,7 +75,7 @@ fn split_headed(arguments: &[String]) -> (bool, Vec<String>) {
     (headed, rest)
 }
 
-pub(super) fn parse(arguments: &[String]) -> Result<Sandbox, String> {
+pub(super) fn parse(arguments: &[String]) -> anyhow::Result<Sandbox> {
     match arguments {
         [command, rest @ ..] if command == "up" => {
             let (headed, rest) = split_headed(rest);
@@ -83,7 +85,7 @@ pub(super) fn parse(arguments: &[String]) -> Result<Sandbox, String> {
                     scene: scene.clone(),
                     headed,
                 }),
-                _ => Err(USAGE.to_string()),
+                _ => anyhow::bail!(USAGE),
             }
         }
         [command, rest @ ..] if command == "restart" => {
@@ -99,7 +101,7 @@ pub(super) fn parse(arguments: &[String]) -> Result<Sandbox, String> {
                     scene: Some(scene.clone()),
                     headed,
                 }),
-                _ => Err(USAGE.to_string()),
+                _ => anyhow::bail!(USAGE),
             }
         }
         [command] if command == "shot" => Ok(Sandbox::Shot { file: None }),
@@ -124,7 +126,7 @@ pub(super) fn parse(arguments: &[String]) -> Result<Sandbox, String> {
             y: number(y, "y")?,
             button: button
                 .parse()
-                .map_err(|_| format!("button must be a whole number, not \"{button}\""))?,
+                .map_err(|_| anyhow::anyhow!("button must be a whole number, not \"{button}\""))?,
         }),
         [command, rest @ ..] if command == "type" && !rest.is_empty() => Ok(Sandbox::Type {
             text: rest.join(" "),
@@ -136,11 +138,11 @@ pub(super) fn parse(arguments: &[String]) -> Result<Sandbox, String> {
         [command] if command == "log" => Ok(Sandbox::Log),
         [command] if command == "opened" => Ok(Sandbox::Opened),
         [command] if command == "down" => Ok(Sandbox::Down),
-        _ => Err(USAGE.to_string()),
+        _ => anyhow::bail!(USAGE),
     }
 }
 
-pub(super) fn sandbox_name(value: Option<&str>) -> Result<String, String> {
+pub(super) fn sandbox_name(value: Option<&str>) -> anyhow::Result<String> {
     let name = value.unwrap_or(DEFAULT_NAME);
     let mut characters = name.chars();
     let first = characters.next();
@@ -152,9 +154,9 @@ pub(super) fn sandbox_name(value: Option<&str>) -> Result<String, String> {
     });
 
     if !valid_first || !valid_rest || name.len() > 32 {
-        return Err(format!(
+        anyhow::bail!(
             "GREPPA_SANDBOX must be one name of lowercase letters, digits, and dashes, not \"{name}\""
-        ));
+        );
     }
 
     Ok(name.to_string())
@@ -179,14 +181,24 @@ fn tool_error(name: &str) -> String {
     format!("The tool \"{name}\" is missing. Install {package} and try again.")
 }
 
-pub(super) fn require_program(name: &str) -> Result<(), String> {
-    let path = std::env::var("PATH").unwrap_or_default();
+#[derive(Debug, Error)]
+#[error("{}", tool_error(name))]
+pub(super) struct MissingTool {
+    pub(super) name: String,
+}
 
-    if find_program(name, &path).is_some() {
+pub(super) fn require_program(name: &str) -> Result<(), MissingTool> {
+    require_program_in(name, &std::env::var("PATH").unwrap_or_default())
+}
+
+fn require_program_in(name: &str, path: &str) -> Result<(), MissingTool> {
+    if find_program(name, path).is_some() {
         return Ok(());
     }
 
-    Err(tool_error(name))
+    Err(MissingTool {
+        name: name.to_string(),
+    })
 }
 
 #[cfg(test)]
@@ -198,46 +210,48 @@ mod tests {
     #[test]
     fn parse_reads_every_command() {
         assert_eq!(
-            parse(&["up".to_string(), "smoke-2".to_string()]),
-            Ok(Sandbox::Up {
+            parse(&["up".to_string(), "smoke-2".to_string()]).expect("up parses"),
+            Sandbox::Up {
                 scene: "smoke-2".to_string(),
                 headed: false,
-            })
+            }
         );
         assert_eq!(
             parse(&[
                 "up".to_string(),
                 "--headed".to_string(),
                 "smoke-2".to_string()
-            ]),
-            Ok(Sandbox::Up {
+            ])
+            .expect("headed up parses"),
+            Sandbox::Up {
                 scene: "smoke-2".to_string(),
                 headed: true,
-            })
+            }
         );
         assert_eq!(
-            parse(&["restart".to_string()]),
-            Ok(Sandbox::Restart {
+            parse(&["restart".to_string()]).expect("restart parses"),
+            Sandbox::Restart {
                 scene: None,
                 headed: None,
-            })
+            }
         );
         assert_eq!(
             parse(&[
                 "restart".to_string(),
                 "--headed".to_string(),
                 "smoke-3".to_string()
-            ]),
-            Ok(Sandbox::Restart {
+            ])
+            .expect("headed restart parses"),
+            Sandbox::Restart {
                 scene: Some("smoke-3".to_string()),
                 headed: Some(true),
-            })
+            }
         );
         assert_eq!(
-            parse(&["shot".to_string(), "out.png".to_string()]),
-            Ok(Sandbox::Shot {
+            parse(&["shot".to_string(), "out.png".to_string()]).expect("shot parses"),
+            Sandbox::Shot {
                 file: Some(PathBuf::from("out.png"))
-            })
+            }
         );
         assert_eq!(
             parse(&[
@@ -246,19 +260,21 @@ mod tests {
                 "2".to_string(),
                 "3".to_string(),
                 "4".to_string()
-            ]),
-            Ok(Sandbox::Move {
+            ])
+            .expect("move parses"),
+            Sandbox::Move {
                 from: (1, 2),
                 to: (3, 4)
-            })
+            }
         );
         assert_eq!(
-            parse(&["click".to_string(), "10".to_string(), "20".to_string()]),
-            Ok(Sandbox::Click {
+            parse(&["click".to_string(), "10".to_string(), "20".to_string()])
+                .expect("click parses"),
+            Sandbox::Click {
                 x: 10,
                 y: 20,
                 button: 1
-            })
+            }
         );
         assert_eq!(
             parse(&[
@@ -266,12 +282,13 @@ mod tests {
                 "10".to_string(),
                 "20".to_string(),
                 "3".to_string()
-            ]),
-            Ok(Sandbox::Click {
+            ])
+            .expect("click with a button parses"),
+            Sandbox::Click {
                 x: 10,
                 y: 20,
                 button: 3
-            })
+            }
         );
         assert_eq!(
             parse(&[
@@ -280,27 +297,36 @@ mod tests {
                 "2".to_string(),
                 "3".to_string(),
                 "4".to_string()
-            ]),
-            Ok(Sandbox::Drag {
+            ])
+            .expect("drag parses"),
+            Sandbox::Drag {
                 from: (1, 2),
                 to: (3, 4)
-            })
+            }
         );
         assert_eq!(
-            parse(&["type".to_string(), "hello".to_string(), "world".to_string()]),
-            Ok(Sandbox::Type {
+            parse(&["type".to_string(), "hello".to_string(), "world".to_string()])
+                .expect("type parses"),
+            Sandbox::Type {
                 text: "hello world".to_string()
-            })
+            }
         );
         assert_eq!(
-            parse(&["key".to_string(), "p".to_string(), "Control_L".to_string()]),
-            Ok(Sandbox::Key {
+            parse(&["key".to_string(), "p".to_string(), "Control_L".to_string()])
+                .expect("key parses"),
+            Sandbox::Key {
                 key: "p".to_string(),
                 modifiers: vec!["Control_L".to_string()]
-            })
+            }
         );
-        assert_eq!(parse(&["log".to_string()]), Ok(Sandbox::Log));
-        assert_eq!(parse(&["down".to_string()]), Ok(Sandbox::Down));
+        assert_eq!(
+            parse(&["log".to_string()]).expect("log parses"),
+            Sandbox::Log
+        );
+        assert_eq!(
+            parse(&["down".to_string()]).expect("down parses"),
+            Sandbox::Down
+        );
     }
 
     #[test]
@@ -317,9 +343,9 @@ mod tests {
 
     #[test]
     fn sandbox_name_accepts_one_leaf_name() {
-        assert_eq!(sandbox_name(None), Ok("greppa".to_string()));
-        assert_eq!(sandbox_name(Some("alpha-2")), Ok("alpha-2".to_string()));
-        assert_eq!(sandbox_name(Some("2")), Ok("2".to_string()));
+        assert_eq!(sandbox_name(None).expect("default name"), "greppa");
+        assert_eq!(sandbox_name(Some("alpha-2")).expect("leaf name"), "alpha-2");
+        assert_eq!(sandbox_name(Some("2")).expect("leaf name"), "2");
     }
 
     #[test]
@@ -335,7 +361,7 @@ mod tests {
     #[test]
     fn find_program_uses_the_given_path() {
         let directory = std::env::temp_dir().join(format!("greppa-find-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&directory);
+        crate::test_support::remove_dir_all(&directory);
         std::fs::create_dir_all(&directory).expect("create the test directory");
         let program = directory.join("fake-tool");
         std::fs::write(&program, "#!/bin/sh\n").expect("write the fake tool");
@@ -344,7 +370,18 @@ mod tests {
         assert_eq!(found, Some(program));
         assert_eq!(find_program("fake-tool", "/nonexistent"), None);
 
-        let _ = std::fs::remove_dir_all(&directory);
+        crate::test_support::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn require_program_reports_a_missing_tool() {
+        let error = require_program_in("no-such-tool", "/nonexistent").expect_err("missing tool");
+
+        assert!(matches!(error, MissingTool { ref name } if name == "no-such-tool"));
+        assert_eq!(
+            error.to_string(),
+            "The tool \"no-such-tool\" is missing. Install no-such-tool and try again."
+        );
     }
 
     #[test]

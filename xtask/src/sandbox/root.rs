@@ -1,6 +1,9 @@
 use std::fs;
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use anyhow::Context as _;
+use thiserror::Error;
 
 const ROOT_PARENT: &str = "/var/tmp";
 const ROOT_PREFIX: &str = "greppa-sandbox-";
@@ -21,21 +24,53 @@ pub(super) struct RootMetadata {
     pub(super) mode: u32,
 }
 
-pub(super) fn root_metadata_problem(metadata: &RootMetadata, current_uid: u32) -> Option<String> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum RootReason {
+    Symlink,
+    NotDirectory,
+    WrongOwner,
+    WrongMode { mode: u32 },
+}
+
+impl std::fmt::Display for RootReason {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RootReason::Symlink => formatter.write_str("it is a symlink"),
+            RootReason::NotDirectory => formatter.write_str("it is not a folder"),
+            RootReason::WrongOwner => formatter.write_str("it is not owned by the current user"),
+            RootReason::WrongMode { mode } => write!(formatter, "its mode is {mode:o}, not 700"),
+        }
+    }
+}
+
+#[derive(Debug, Error)]
+pub(super) enum RootError {
+    #[error("refusing {}: {reason}", path.display())]
+    Unsafe { path: PathBuf, reason: RootReason },
+    #[error("refusing the symlinked sandbox path {}", path.display())]
+    LinkedPath { path: PathBuf },
+}
+
+pub(super) fn root_metadata_problem(
+    metadata: &RootMetadata,
+    current_uid: u32,
+) -> Option<RootReason> {
     if metadata.is_symlink {
-        return Some("it is a symlink".to_string());
+        return Some(RootReason::Symlink);
     }
 
     if !metadata.is_dir {
-        return Some("it is not a folder".to_string());
+        return Some(RootReason::NotDirectory);
     }
 
     if metadata.owner != current_uid {
-        return Some("it is not owned by the current user".to_string());
+        return Some(RootReason::WrongOwner);
     }
 
     if metadata.mode & 0o777 != 0o700 {
-        return Some(format!("its mode is {:o}, not 700", metadata.mode & 0o777));
+        return Some(RootReason::WrongMode {
+            mode: metadata.mode & 0o777,
+        });
     }
 
     None
@@ -74,19 +109,20 @@ pub(super) fn remove_root_allowed(root: &Path) -> bool {
         && base.is_some_and(|name| name.starts_with(ROOT_PREFIX) && name.len() > ROOT_PREFIX.len())
 }
 
-pub(super) fn require_trusted_root(root: &Path) -> Result<(), String> {
+pub(super) fn require_trusted_root(root: &Path) -> anyhow::Result<()> {
     refuse_unsafe_root(root)?;
-    refuse_linked_paths(root)
+    refuse_linked_paths(root)?;
+
+    Ok(())
 }
 
-pub(super) fn prepare_root(root: &Path) -> Result<(), String> {
+pub(super) fn prepare_root(root: &Path) -> anyhow::Result<()> {
     refuse_unsafe_root(root)?;
 
     if !root.exists() {
-        fs::create_dir(root)
-            .map_err(|error| format!("Could not create {}: {error}", root.display()))?;
+        fs::create_dir(root).with_context(|| format!("Could not create {}", root.display()))?;
         fs::set_permissions(root, fs::Permissions::from_mode(0o700))
-            .map_err(|error| format!("Could not secure {}: {error}", root.display()))?;
+            .with_context(|| format!("Could not secure {}", root.display()))?;
     }
 
     refuse_unsafe_root(root)?;
@@ -96,20 +132,24 @@ pub(super) fn prepare_root(root: &Path) -> Result<(), String> {
 
         if !path.exists() {
             fs::create_dir(&path)
-                .map_err(|error| format!("Could not create {}: {error}", path.display()))?;
+                .with_context(|| format!("Could not create {}", path.display()))?;
             fs::set_permissions(&path, fs::Permissions::from_mode(0o700))
-                .map_err(|error| format!("Could not secure {}: {error}", path.display()))?;
+                .with_context(|| format!("Could not secure {}", path.display()))?;
         }
     }
 
-    refuse_linked_paths(root)
+    refuse_linked_paths(root)?;
+
+    Ok(())
 }
 
-pub(super) fn refuse_unsafe_root(root: &Path) -> Result<(), String> {
+pub(super) fn refuse_unsafe_root(root: &Path) -> anyhow::Result<()> {
     let metadata = match fs::symlink_metadata(root) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(format!("Could not read {}: {error}", root.display())),
+        Err(error) => {
+            return Err(error).with_context(|| format!("Could not read {}", root.display()));
+        }
     };
 
     let described = RootMetadata {
@@ -120,47 +160,47 @@ pub(super) fn refuse_unsafe_root(root: &Path) -> Result<(), String> {
     };
 
     match root_metadata_problem(&described, current_uid()?) {
-        Some(reason) => Err(format!("refusing {}: {reason}", root.display())),
+        Some(reason) => Err(RootError::Unsafe {
+            path: root.to_path_buf(),
+            reason,
+        }
+        .into()),
         None => Ok(()),
     }
 }
 
-pub(super) fn refuse_linked_paths(root: &Path) -> Result<(), String> {
+pub(super) fn refuse_linked_paths(root: &Path) -> Result<(), RootError> {
     for path in linked_paths(root) {
         let is_symlink = fs::symlink_metadata(&path)
             .map(|metadata| metadata.file_type().is_symlink())
             .unwrap_or(false);
 
         if is_symlink {
-            return Err(format!(
-                "refusing the symlinked sandbox path {}",
-                path.display()
-            ));
+            return Err(RootError::LinkedPath { path });
         }
     }
 
     Ok(())
 }
 
-fn current_uid() -> Result<u32, String> {
+fn current_uid() -> anyhow::Result<u32> {
     fs::metadata("/proc/self")
         .map(|metadata| metadata.uid())
-        .map_err(|error| format!("Could not read the current user id: {error}"))
+        .with_context(|| "Could not read the current user id")
 }
 
-pub(super) fn remove_root(root: &Path) -> Result<(), String> {
+pub(super) fn remove_root(root: &Path) -> anyhow::Result<()> {
     if !remove_root_allowed(root) {
-        return Err(format!(
+        anyhow::bail!(
             "refusing to remove {}: it is not a sandbox folder",
             root.display()
-        ));
+        );
     }
 
-    fs::remove_dir_all(root)
-        .map_err(|error| format!("Could not remove {}: {error}", root.display()))
+    fs::remove_dir_all(root).with_context(|| format!("Could not remove {}", root.display()))
 }
 
-pub(super) fn install_openers(root: &Path) -> Result<(), String> {
+pub(super) fn install_openers(root: &Path) -> anyhow::Result<()> {
     let opened = root.join("opened");
 
     for opener in ["xdg-open", "open"] {
@@ -170,7 +210,7 @@ pub(super) fn install_openers(root: &Path) -> Result<(), String> {
             .map(|metadata| metadata.file_type().is_symlink())
             .unwrap_or(false)
         {
-            return Err(format!("refusing the symlinked opener {}", path.display()));
+            anyhow::bail!("refusing the symlinked opener {}", path.display());
         }
 
         let script = format!(
@@ -178,10 +218,9 @@ pub(super) fn install_openers(root: &Path) -> Result<(), String> {
             shell_quote(&opened.to_string_lossy())
         );
 
-        fs::write(&path, script)
-            .map_err(|error| format!("Could not write {}: {error}", path.display()))?;
+        fs::write(&path, script).with_context(|| format!("Could not write {}", path.display()))?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o755))
-            .map_err(|error| format!("Could not make {} runnable: {error}", path.display()))?;
+            .with_context(|| format!("Could not make {} runnable", path.display()))?;
     }
 
     Ok(())
@@ -242,7 +281,7 @@ mod tests {
                 },
                 1000
             ),
-            Some("it is a symlink".to_string())
+            Some(RootReason::Symlink)
         );
         assert_eq!(
             root_metadata_problem(
@@ -252,11 +291,11 @@ mod tests {
                 },
                 1000
             ),
-            Some("it is not a folder".to_string())
+            Some(RootReason::NotDirectory)
         );
         assert_eq!(
             root_metadata_problem(&good, 1001),
-            Some("it is not owned by the current user".to_string())
+            Some(RootReason::WrongOwner)
         );
         assert_eq!(
             root_metadata_problem(
@@ -266,7 +305,7 @@ mod tests {
                 },
                 1000
             ),
-            Some("its mode is 755, not 700".to_string())
+            Some(RootReason::WrongMode { mode: 0o755 })
         );
     }
 
@@ -286,8 +325,8 @@ mod tests {
             "greppa-sandbox-test-linked-target-{}",
             std::process::id()
         ));
-        let _ = fs::remove_dir_all(&root);
-        let _ = fs::remove_dir_all(&target);
+        crate::test_support::remove_dir_all(&root);
+        crate::test_support::remove_dir_all(&target);
         fs::create_dir_all(&root).expect("create the root");
         fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("secure the root");
         fs::create_dir_all(&target).expect("create the target");
@@ -298,7 +337,11 @@ mod tests {
 
         let error = refuse_linked_paths(&root).expect_err("the linked path is refused");
 
-        assert!(error.contains("symlinked"), "unexpected error: {error}");
+        assert!(
+            matches!(error, RootError::LinkedPath { .. }),
+            "unexpected error: {error}"
+        );
+        assert!(error.to_string().contains("symlinked"));
         assert!(marker.is_file(), "the target must not change");
         assert!(
             fs::symlink_metadata(&link)
@@ -307,7 +350,7 @@ mod tests {
                 .is_symlink()
         );
 
-        let _ = fs::remove_dir_all(&root);
-        let _ = fs::remove_dir_all(&target);
+        crate::test_support::remove_dir_all(&root);
+        crate::test_support::remove_dir_all(&target);
     }
 }

@@ -112,15 +112,15 @@ fn steps() -> Vec<Step> {
     ]
 }
 
-fn parse_groups(arguments: &[String]) -> Result<Vec<Group>, String> {
+fn parse_groups(arguments: &[String]) -> anyhow::Result<Vec<Group>> {
     match arguments {
         [] => Ok(vec![Group::Tidy, Group::Build]),
         [group] if group == "tidy" => Ok(vec![Group::Tidy]),
         [group] if group == "build" => Ok(vec![Group::Build]),
-        _ => Err(format!(
+        _ => anyhow::bail!(
             "Unknown check arguments: {}. Use tidy, build, or none.",
             arguments.join(" ")
-        )),
+        ),
     }
 }
 
@@ -153,8 +153,8 @@ fn run_step(root: &Path, step: &Step) -> bool {
         }
         Action::RawValues => match raw_values::check(root) {
             Ok(()) => true,
-            Err(message) => {
-                eprintln!("{message}");
+            Err(error) => {
+                eprintln!("{error:#}");
                 false
             }
         },
@@ -169,8 +169,8 @@ fn run_step(root: &Path, step: &Step) -> bool {
 pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
     let groups = match parse_groups(arguments) {
         Ok(groups) => groups,
-        Err(message) => {
-            eprintln!("{message}");
+        Err(error) => {
+            eprintln!("{error:#}");
             return ExitCode::FAILURE;
         }
     };

@@ -38,10 +38,12 @@ the commit in its row.
 - [0002: Native app in Rust with GPUI](./0002-native-rust-gpui.md)
 - [0003: Diff viewer on gpui-component's `Diff`](./0003-diff-viewer-on-gpui-component.md)
 - [0005: Two AI judges from different model families gate UI mocks](./0005-two-ai-judges-gate-ui-mocks.md)
+- [0007: greppa supports Linux and macOS, not Windows](./0007-linux-and-macos-only.md)
 
 ### Project and toolchain
 
 - [0004: Toolchain and quality gates](./0004-toolchain-and-quality-gates.md)
+- [0006: A Rust coding guide adapts Tau's coding rules](./0006-rust-coding-guide.md)
 
 ## Retired
 

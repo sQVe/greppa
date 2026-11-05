@@ -124,6 +124,10 @@ fn parse_groups(arguments: &[String]) -> Result<Vec<Group>, String> {
     }
 }
 
+#[expect(
+    clippy::print_stderr,
+    reason = "check progress and failures are the command's output"
+)]
 fn run_step(root: &Path, step: &Step) -> bool {
     eprintln!("==> {}", step.name);
 
@@ -158,6 +162,10 @@ fn run_step(root: &Path, step: &Step) -> bool {
 }
 
 /// Runs every selected step, even after a failure, so one run shows every problem.
+#[expect(
+    clippy::print_stderr,
+    reason = "check progress and failures are the command's output"
+)]
 pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
     let groups = match parse_groups(arguments) {
         Ok(groups) => groups,

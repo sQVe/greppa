@@ -3,6 +3,10 @@ use std::process::ExitCode;
 
 const USAGE: &str = "Usage:\n  cargo xtask mock capture <scene>";
 
+#[expect(
+    clippy::print_stderr,
+    reason = "usage and failure messages are the command's output"
+)]
 pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
     match arguments {
         [command, scene] if command == "capture" => capture_command(root, scene),
@@ -14,6 +18,10 @@ pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
 }
 
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::print_stderr,
+    reason = "failure messages are the command's output"
+)]
 fn capture_command(root: &Path, scene: &str) -> ExitCode {
     if let Err(message) = linux::capture(root, scene) {
         eprintln!("{message}");
@@ -25,6 +33,10 @@ fn capture_command(root: &Path, scene: &str) -> ExitCode {
 }
 
 #[cfg(not(target_os = "linux"))]
+#[expect(
+    clippy::print_stderr,
+    reason = "the unsupported-platform message is the command's output"
+)]
 fn capture_command(_root: &Path, _scene: &str) -> ExitCode {
     eprintln!("Mock capture runs on Linux only.");
     ExitCode::FAILURE

@@ -1,110 +1,67 @@
-//! The single source of sizes, spacing, radii, text sizes, and colors for greppa's UI.
-//!
-//! Scenes and parts take every such value from here. No other file in `greppa-ui` may build a
-//! length with `px`/`rems` or a color with `rgb`/`rgba`/`hsla`; the `cargo xtask check` raw-value
-//! step enforces that.
-
 use gpui_kit::{FontWeight, Pixels, Rgba, px, rgb};
 
-/// Every value a scene or part may draw with.
 #[derive(Clone, Copy)]
 pub struct Theme {
-    /// Named colors.
     pub colors: Colors,
-    /// Gaps and padding.
     pub spacing: Spacing,
-    /// Corner radii.
     pub radius: Radius,
-    /// Text sizes.
     pub text: TextSizes,
-    /// Border widths.
     pub border: Border,
-    /// Fixed sizes that are not spacing.
     pub sizing: Sizing,
 }
 
-/// Named colors for the light theme.
 #[derive(Clone, Copy)]
 pub struct Colors {
-    /// The window base color.
     pub background: Rgba,
-    /// A raised surface such as the changed files panel.
     pub surface: Rgba,
-    /// Primary text.
     pub foreground: Rgba,
-    /// Secondary text such as line counts.
     pub muted: Rgba,
-    /// Control and panel boundaries.
     pub border: Rgba,
-    /// Focus and selection accent.
     pub accent: Rgba,
-    /// A selected row's fill.
     pub selected: Rgba,
-    /// Added files and added line counts.
     pub added: Rgba,
-    /// Modified files.
     pub modified: Rgba,
-    /// Deleted files and deleted line counts.
     pub deleted: Rgba,
 }
 
-/// Gaps and padding.
 #[derive(Clone, Copy)]
 pub struct Spacing {
-    /// The smallest gap.
     pub tiny: Pixels,
-    /// A small gap or padding.
     pub small: Pixels,
-    /// A medium padding.
     pub medium: Pixels,
-    /// A large padding.
     pub large: Pixels,
 }
 
-/// Corner radii.
 #[derive(Clone, Copy)]
 pub struct Radius {
-    /// A small radius for rows.
     pub small: Pixels,
-    /// A medium radius for panels.
     pub medium: Pixels,
 }
 
-/// Text sizes.
 #[derive(Clone, Copy)]
 pub struct TextSizes {
-    /// A section header.
     pub section: Pixels,
-    /// A file label in a row.
     pub row: Pixels,
-    /// A status mark next to a label.
     pub mark: Pixels,
     /// The selected row's label weight, so selection is not color alone.
     pub selected_weight: FontWeight,
-    /// Line counts in a row.
     pub counts: Pixels,
 }
 
-/// Border widths.
 #[derive(Clone, Copy)]
 pub struct Border {
-    /// A hairline.
     pub width: Pixels,
 }
 
-/// Fixed sizes that are not spacing.
 #[derive(Clone, Copy)]
 pub struct Sizing {
-    /// A medium row height.
     pub row_height: Pixels,
-    /// A small row height.
     pub row_height_small: Pixels,
     /// No size, so a flex child may shrink.
     pub none: Pixels,
 }
 
 impl Theme {
-    /// The light theme.
     pub fn light() -> Theme {
         Theme {
             colors: Colors {
@@ -146,7 +103,6 @@ impl Theme {
     }
 }
 
-/// The theme every scene and part draws with.
 pub fn theme() -> Theme {
     Theme::light()
 }
@@ -156,13 +112,9 @@ pub fn theme() -> Theme {
 pub mod layout {
     use gpui_kit::{Pixels, Point, Size, point, px, size};
 
-    /// The scene window's fixed size.
     pub const WINDOW_SIZE: Size<Pixels> = size(px(640.0), px(480.0));
-    /// The scene window's fixed position.
     pub const WINDOW_ORIGIN: Point<Pixels> = point(px(0.0), px(0.0));
-    /// The scene's top-left corner inside the window.
     pub const SCENE_ORIGIN: Point<Pixels> = point(px(60.0), px(60.0));
-    /// The scene's fixed size, which the panel fills.
     pub const SCENE_SIZE: Size<Pixels> = size(px(420.0), px(300.0));
 }
 

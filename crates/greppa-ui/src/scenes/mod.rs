@@ -1,31 +1,20 @@
-//! Mock scenes built from greppa UI parts with fake data.
-//!
-//! A scene is drawn by the `greppa-scene` binary and captured for the two AI judges.
-
 mod changed_files;
 
 use gpui_kit::Div;
 
 use crate::theme::Theme;
 
-/// One named scene.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SceneName {
-    /// A changed files panel with no header and no selected row.
     Smoke1,
-    /// A clean changed files panel.
     Smoke2,
-    /// A changed files panel whose file labels are all blank.
     Smoke3,
-    /// A clean changed files panel with one shorter row.
     Smoke4,
 }
 
-/// Every scene name, in listing order.
 pub const SCENE_NAMES: &[&str] = &["smoke-1", "smoke-2", "smoke-3", "smoke-4"];
 
 impl SceneName {
-    /// Parses a scene name, trimming surrounding whitespace.
     pub fn parse(name: &str) -> Option<SceneName> {
         match name.trim() {
             "smoke-1" => Some(SceneName::Smoke1),
@@ -36,7 +25,6 @@ impl SceneName {
         }
     }
 
-    /// The scene's canonical name.
     pub fn as_str(self) -> &'static str {
         match self {
             SceneName::Smoke1 => "smoke-1",
@@ -47,7 +35,6 @@ impl SceneName {
     }
 }
 
-/// The error message for a missing or unknown scene name. It lists every known scene.
 pub fn unknown_scene_message(name: Option<&str>) -> String {
     let known = SCENE_NAMES.join(", ");
 
@@ -57,7 +44,6 @@ pub fn unknown_scene_message(name: Option<&str>) -> String {
     }
 }
 
-/// Renders one scene into the panel area.
 pub fn render_scene(name: SceneName, theme: &Theme) -> Div {
     changed_files::render(name, theme)
 }

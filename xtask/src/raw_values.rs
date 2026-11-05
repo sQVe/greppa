@@ -1,8 +1,3 @@
-//! The raw-value check: every size and color in `greppa-ui` comes from `theme.rs`.
-//!
-//! The step scans `crates/greppa-ui/src/**/*.rs` except `theme.rs` and reports each line that
-//! builds a length or color directly instead of taking it from a theme token.
-
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -23,8 +18,6 @@ const NAMED_COLORS: &[&str] = &[
     "opaque_grey",
 ];
 
-// The GPUI length and color types. A raw value hides in a `from`, a tuple constructor, or a
-// struct literal as well as in a function call.
 const CONSTRUCTORS: &[&str] = &["Pixels", "Rgba", "Hsla"];
 
 // The style helpers that encode a fixed scale. `full` and `auto` are left out: they are relative
@@ -65,7 +58,6 @@ const CORNER_SUFFIXES: &[&str] = &["none", "xs", "sm", "md", "lg", "xl", "2xl", 
 
 const TEXT_SUFFIXES: &[&str] = &["xs", "sm", "base", "lg", "xl", "2xl", "3xl"];
 
-/// Checks every source file under `crates/greppa-ui/src`, except `theme.rs`.
 pub(crate) fn check(root: &Path) -> Result<(), String> {
     let directory = root.join(UI_SOURCE);
     let failures = scan_directory(root, &directory)?;
@@ -151,8 +143,6 @@ fn line_number(masked: &str, offset: usize) -> usize {
         + 1
 }
 
-/// Returns the start offset of the next raw value at or after `from`. Matches may span lines, so a
-/// value rustfmt split is still found.
 fn next_raw_value(text: &str, from: usize) -> Option<usize> {
     let mut earliest: Option<usize> = None;
     let mut consider = |candidate: Option<usize>| {
@@ -200,8 +190,6 @@ fn find_constructor(text: &str, from: usize, name: &str) -> Option<usize> {
     earliest
 }
 
-/// Finds `name` then `{` and a real first field. A return type such as `fn f() -> Rgba {` is
-/// skipped.
 fn find_bare_struct_literal(text: &str, from: usize, name: &str) -> Option<usize> {
     let mut start = from;
 
@@ -249,9 +237,6 @@ fn starts_with_struct_fields(fields: &str, name: &str) -> bool {
         .any(|prefix| fields.starts_with(prefix))
 }
 
-/// Finds `name` then optional whitespace then `(` when `name` is not part of a longer identifier
-/// and not a method call, so the padding helper `.px(...)` does not match the length function
-/// `px(...)`. The whitespace may include a newline.
 fn find_bare_call(text: &str, from: usize, name: &str) -> Option<usize> {
     let mut start = from;
 
@@ -357,8 +342,6 @@ fn is_identifier_char(character: char) -> bool {
     character.is_ascii_alphanumeric() || character == '_'
 }
 
-/// Replaces comments and string or char literals with spaces, keeping newlines so line numbers do
-/// not move. Detection then runs on code only, so a label may say `rgb(...)` without failing.
 fn mask_source(source: &str) -> String {
     let characters: Vec<char> = source.chars().collect();
     let mut masked = String::with_capacity(source.len());

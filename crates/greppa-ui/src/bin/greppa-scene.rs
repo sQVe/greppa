@@ -1,8 +1,3 @@
-//! Opens one named mock scene for capture.
-//!
-//! The window is a fixed size in the base color, and the scene is drawn at a fixed origin with its
-//! declared size. On the first frame the binary prints one JSON line so the capture can wait for it.
-
 use std::process::ExitCode;
 
 use gpui_kit::*;

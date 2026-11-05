@@ -1,15 +1,11 @@
-//! The changed files panel scenes, built on the panel and row parts with fake data.
-
 use gpui_kit::Div;
 
 use crate::parts::{ChangedFileRow, ChangedFilesPanel, FileStatus};
 use crate::scenes::SceneName;
 use crate::theme::Theme;
 
-/// The row that draws a little shorter in the small-row scene.
 const SMALL_ROW_INDEX: usize = 2;
 
-/// The quality a smoke scene is designed to show.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Variant {
     MissingHeader,

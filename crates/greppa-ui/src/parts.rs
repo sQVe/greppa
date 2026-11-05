@@ -1,18 +1,12 @@
-//! Reusable greppa UI parts. Every size, color, and text size comes from [`crate::theme`].
-
 use gpui_kit::base::{h_flex, v_flex};
 use gpui_kit::*;
 
 use crate::theme::Theme;
 
-/// The status of a changed file.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FileStatus {
-    /// A new file.
     Added,
-    /// An edited file.
     Modified,
-    /// A removed file.
     Deleted,
 }
 
@@ -34,34 +28,23 @@ impl FileStatus {
     }
 }
 
-/// A row's vertical density.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum RowSize {
-    /// The default row.
     Medium,
-    /// A slightly shorter row, with the same text.
     Small,
 }
 
-/// One changed file shown in a [`ChangedFilesPanel`].
 #[derive(Clone)]
 pub struct ChangedFileRow {
-    /// The file path, or an empty string to hide it.
     pub label: String,
-    /// The file's status.
     pub status: FileStatus,
-    /// Added line count.
     pub added_lines: u32,
-    /// Deleted line count.
     pub deleted_lines: u32,
-    /// Whether the row draws as selected.
     pub selected: bool,
-    /// The row's density.
     pub size: RowSize,
 }
 
 impl ChangedFileRow {
-    /// A medium, unselected row with no line counts.
     pub fn new(label: impl Into<String>, status: FileStatus) -> Self {
         Self {
             label: label.into(),
@@ -73,20 +56,17 @@ impl ChangedFileRow {
         }
     }
 
-    /// Sets the added and deleted line counts.
     pub fn lines(mut self, added_lines: u32, deleted_lines: u32) -> Self {
         self.added_lines = added_lines;
         self.deleted_lines = deleted_lines;
         self
     }
 
-    /// Draws the row as selected.
     pub fn selected(mut self) -> Self {
         self.selected = true;
         self
     }
 
-    /// Draws the row a little shorter, with the same text.
     pub fn small(mut self) -> Self {
         self.size = RowSize::Small;
         self
@@ -156,28 +136,22 @@ fn counts(row: &ChangedFileRow, theme: &Theme) -> Div {
     counts
 }
 
-/// A panel listing changed files.
 #[derive(Clone)]
 pub struct ChangedFilesPanel {
-    /// The section header, or `None` to draw no header.
     pub header: Option<String>,
-    /// The rows, in draw order.
     pub rows: Vec<ChangedFileRow>,
 }
 
 impl ChangedFilesPanel {
-    /// A panel with no header.
     pub fn new(rows: Vec<ChangedFileRow>) -> Self {
         Self { header: None, rows }
     }
 
-    /// Adds the section header.
     pub fn header(mut self, header: impl Into<String>) -> Self {
         self.header = Some(header.into());
         self
     }
 
-    /// Renders the panel. The panel fills its parent.
     pub fn render(&self, theme: &Theme) -> Div {
         let mut panel = v_flex()
             .size_full()

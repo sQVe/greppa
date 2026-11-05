@@ -1,8 +1,3 @@
-//! `cargo xtask mock capture <scene>`: capture a mock scene on a private headless display.
-//!
-//! Capture is Linux only. It builds the scene binary, starts a private weston with Xwayland,
-//! grabs the scene window, and writes `shot.png`, `crop.png`, and `capture.json`.
-
 use std::path::Path;
 use std::process::ExitCode;
 

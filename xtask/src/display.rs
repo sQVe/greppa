@@ -5,11 +5,25 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use crate::cleanup;
 use crate::process::{TOOL_TIMEOUT, poll_until, run_with_timeout};
 
 pub(crate) const WESTON_TIMEOUT: Duration = Duration::from_secs(30);
+
+#[derive(Debug, Error)]
+enum DisplayError {
+    #[error("weston did not print a display within {} seconds.", timeout.as_secs())]
+    DisplayTimeout {
+        timeout: Duration,
+        #[allow(
+            dead_code,
+            reason = "the timeout is the message contract; the log path is test-visible data"
+        )]
+        log: PathBuf,
+    },
+}
 
 /// A private XDG runtime directory, mode 700, removed on drop. Creation is atomic and refuses an
 /// existing path, so a planted symlink cannot redirect it.
@@ -242,10 +256,11 @@ pub(crate) fn wait_for_display(log_path: &Path, timeout: Duration) -> anyhow::Re
     })?;
 
     display.ok_or_else(|| {
-        anyhow::anyhow!(
-            "weston did not print a display within {} seconds.",
-            timeout.as_secs()
-        )
+        DisplayError::DisplayTimeout {
+            timeout,
+            log: log_path.to_path_buf(),
+        }
+        .into()
     })
 }
 
@@ -453,13 +468,30 @@ mod tests {
     fn wait_for_display_reports_a_timeout() {
         let folder = crate::test_support::temporary_directory();
         let log = folder.path().join("weston.log");
+        let timeout = Duration::from_millis(150);
 
-        let error = wait_for_display(&log, Duration::from_millis(150))
-            .expect_err("a missing display times out");
+        let error = wait_for_display(&log, timeout).expect_err("a missing display times out");
+
+        assert!(
+            matches!(
+                error.downcast_ref::<DisplayError>(),
+                Some(DisplayError::DisplayTimeout { timeout: recorded, log: recorded_log })
+                    if *recorded == timeout && recorded_log == &log
+            ),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn the_display_errors_render_their_messages() {
+        let error = DisplayError::DisplayTimeout {
+            timeout: Duration::from_secs(3),
+            log: PathBuf::from("/tmp/weston.log"),
+        };
 
         assert_eq!(
             error.to_string(),
-            "weston did not print a display within 0 seconds."
+            "weston did not print a display within 3 seconds."
         );
     }
 }

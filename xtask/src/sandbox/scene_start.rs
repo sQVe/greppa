@@ -1,19 +1,34 @@
 use std::fs;
 use std::os::unix::process::CommandExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use crate::cleanup;
 use crate::process::poll_until;
 use crate::scene::{self, Ready};
 
 use super::environment::sandbox_environment;
-use super::identity::{STOP_TIMEOUT, process_start, record_process, stop_window};
+use super::identity::{
+    STOP_TIMEOUT, process_is_zombie, process_start, record_process, stop_window,
+};
 
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
+
+#[derive(Debug, Error)]
+enum SceneStartError {
+    #[error("The scene exited before it printed a ready line; see {}", log.display())]
+    SceneExited { log: PathBuf },
+    #[error(
+        "The scene did not print a ready line within {} seconds; see {}",
+        timeout.as_secs(),
+        log.display()
+    )]
+    ReadyTimeout { timeout: Duration, log: PathBuf },
+}
 
 pub(super) fn start_scene(
     root: &Path,
@@ -76,23 +91,24 @@ fn wait_for_ready(log_path: &Path, pid: u32, timeout: Duration) -> anyhow::Resul
             }
         }
 
-        if process_start(pid).is_none() {
-            anyhow::bail!(
-                "The scene exited before it printed a ready line; see {}",
-                log_path.display()
-            );
+        if process_start(pid).is_none() || process_is_zombie(pid) {
+            return Err(SceneStartError::SceneExited {
+                log: log_path.to_path_buf(),
+            }
+            .into());
         }
 
         Ok(None)
     })?;
 
-    ready.ok_or_else(|| {
-        anyhow::anyhow!(
-            "The scene did not print a ready line within {} seconds; see {}",
-            timeout.as_secs(),
-            log_path.display()
-        )
-    })
+    match ready {
+        Some(ready) => Ok(ready),
+        None => Err(SceneStartError::ReadyTimeout {
+            timeout,
+            log: log_path.to_path_buf(),
+        }
+        .into()),
+    }
 }
 
 #[cfg(test)]
@@ -137,12 +153,88 @@ mod tests {
         let error = wait_for_ready(&log, u32::MAX, Duration::from_secs(1))
             .expect_err("a missing process is reported");
 
-        assert_eq!(
-            error.to_string(),
-            format!(
-                "The scene exited before it printed a ready line; see {}",
-                log.display()
-            )
+        assert!(
+            matches!(
+                error.downcast_ref::<SceneStartError>(),
+                Some(SceneStartError::SceneExited { log: recorded }) if recorded == &log
+            ),
+            "unexpected error: {error:#}"
         );
+    }
+
+    #[test]
+    fn wait_for_ready_reports_a_timeout() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("scene.log");
+        fs::write(&log, "no ready line here\n").expect("write the log");
+        let timeout = Duration::from_millis(150);
+
+        let error = wait_for_ready(&log, std::process::id(), timeout)
+            .expect_err("a live scene without a ready line times out");
+
+        assert!(
+            matches!(
+                error.downcast_ref::<SceneStartError>(),
+                Some(SceneStartError::ReadyTimeout { timeout: recorded, log: recorded_log })
+                    if *recorded == timeout && recorded_log == &log
+            ),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn wait_for_ready_reports_a_zombie_scene_before_the_timeout() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("scene.log");
+        fs::write(&log, "no ready line here\n").expect("write the log");
+        let mut child = Command::new("true").spawn().expect("spawn the scene");
+        let pid = child.id();
+        let zombie = poll_until(Duration::from_secs(3), || {
+            Ok(process_is_zombie(pid).then_some(()))
+        })
+        .expect("the zombie check cannot fail");
+        assert!(zombie.is_some(), "the scene became a zombie");
+
+        let started = std::time::Instant::now();
+        let error =
+            wait_for_ready(&log, pid, Duration::from_secs(30)).expect_err("the scene exited");
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(
+                error.downcast_ref::<SceneStartError>(),
+                Some(SceneStartError::SceneExited { .. })
+            ),
+            "unexpected error: {error:#}"
+        );
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "the exit was reported after {elapsed:?} instead of before the timeout"
+        );
+
+        crate::test_support::stop_child(&mut child);
+    }
+
+    #[test]
+    fn the_scene_start_errors_render_their_messages() {
+        let cases = [
+            (
+                SceneStartError::SceneExited {
+                    log: PathBuf::from("/tmp/scene.log"),
+                },
+                "The scene exited before it printed a ready line; see /tmp/scene.log",
+            ),
+            (
+                SceneStartError::ReadyTimeout {
+                    timeout: Duration::from_secs(2),
+                    log: PathBuf::from("/tmp/scene.log"),
+                },
+                "The scene did not print a ready line within 2 seconds; see /tmp/scene.log",
+            ),
+        ];
+
+        for (error, expected) in cases {
+            assert_eq!(error.to_string(), expected, "{error:?}");
+        }
     }
 }

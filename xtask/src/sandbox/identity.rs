@@ -74,7 +74,7 @@ fn process_parent(pid: u32) -> Option<u32> {
     tail.split_whitespace().nth(1)?.parse().ok()
 }
 
-fn process_is_zombie(pid: u32) -> bool {
+pub(super) fn process_is_zombie(pid: u32) -> bool {
     let Some(stat) = fs::read_to_string(format!("/proc/{pid}/stat")).ok() else {
         return false;
     };

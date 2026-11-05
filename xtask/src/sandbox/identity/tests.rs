@@ -1,4 +1,5 @@
 use std::io::BufRead as _;
+use std::os::unix::process::CommandExt as _;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -7,6 +8,7 @@ use super::*;
 struct ChildGuard {
     child: std::process::Child,
     reaped: bool,
+    group: bool,
 }
 
 impl ChildGuard {
@@ -14,11 +16,20 @@ impl ChildGuard {
         Self {
             child,
             reaped: false,
+            group: false,
         }
     }
 
     fn spawn(command: &mut Command) -> Self {
         Self::new(command.spawn().expect("spawn the child"))
+    }
+
+    fn spawn_group(command: &mut Command) -> Self {
+        command.process_group(0);
+        let mut guard = Self::new(command.spawn().expect("spawn the child"));
+        guard.group = true;
+
+        guard
     }
 
     fn id(&self) -> u32 {
@@ -59,9 +70,29 @@ impl ChildGuard {
     }
 
     fn reap(&mut self) {
-        if !self.reaped {
-            crate::test_support::stop_child(&mut self.child);
-            self.reaped = true;
+        if self.reaped {
+            return;
+        }
+
+        if self.group {
+            stop_process_group(self.child.id());
+        }
+
+        crate::test_support::stop_child(&mut self.child);
+        self.reaped = true;
+    }
+}
+
+fn stop_process_group(child_id: u32) {
+    let Some(pgid) = rustix::process::Pid::from_raw(child_id as i32) else {
+        return;
+    };
+
+    if let Err(error) = rustix::process::kill_process_group(pgid, rustix::process::Signal::KILL) {
+        let error = std::io::Error::from(error);
+
+        if let Some(warning) = crate::cleanup::cleanup_warning("stop the process group", &error) {
+            panic!("{warning}");
         }
     }
 }
@@ -106,13 +137,39 @@ fn spawn_with_marker(root: &Path) -> ChildGuard {
     child
 }
 
-fn spawn_named(name: &str) -> ChildGuard {
+fn spawn_fake_weston(child_name: &str) -> (ChildGuard, u32) {
     let mut command = Command::new("bash");
-    command.args(["-c", &format!("exec -a \"{name}\" sleep 30")]);
-    let child = ChildGuard::spawn(&mut command);
-    child.wait_until_ready(name, Duration::from_secs(2));
+    command.args(["-c", &format!("exec -a \"{child_name}\" sleep 30 & wait")]);
+    let parent = ChildGuard::spawn_group(&mut command);
+    let child = wait_for_child_named(parent.id(), child_name, Duration::from_secs(2));
 
-    child
+    (parent, child)
+}
+
+fn wait_for_child_named(parent: u32, name: &str, timeout: Duration) -> u32 {
+    let found = poll_until(timeout, || {
+        for pid in child_pids(parent) {
+            let Ok(cmdline) = fs::read(format!("/proc/{pid}/cmdline")) else {
+                continue;
+            };
+            let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
+
+            if cmdline.contains(name) {
+                return Ok(Some(pid));
+            }
+        }
+
+        Ok(None)
+    })
+    .expect("the child scan cannot fail");
+
+    found.expect("the named child appeared in time")
+}
+
+fn write_weston_record(root: &Path, pid: u32) {
+    let started = process_start(pid).expect("the fake weston has a start time");
+
+    fs::write(root.join("weston.pid"), format!("{pid} {started}\n")).expect("write weston.pid");
 }
 
 fn spawn_term_ignorer() -> ChildGuard {
@@ -447,27 +504,21 @@ fn record_process_reports_an_empty_name_in_time() {
 fn record_xwayland_records_a_matching_child() {
     let root = crate::test_support::temporary_sandbox_root("xwayland-match");
     let path = root.path().join("xwayland.pid");
-    let me = std::process::id();
-    let started = process_start(me).expect("the test process has a start time");
-    fs::write(root.path().join("weston.pid"), format!("{me} {started}\n"))
-        .expect("write weston.pid");
-    let child = spawn_named("Xwayland :97");
+    let (weston, child) = spawn_fake_weston("Xwayland :97");
+    write_weston_record(root.path(), weston.id());
 
     record_xwayland(root.path(), ":97", Duration::from_secs(1)).expect("record_xwayland");
 
     let (pid, _) = read_record(&path).expect("the xwayland record");
-    assert_eq!(pid, child.id());
+    assert_eq!(pid, child);
 }
 
 #[test]
 fn record_xwayland_ignores_a_different_display() {
     let root = crate::test_support::temporary_sandbox_root("xwayland-display");
     let path = root.path().join("xwayland.pid");
-    let me = std::process::id();
-    let started = process_start(me).expect("the test process has a start time");
-    fs::write(root.path().join("weston.pid"), format!("{me} {started}\n"))
-        .expect("write weston.pid");
-    let _child = spawn_named("Xwayland :97");
+    let (weston, _child) = spawn_fake_weston("Xwayland :97");
+    write_weston_record(root.path(), weston.id());
 
     record_xwayland(root.path(), ":98", Duration::from_millis(200)).expect("record_xwayland");
 
@@ -478,15 +529,28 @@ fn record_xwayland_ignores_a_different_display() {
 fn record_xwayland_ignores_a_child_with_another_name() {
     let root = crate::test_support::temporary_sandbox_root("xwayland-name");
     let path = root.path().join("xwayland.pid");
-    let me = std::process::id();
-    let started = process_start(me).expect("the test process has a start time");
-    fs::write(root.path().join("weston.pid"), format!("{me} {started}\n"))
-        .expect("write weston.pid");
-    let _child = spawn_named("OtherProcess");
+    let (weston, _child) = spawn_fake_weston("OtherProcess");
+    write_weston_record(root.path(), weston.id());
 
     record_xwayland(root.path(), ":97", Duration::from_millis(200)).expect("record_xwayland");
 
     assert!(!path.exists(), "a child with another name is not recorded");
+}
+
+#[test]
+fn record_process_waits_for_the_command_line_to_change() {
+    let directory = crate::test_support::temporary_directory();
+    let path = directory.path().join("record");
+    let mut command = Command::new("bash");
+    command.args(["-c", "sleep 0.3; exec -a \"$EXPECTED\" sleep 30"]);
+    command.env("EXPECTED", "expected-name");
+    let child = ChildGuard::spawn(&mut command);
+
+    record_process(&path, child.id(), "expected-name", Duration::from_secs(2))
+        .expect("record_process waits for the exec");
+
+    let (pid, _) = read_record(&path).expect("the record exists");
+    assert_eq!(pid, child.id());
 }
 
 #[test]

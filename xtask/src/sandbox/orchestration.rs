@@ -328,15 +328,18 @@ mod tests {
 
     #[test]
     fn a_refused_scene_leaves_a_running_sandbox_alone() {
-        let root = temporary_root("preflight");
-        crate::test_support::remove_dir_all(&root);
-        fs::create_dir(&root).expect("create the root");
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("make it private");
-        let marker = root.join("scene");
+        let root = crate::test_support::temporary_sandbox_root("preflight");
+        let marker = root.path().join("scene");
         fs::write(&marker, "smoke-2\n").expect("write the scene record");
 
-        let error = start_window(Path::new("/nonexistent"), "preflight", &root, "app", false)
-            .expect_err("the app scene is refused");
+        let error = start_window(
+            Path::new("/nonexistent"),
+            "preflight",
+            root.path(),
+            "app",
+            false,
+        )
+        .expect_err("the app scene is refused");
 
         assert_eq!(
             error.to_string(),
@@ -346,8 +349,6 @@ mod tests {
             marker.is_file(),
             "a refused scene must not tear the sandbox down"
         );
-
-        crate::test_support::remove_dir_all(&root);
     }
 
     #[test]

@@ -2,6 +2,8 @@ use std::path::Path;
 
 use crate::environment::{self, ChildDirs};
 
+// Reads only the real process environment.
+#[mutants::skip]
 pub(super) fn caller_environment() -> Vec<(String, String)> {
     std::env::vars().collect()
 }

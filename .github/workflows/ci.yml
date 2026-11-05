@@ -8,6 +8,7 @@ on:
   schedule:
     # Weekly, so new security advisories fail cargo-deny without a code change.
     - cron: "0 5 * * 1"
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -81,3 +82,116 @@ jobs:
         with:
           tool: cargo-nextest
       - run: cargo xtask check build
+
+  mutation:
+    name: Mutation (changed)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install GPUI system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libssl-dev \
+            libvulkan-dev \
+            libwayland-dev \
+            libx11-dev \
+            libx11-xcb-dev \
+            libxcb-randr0-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxcb-xkb-dev \
+            libxcb1-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            pkg-config
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-mutants@27.1.0,cargo-nextest
+      # Survivors are advice: exit 2 passes, and only exit 1 (an error or an unmutated file) fails.
+      - name: Mutate the pull request's diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          status=0
+          cargo xtask mutation changed "$BASE_SHA" > mutation-report.json || status=$?
+          cat mutation-report.json
+          {
+            echo "### Mutation testing"
+            echo
+            jq -r '"Status: \(.status), \(.survivors | length) survivors"' mutation-report.json
+            jq -r '.survivors[] | "- `\(.file):\(.line)`: \(.original) -> \(.replacement)"' mutation-report.json
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then
+            exit "$status"
+          fi
+
+  mutation-audit:
+    name: Mutation audit
+    if: >-
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # The audit's runtime on a runner is not measured yet; 180 minutes is a first guess.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install GPUI system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libssl-dev \
+            libvulkan-dev \
+            libwayland-dev \
+            libx11-dev \
+            libx11-xcb-dev \
+            libxcb-randr0-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxcb-xkb-dev \
+            libxcb1-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            pkg-config
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-mutants@27.1.0,cargo-nextest
+      # Survivors (exit 2) and timeouts (exit 3) are advice. Other exits, such as a failing
+      # baseline (exit 4), fail the job.
+      - name: Mutate the whole workspace
+        run: |
+          status=0
+          cargo mutants --workspace --test-tool nextest || status=$?
+          echo "cargo-mutants exited with $status"
+          case "$status" in
+            0 | 2 | 3) ;;
+            *) exit "$status" ;;
+          esac
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mutants.out
+          path: mutants.out
+          if-no-files-found: warn

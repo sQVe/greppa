@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+mutants = "0.0.3"
 serde_json.workspace = true
 thiserror.workspace = true
 

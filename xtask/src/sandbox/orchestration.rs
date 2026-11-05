@@ -93,6 +93,8 @@ fn execute(workspace: &Path, name: &str, command: Sandbox) -> anyhow::Result<()>
     }
 }
 
+// Starts a live sandbox display and scene.
+#[mutants::skip]
 fn up(
     workspace: &Path,
     name: &str,
@@ -112,6 +114,8 @@ fn up(
     start_window(workspace, name, root, scene_name, headed)
 }
 
+// Restarts a live sandbox display and scene.
+#[mutants::skip]
 fn restart(
     workspace: &Path,
     name: &str,
@@ -261,6 +265,8 @@ fn require_up(name: &str, root: &Path) -> anyhow::Result<String> {
     Ok(display)
 }
 
+// Captures a live sandbox window with ImageMagick.
+#[mutants::skip]
 #[expect(clippy::print_stdout, reason = "the shot path is the command's output")]
 fn shot(name: &str, root: &Path, file: Option<PathBuf>) -> anyhow::Result<()> {
     require_program("import")?;

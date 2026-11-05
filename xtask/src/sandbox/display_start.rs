@@ -16,6 +16,8 @@ use super::root::{prepare_root, socket_name};
 const WINDOW_WIDTH: u32 = 1400;
 const WINDOW_HEIGHT: u32 = 900;
 
+// Starts Weston and Xwayland, so it needs a real display server.
+#[mutants::skip]
 pub(super) fn ensure_display(name: &str, root: &Path, headed: bool) -> anyhow::Result<String> {
     let mode = if headed { "headed" } else { "headless" };
 

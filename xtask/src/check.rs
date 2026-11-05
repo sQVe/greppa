@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::process::{Command, ExitCode};
 
+use crate::raw_values;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Group {
     /// Checks whose result does not depend on the operating system.
@@ -8,81 +10,107 @@ enum Group {
     Build,
 }
 
+enum Action {
+    Command {
+        program: &'static str,
+        arguments: &'static [&'static str],
+        environment: &'static [(&'static str, &'static str)],
+    },
+    RawValues,
+}
+
 struct Step {
+    name: &'static str,
+    group: Group,
+    action: Action,
+}
+
+const DENY_WARNINGS: (&str, &str) = ("CARGO_BUILD_WARNINGS", "deny");
+
+fn command(
     name: &'static str,
     group: Group,
     program: &'static str,
     arguments: &'static [&'static str],
     environment: &'static [(&'static str, &'static str)],
+) -> Step {
+    Step {
+        name,
+        group,
+        action: Action::Command {
+            program,
+            arguments,
+            environment,
+        },
+    }
 }
 
-const DENY_WARNINGS: (&str, &str) = ("CARGO_BUILD_WARNINGS", "deny");
-
-const STEPS: &[Step] = &[
-    Step {
-        name: "rustfmt",
-        group: Group::Tidy,
-        program: "cargo",
-        arguments: &["fmt", "--all", "--check"],
-        environment: &[],
-    },
-    Step {
-        name: "typos",
-        group: Group::Tidy,
-        program: "typos",
-        arguments: &[],
-        environment: &[],
-    },
-    Step {
-        name: "taplo",
-        group: Group::Tidy,
-        program: "taplo",
-        arguments: &["fmt", "--check"],
-        environment: &[("RUST_LOG", "warn")],
-    },
-    Step {
-        name: "cargo-deny",
-        group: Group::Tidy,
-        program: "cargo",
-        arguments: &["deny", "--locked", "check"],
-        environment: &[],
-    },
-    Step {
-        name: "cargo-shear",
-        group: Group::Tidy,
-        program: "cargo",
-        arguments: &["shear", "--locked", "--deny-warnings"],
-        environment: &[],
-    },
-    Step {
-        name: "clippy",
-        group: Group::Build,
-        program: "cargo",
-        arguments: &["clippy", "--workspace", "--all-targets", "--locked"],
-        environment: &[DENY_WARNINGS],
-    },
-    Step {
-        name: "nextest",
-        group: Group::Build,
-        program: "cargo",
-        arguments: &["nextest", "run", "--workspace", "--locked"],
-        environment: &[DENY_WARNINGS],
-    },
-    Step {
-        name: "doctests",
-        group: Group::Build,
-        program: "cargo",
-        arguments: &["test", "--doc", "--workspace", "--locked"],
-        environment: &[DENY_WARNINGS],
-    },
-    Step {
-        name: "rustdoc",
-        group: Group::Build,
-        program: "cargo",
-        arguments: &["doc", "--workspace", "--no-deps", "--locked"],
-        environment: &[DENY_WARNINGS, ("RUSTDOCFLAGS", "-D warnings")],
-    },
-];
+fn steps() -> Vec<Step> {
+    vec![
+        command(
+            "rustfmt",
+            Group::Tidy,
+            "cargo",
+            &["fmt", "--all", "--check"],
+            &[],
+        ),
+        Step {
+            name: "raw-values",
+            group: Group::Tidy,
+            action: Action::RawValues,
+        },
+        command("typos", Group::Tidy, "typos", &[], &[]),
+        command(
+            "taplo",
+            Group::Tidy,
+            "taplo",
+            &["fmt", "--check"],
+            &[("RUST_LOG", "warn")],
+        ),
+        command(
+            "cargo-deny",
+            Group::Tidy,
+            "cargo",
+            &["deny", "--locked", "check"],
+            &[],
+        ),
+        command(
+            "cargo-shear",
+            Group::Tidy,
+            "cargo",
+            &["shear", "--locked", "--deny-warnings"],
+            &[],
+        ),
+        command(
+            "clippy",
+            Group::Build,
+            "cargo",
+            &["clippy", "--workspace", "--all-targets", "--locked"],
+            &[DENY_WARNINGS],
+        ),
+        command(
+            "nextest",
+            Group::Build,
+            "cargo",
+            &["nextest", "run", "--workspace", "--locked"],
+            &[DENY_WARNINGS],
+        ),
+        command(
+            "doctests",
+            Group::Build,
+            "cargo",
+            &["test", "--doc", "--workspace", "--locked"],
+            &[DENY_WARNINGS],
+        ),
+        command(
+            "rustdoc",
+            Group::Build,
+            "cargo",
+            &["doc", "--workspace", "--no-deps", "--locked"],
+            &[DENY_WARNINGS, ("RUSTDOCFLAGS", "-D warnings")],
+        ),
+    ]
+}
 
 fn parse_groups(arguments: &[String]) -> Result<Vec<Group>, String> {
     match arguments {
@@ -99,18 +127,33 @@ fn parse_groups(arguments: &[String]) -> Result<Vec<Group>, String> {
 fn run_step(root: &Path, step: &Step) -> bool {
     eprintln!("==> {}", step.name);
 
-    let status = Command::new(step.program)
-        .args(step.arguments)
-        .envs(step.environment.iter().copied())
-        .current_dir(root)
-        .status();
+    match &step.action {
+        Action::Command {
+            program,
+            arguments,
+            environment,
+        } => {
+            let status = Command::new(program)
+                .args(*arguments)
+                .envs(environment.iter().copied())
+                .current_dir(root)
+                .status();
 
-    match status {
-        Ok(status) => status.success(),
-        Err(error) => {
-            eprintln!("Could not start {}: {error}", step.program);
-            false
+            match status {
+                Ok(status) => status.success(),
+                Err(error) => {
+                    eprintln!("Could not start {program}: {error}");
+                    false
+                }
+            }
         }
+        Action::RawValues => match raw_values::check(root) {
+            Ok(()) => true,
+            Err(message) => {
+                eprintln!("{message}");
+                false
+            }
+        },
     }
 }
 
@@ -124,7 +167,7 @@ pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
         }
     };
 
-    let failed: Vec<&str> = STEPS
+    let failed: Vec<&str> = steps()
         .iter()
         .filter(|step| groups.contains(&step.group))
         .filter(|step| !run_step(root, step))

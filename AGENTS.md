@@ -20,10 +20,18 @@ verification.
 - greppa is one native process on GPUI and gpui-component, with no server and no browser. See
   [ADR 0002](docs/adr/0002-native-rust-gpui.md).
 - The diff viewer is gpui-component's `Diff`, from a vendored copy that greppa owns and patches.
-  Record each local patch, with its reason, next to the vendored code. See
-  [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
+  Record each local patch, with its reason, in the vendored crate's `PATCHES.md`, and mark the
+  changed code with a `// GREPPA:` comment. Commit an import or update of the crate unchanged, apart
+  from its patches. See [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
 - Only one module talks to `Diff`. Everything else uses greppa's own types for files, comments,
   themes, selections, and clicks. See [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
+- Every size, spacing, corner radius, text size, and color in `greppa-ui` comes from
+  `crates/greppa-ui/src/theme.rs`. `cargo xtask check` rejects a raw value anywhere else in
+  `greppa-ui`, and a contrast test checks the theme's text and control pairs.
+- Design new UI as a mock scene first, with real greppa parts and fake data. Open a scene with
+  `cargo run --package greppa-ui --bin greppa-scene -- <scene>`, capture it with
+  `cargo xtask mock capture <scene>`, and gate it with the judge-mock skill in
+  `.pi/skills/judge-mock/`. See [ADR 0005](docs/adr/0005-two-ai-judges-gate-ui-mocks.md).
 - The toolchain is pinned in `rust-toolchain.toml`. Lint levels live in `[workspace.lints]`, and CI
   fails on warnings. Add single clippy lints, not whole groups. See
   [ADR 0004](docs/adr/0004-toolchain-and-quality-gates.md).

@@ -16,13 +16,38 @@
    prek install
    ```
 
+### Linux build packages
+
+GPUI needs system libraries to compile. On Debian and Ubuntu:
+
+```sh
+sudo apt-get install --no-install-recommends \
+  libasound2-dev libfontconfig1-dev libfreetype6-dev libssl-dev libvulkan-dev \
+  libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxcb-render0-dev \
+  libxcb-shape0-dev libxcb-xfixes0-dev libxcb-xkb-dev libxcb1-dev \
+  libxkbcommon-dev libxkbcommon-x11-dev pkg-config
+```
+
+On Arch Linux the same packages are:
+
+```sh
+sudo pacman -S --needed alsa-lib fontconfig freetype2 openssl vulkan-headers \
+  wayland libx11 libxcb libxkbcommon libxkbcommon-x11 pkgconf
+```
+
+The `Test (Linux)` job in `.github/workflows/ci.yml` installs the Debian and Ubuntu list before it
+builds GPUI. The check job does not compile code and needs no display.
+
 ## Workspace
 
 - `crates/greppa-core` holds review logic: diffs, line ranges, and review state. It never depends on
   GPUI, so it builds and tests without a display or GPU.
-- `crates/greppa-ui` holds the GPUI views.
+- `crates/greppa-ui` holds the GPUI views. It depends on `gpui-kit`; `greppa-core` never does.
 - `crates/greppa` is the app binary. `cargo run` starts it.
 - `xtask` holds repository tasks, run as `cargo xtask <task>`.
+- `vendor/gpui-component` is the published `gpui-component` crate with one local patch, wired in
+  through `[patch.crates-io]`. `PATCHES.md` describes the change. It is not a workspace member
+  and is left out of the formatters and linters.
 
 ## Check your work
 
@@ -32,9 +57,21 @@ Run every check before you open a pull request:
 cargo xtask check
 ```
 
-It changes no files. It runs rustfmt, typos, taplo, cargo-deny, cargo-shear, clippy, nextest,
-doctests, and rustdoc, and reports every failed check at the end. Warnings fail clippy, the tests,
-and rustdoc. Every Cargo build runs with `--locked`, so a stale `Cargo.lock` fails too.
+It changes no files. It runs rustfmt, the raw-value check, typos, taplo, cargo-deny, cargo-shear,
+clippy, nextest, doctests, and rustdoc, and reports every failed check at the end. Warnings fail
+clippy, the tests, and rustdoc. Every Cargo build runs with `--locked`, so a stale `Cargo.lock`
+fails too.
+
+The raw-value check scans `crates/greppa-ui/src/**/*.rs` except `theme.rs`. It fails when a line
+builds a length or color directly, such as `px(3.0)`, `rgb(0x112233)`, `white()`, or a preset
+helper such as `.p_2()` or `.w_64()`. Every size, spacing, radius, text size, and color comes from
+`crates/greppa-ui/src/theme.rs`.
+
+The contrast test is a `greppa-ui` unit test that nextest runs. It computes the WCAG 2.2 AA
+contrast ratio for each theme text and surface pair: 4.5:1 for text, 3:1 for boundaries and large
+text. It passes only when the failing pairs are exactly the list of known failures. A new failing
+pair fails the test, and a listed pair that starts to pass fails it too. Each failure message names
+both tokens and the ratio.
 
 `cargo xtask check tidy` runs only the checks that do not compile code. `cargo xtask check build`
 runs only the ones that do.
@@ -51,6 +88,41 @@ Fix problems with these commands:
 
 The pre-commit hook runs rustfmt, clippy, typos, and taplo, but only in check mode. Run the fix
 commands yourself.
+
+## UI mocks
+
+A mock is a scene built from real greppa UI parts with fake data. The scene code lives in
+`crates/greppa-ui/src/scenes/`, and the parts live in `crates/greppa-ui/src/parts.rs`.
+
+Open one scene in a window:
+
+```sh
+cargo run --package greppa-ui --bin greppa-scene -- smoke-2
+```
+
+The binary opens one named scene. It prints the known scene names and exits non-zero when the name
+is unknown or missing. The `--list` flag prints the names and exits without opening a window. On
+the first frame it prints one JSON line with the scene name, origin, size, scale factor, and window
+title.
+
+Capture a scene for the judges:
+
+```sh
+cargo xtask mock capture smoke-2
+```
+
+The command builds the scene binary, starts a private headless display, runs the scene, waits for
+the ready JSON line, grabs the window with ImageMagick `import`, crops it with `magick`, and writes
+`shot.png`, `crop.png`, and `capture.json` to `.tau/judge/smoke-2/`. The crop is exactly the scene
+panel; the shot shows the surrounding base color. Capture stops the scene and the display on
+success and on failure, and it never uses the real display or input. `.tau/` is git-ignored.
+
+Capture is Linux only and does not run in CI. It needs:
+
+- weston with the headless backend and Xwayland.
+- ImageMagick 7 with `import`, `magick`, and `identify`.
+- A working Vulkan driver. On a machine without a GPU, install Mesa's lavapipe. On Arch Linux that
+  package is `vulkan-swrast`; on Debian and Ubuntu it is `mesa-vulkan-drivers`.
 
 ## Mutation testing
 

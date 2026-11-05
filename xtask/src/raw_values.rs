@@ -74,10 +74,11 @@ fn scan_directory(root: &Path, directory: &Path) -> Result<Vec<String>, String> 
     collect_files(directory, &mut files)?;
     files.sort();
 
+    let theme_file = directory.join(THEME_FILE);
     let mut failures = Vec::new();
 
     for file in files {
-        if file.file_name().and_then(|name| name.to_str()) == Some(THEME_FILE) {
+        if file == theme_file {
             continue;
         }
 
@@ -703,6 +704,20 @@ let c = rgb\n\
 
         fs::remove_dir_all(&directory).expect("remove temporary directory");
         assert!(failures.is_empty());
+    }
+
+    #[test]
+    fn scan_directory_scans_a_nested_theme_file() {
+        let directory = temporary_directory("nested-theme");
+        fs::create_dir_all(directory.join("scenes")).expect("create scenes");
+        fs::write(directory.join("scenes/theme.rs"), "let x = px(3.0);\n")
+            .expect("write nested theme");
+
+        let failures = scan_directory(&directory, &directory).expect("scan");
+
+        fs::remove_dir_all(&directory).expect("remove temporary directory");
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].ends_with("theme.rs:1: let x = px(3.0);"));
     }
 
     #[test]

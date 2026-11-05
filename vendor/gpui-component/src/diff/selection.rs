@@ -277,7 +277,8 @@ impl Element for CodeText {
             let start = range.start.max(line.source().start);
             let end = range.end.min(line.content_end());
             if start < end {
-                layers.push((
+                // GREPPA: insert first so inline change backgrounds win over the selection background.
+                layers.insert(0, (
                     line.display_range(start - line.source().start..end - line.source().start),
                     HighlightStyle {
                         background_color: Some(crate::ActiveTheme::theme(cx).selection),

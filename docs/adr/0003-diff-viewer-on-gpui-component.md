@@ -30,7 +30,10 @@ greppa treats as its own code.
 - greppa vendors gpui-component and patches it, starting with the patch that keeps change
   highlights visible inside a selection.
 - Each local patch is recorded next to the vendored code with its reason, so it can be kept on an
-  update.
+  update. A `// GREPPA:` comment marks each patch in the code, so a search finds every local
+  change.
+- Apart from its patches, the vendored copy is the published crate unchanged. The import and each
+  patch land in separate commits, so a review reads only the patches.
 - greppa offers generic patches upstream, but does not wait for them.
 
 ### One boundary

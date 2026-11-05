@@ -20,8 +20,9 @@ verification.
 - greppa is one native process on GPUI and gpui-component, with no server and no browser. See
   [ADR 0002](docs/adr/0002-native-rust-gpui.md).
 - The diff viewer is gpui-component's `Diff`, from a vendored copy that greppa owns and patches.
-  Record each local patch, with its reason, next to the vendored code. See
-  [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
+  Record each local patch, with its reason, in the vendored crate's `PATCHES.md`, and mark the
+  changed code with a `// GREPPA:` comment. Commit an import or update of the crate unchanged, apart
+  from its patches. See [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
 - Only one module talks to `Diff`. Everything else uses greppa's own types for files, comments,
   themes, selections, and clicks. See [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
 - The toolchain is pinned in `rust-toolchain.toml`. Lint levels live in `[workspace.lints]`, and CI

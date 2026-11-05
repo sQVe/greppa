@@ -8,9 +8,10 @@
 ## Context
 
 Contributors and agents work in many Git worktrees at once, and each worktree has its own `target/`
-directory. Cargo's default `dev` profile builds every crate with full debug info. greppa pulls in
-GPUI and its large dependency tree, so most of each `target/` was debug info for dependencies that
-nobody steps through. That made each worktree take several gigabytes and slowed every build.
+directory. Cargo's default `dev` profile builds workspace crates and their runtime dependencies with
+full debug info. greppa pulls in GPUI and its large dependency tree, so each worktree writes and
+links debug info for many dependencies that nobody steps through. The Cargo book names this debug
+info as a cost in both disk space and build time.
 
 Day-to-day work needs panic backtraces with files and lines, from tests and from the app. It rarely
 needs a debugger that shows variables.
@@ -37,7 +38,8 @@ inherits the dependency override, so dependencies stay without debug info there 
 - A debugger on a `dev` build cannot show local variables.
 - The `debugging` profile builds into its own `target/debugging/` directory, so its first build
   compiles everything again.
-- Stepping into dependency code shows no source, even with the `debugging` profile.
+- Dependency code compiled in the dependency's own crate has no source or variables in a debugger,
+  even with the `debugging` profile. Generic code built inside a workspace crate keeps them.
 
 ## Alternatives considered
 

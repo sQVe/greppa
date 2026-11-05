@@ -191,6 +191,59 @@ fn report_runs_the_selected_files_within_the_diff() {
 }
 
 #[test]
+fn report_runs_the_requested_audit_files() {
+    let fixture = Fixture::new();
+    let cargo = fixture.cargo(r#"[{"file":"a.rs"},{"file":"b.rs"}]"#, 0, "exit 0");
+    let git = fixture.git("", 0);
+
+    let report = fixture.report(&["audit", "a.rs", "./b.rs"], &cargo, &git);
+    let calls = fixture.cargo_calls();
+
+    assert_eq!(status(&report), (Some("pass"), 0));
+    assert_eq!(calls.len(), 2);
+    assert!(
+        calls[0].ends_with("--list --json --file a.rs --file b.rs"),
+        "{}",
+        calls[0]
+    );
+    assert!(
+        calls[1].ends_with(" --file a.rs --file b.rs"),
+        "{}",
+        calls[1]
+    );
+    assert!(
+        calls.iter().all(|call| !call.contains("--in-diff")),
+        "{calls:?}"
+    );
+}
+
+#[test]
+fn report_fails_when_a_tool_cannot_start() {
+    let missing = "/nonexistent/greppa-missing-program";
+    let fixture = Fixture::new();
+    let cargo = fixture.cargo(LISTING, 0, "exit 0");
+    let git = fixture.git(DIFF, 0);
+
+    let without_git = fixture.report(&["changed", "main"], &cargo, missing);
+    let without_cargo = fixture.report(&["audit", "a.rs"], missing, &git);
+
+    assert_eq!(status(&without_git), (Some("error"), 1));
+    assert_eq!(status(&without_cargo), (Some("error"), 1));
+}
+
+#[test]
+fn report_fails_when_cargo_cannot_start_the_run() {
+    let fixture = Fixture::new();
+    let cargo = fixture.tool(
+        "cargo",
+        &format!("case \"$*\" in *--list*) printf '%s' '{LISTING}'; rm \"$0\";; esac"),
+    );
+
+    assert_eq!(status(&fixture.audit(&cargo)), (Some("error"), 1));
+    assert!(!Path::new(&cargo).exists());
+}
+
+#[test]
 fn scope_arguments_keep_flag_and_value_order() {
     let diff = PathBuf::from("out/changes.diff");
     let cases = [

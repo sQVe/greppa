@@ -182,6 +182,22 @@ fn failed_steps<'a>(root: &Path, steps: &'a [Step], groups: &[Group]) -> Vec<&'a
     clippy::print_stderr,
     reason = "check progress and failures are the command's output"
 )]
+fn check_steps(root: &Path, steps: &[Step], groups: &[Group]) -> ExitCode {
+    let failed = failed_steps(root, steps, groups);
+
+    if failed.is_empty() {
+        eprintln!("All checks passed.");
+        return ExitCode::SUCCESS;
+    }
+
+    eprintln!("Failed checks: {}", failed.join(", "));
+    ExitCode::FAILURE
+}
+
+#[expect(
+    clippy::print_stderr,
+    reason = "check progress and failures are the command's output"
+)]
 pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
     let groups = match parse_groups(arguments) {
         Ok(groups) => groups,
@@ -191,16 +207,7 @@ pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
         }
     };
 
-    let steps = steps();
-    let failed = failed_steps(root, &steps, &groups);
-
-    if failed.is_empty() {
-        eprintln!("All checks passed.");
-        return ExitCode::SUCCESS;
-    }
-
-    eprintln!("Failed checks: {}", failed.join(", "));
-    ExitCode::FAILURE
+    check_steps(root, &steps(), &groups)
 }
 
 #[cfg(test)]
@@ -305,6 +312,21 @@ mod tests {
         let root = crate::test_support::temporary_directory();
 
         assert_eq!(run(root.path(), &strings(&["lint"])), ExitCode::FAILURE);
+    }
+
+    #[test]
+    fn check_steps_fails_when_a_step_fails_and_runs_later_steps() {
+        let root = crate::test_support::temporary_directory();
+        let steps = [
+            shell_step("fails", &["-c", "exit 7"]),
+            shell_step("later", &["-c", "touch later"]),
+        ];
+
+        assert_eq!(
+            check_steps(root.path(), &steps, &[Group::Tidy]),
+            ExitCode::FAILURE
+        );
+        assert!(root.path().join("later").exists());
     }
 
     #[test]

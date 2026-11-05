@@ -178,6 +178,25 @@ fn recorded_scene(root: &Path, scene_name: Option<&str>) -> Result<String, Strin
         })
 }
 
+// Runs before anything changes, so a failed check leaves a running sandbox as it was.
+fn prepare_scene(
+    workspace: &Path,
+    root: &Path,
+    scene_name: &str,
+) -> Result<(PathBuf, String), String> {
+    if scene_name == "app" {
+        return Err(
+            "The real app has no window yet. Use a scene name such as smoke-2.".to_string(),
+        );
+    }
+
+    let binary = scene::build(workspace)?;
+    let names = scene::names(&binary, &weston_environment(root))?;
+    let scene = scene::validate_scene(scene_name, &names)?;
+
+    Ok((binary, scene))
+}
+
 fn start_window(
     workspace: &Path,
     name: &str,
@@ -185,7 +204,8 @@ fn start_window(
     scene_name: &str,
     headed: bool,
 ) -> Result<(), String> {
-    let outcome = start_window_inner(workspace, name, root, scene_name, headed);
+    let (binary, scene) = prepare_scene(workspace, root, scene_name)?;
+    let outcome = start_window_inner(name, root, &binary, &scene, headed);
 
     if outcome.is_err() {
         let _ = cleanup(root);
@@ -199,27 +219,18 @@ fn start_window(
     reason = "the display and log path are the command's output"
 )]
 fn start_window_inner(
-    workspace: &Path,
     name: &str,
     root: &Path,
-    scene_name: &str,
+    binary: &Path,
+    scene: &str,
     headed: bool,
 ) -> Result<(), String> {
-    if scene_name == "app" {
-        return Err(
-            "The real app has no window yet. Use a scene name such as smoke-2.".to_string(),
-        );
-    }
-
     prepare_root(root)?;
 
-    let binary = scene::build(workspace)?;
-    let names = scene::names(&binary, &weston_environment(root))?;
-    let scene = scene::validate_scene(scene_name, &names)?;
     let display = ensure_display(name, root, headed)?;
 
     install_openers(root)?;
-    let ready = start_scene(root, &binary, &scene, &display)?;
+    let ready = start_scene(root, binary, scene, &display)?;
     focus_window(root, &display, &ready.title)?;
     record_xwayland(root, &display);
 
@@ -436,6 +447,27 @@ mod tests {
             "greppa-sandbox-test-{label}-{}",
             std::process::id()
         ))
+    }
+
+    #[test]
+    fn a_refused_scene_leaves_a_running_sandbox_alone() {
+        let root = temporary_root("preflight");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir(&root).expect("create the root");
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("make it private");
+        let marker = root.join("scene");
+        fs::write(&marker, "smoke-2\n").expect("write the scene record");
+
+        let error = start_window(Path::new("/nonexistent"), "preflight", &root, "app", false)
+            .expect_err("the app scene is refused");
+
+        assert!(error.contains("no window yet"), "unexpected error: {error}");
+        assert!(
+            marker.is_file(),
+            "a refused scene must not tear the sandbox down"
+        );
+
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]

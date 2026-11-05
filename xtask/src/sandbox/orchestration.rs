@@ -1,6 +1,3 @@
-//! Command orchestration: start and stop the display, bring the window up or down, and run one
-//! command against a running sandbox.
-
 use std::fs;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -421,8 +418,6 @@ fn cleanup(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Reads the display this sandbox started and delegates the stale-file cleanup to the shared
-/// display module, so capture and the sandbox use one implementation.
 fn clean_display_files(root: &Path) {
     if let Ok(display) = fs::read_to_string(root.join("display")) {
         display::clean_display_files(display.trim());

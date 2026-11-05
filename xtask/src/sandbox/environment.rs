@@ -1,6 +1,3 @@
-//! Child environments for sandbox processes: the caller's allowlisted values plus the sandbox
-//! directories and display.
-
 use std::path::Path;
 
 use crate::environment::{self, ChildDirs};

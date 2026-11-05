@@ -1,9 +1,3 @@
-//! A throwaway greppa window on a private headless Weston and Xwayland display.
-//!
-//! Every command is a separate process. The sandbox therefore records process IDs with their
-//! start times and its own display and window in the root folder. `down` stops the recorded
-//! processes and removes the folder. Nothing reaches the caller's display, pointer, or keyboard.
-
 mod command;
 #[cfg(target_os = "linux")]
 mod environment;

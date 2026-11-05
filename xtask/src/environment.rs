@@ -1,5 +1,3 @@
-//! The child environment allowlist. Every sandbox child except nested Weston uses it.
-
 use std::path::{Path, PathBuf};
 
 const ALLOWED_KEYS: &[&str] = &[
@@ -66,8 +64,6 @@ fn set(environment: &mut Vec<(String, String)>, key: &str, value: &str) {
     environment.push((key.to_string(), value.to_string()));
 }
 
-/// Builds a cleared environment from the caller's allowlisted values plus the sandbox values.
-/// `extras` win over both, so a sandbox `DISPLAY` replaces an inherited one.
 pub(crate) fn child_environment(
     caller: &[(String, String)],
     dirs: &ChildDirs,

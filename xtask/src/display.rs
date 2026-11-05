@@ -1,5 +1,3 @@
-//! A private headless Weston with Xwayland, shared by `mock capture` and `sandbox`.
-
 use std::fs;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
@@ -55,7 +53,6 @@ impl Drop for RuntimeDir {
     }
 }
 
-/// A child process killed on drop. The persistent sandbox spawns its own detached processes.
 pub(crate) struct Running {
     child: Child,
     display: Option<String>,
@@ -76,8 +73,6 @@ impl Running {
         })
     }
 
-    /// Names the X display this run started, so dropping the process also removes its stale lock
-    /// and socket.
     pub(crate) fn set_display(&mut self, display: &str) {
         self.display = Some(display.to_string());
     }
@@ -96,9 +91,6 @@ impl Drop for Running {
 
 const DISPLAY_CLEANUP_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// Removes the X lock and socket for a display this run started. It removes them only when no live
-/// process owns the lock, and waits briefly for a dying owner so a just-stopped Xwayland does not
-/// leave the files behind.
 pub(crate) fn clean_display_files(display: &str) {
     clean_display_files_in(Path::new("/tmp"), display, DISPLAY_CLEANUP_TIMEOUT);
 }
@@ -128,7 +120,6 @@ fn clean_display_files_in(folder: &Path, display: &str, timeout: Duration) {
         }
     }
 
-    // Another server can claim the display number while the first owner dies. Its files must stay.
     if lock_owner(&lock) != owner {
         return;
     }
@@ -173,7 +164,6 @@ fn base_weston_command(
     command
 }
 
-/// Builds a headless Weston command. The caller decides whether the process is guarded or detached.
 pub(crate) fn weston_command(
     socket: &str,
     width: u32,
@@ -188,8 +178,6 @@ pub(crate) fn weston_command(
     command
 }
 
-/// A nested Weston on the caller's Wayland session. Only this process gets the caller's
-/// `WAYLAND_DISPLAY`, so it can show one window on the real desktop.
 pub(crate) fn nested_weston_command(
     socket: &str,
     width: u32,

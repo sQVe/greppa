@@ -1,5 +1,3 @@
-//! Command parsing and tool lookup.
-
 use std::path::Path;
 
 const USAGE: &str = "\

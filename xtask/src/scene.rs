@@ -1,5 +1,3 @@
-//! The `greppa-scene` binary: build it, read its ready line, and name its scenes.
-
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -17,7 +15,6 @@ pub(crate) struct LogicalSize {
     pub height: f32,
 }
 
-/// The first frame's JSON line: where the scene draws inside its window.
 #[derive(Debug, PartialEq)]
 pub(crate) struct Ready {
     pub scene: String,
@@ -67,7 +64,6 @@ pub(crate) fn unknown_scene_message(name: &str, names: &[String]) -> String {
     }
 }
 
-/// Matches `name` against the scene binary's list, so `up` fails before it starts anything.
 pub(crate) fn validate_scene(name: &str, names: &[String]) -> Result<String, String> {
     let trimmed = name.trim();
 
@@ -78,8 +74,6 @@ pub(crate) fn validate_scene(name: &str, names: &[String]) -> Result<String, Str
         .ok_or_else(|| unknown_scene_message(name, names))
 }
 
-/// Session variables the scene build must not inherit. Cargo and rustup keep the rest of the
-/// caller's environment, including PATH, HOME, CARGO_*, and RUSTUP_*.
 const DROPPED_SESSION: &[&str] = &[
     "DISPLAY",
     "WAYLAND_DISPLAY",

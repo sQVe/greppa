@@ -1,5 +1,3 @@
-//! Input: find and focus the sandbox window, then move the pointer and send keys through xdotool.
-
 use std::fs;
 use std::path::Path;
 use std::process::Command;

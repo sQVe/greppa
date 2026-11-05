@@ -1,6 +1,3 @@
-//! Root path and folder safety: the sandbox root path, the pure checks that describe a trusted
-//! root, and the filesystem checks that create, refuse, and remove it.
-
 use std::fs;
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
@@ -44,7 +41,6 @@ pub(super) fn root_metadata_problem(metadata: &RootMetadata, current_uid: u32) -
     None
 }
 
-/// The sandbox paths that must never be symlinks. A planted link could redirect sandbox writes.
 pub(super) fn linked_paths(root: &Path) -> Vec<std::path::PathBuf> {
     [
         "display",
@@ -191,7 +187,6 @@ pub(super) fn install_openers(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Wraps a path in single quotes for the stub scripts. The root never contains a quote.
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }

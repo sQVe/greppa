@@ -1,6 +1,3 @@
-//! Process identity: read and write PID records with start times, and stop a recorded process
-//! only while its identity still matches. A reused PID is never signaled.
-
 use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -61,7 +58,6 @@ fn process_parent(pid: u32) -> Option<u32> {
     tail.split_whitespace().nth(1)?.parse().ok()
 }
 
-/// A zombie holds its PID but no longer runs. It is reaped when its parent exits.
 fn process_is_zombie(pid: u32) -> bool {
     let Some(stat) = fs::read_to_string(format!("/proc/{pid}/stat")).ok() else {
         return false;
@@ -207,8 +203,6 @@ fn stop_process(path: &Path, pid: u32, started: u64) -> Result<(), String> {
     })
 }
 
-/// Guards the post-pidfd identity check. `after_open` is observed after the pidfd is open; a
-/// changed value means the PID was reused, so no signal is sent.
 fn stop_after_open(
     path: &Path,
     pid: u32,

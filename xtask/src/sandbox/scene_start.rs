@@ -1,5 +1,3 @@
-//! Scene startup: write the scene log, record the scene PID, and wait for its ready line.
-
 use std::fs;
 use std::os::unix::process::CommandExt;
 use std::path::Path;

@@ -1,5 +1,3 @@
-//! Child processes with a deadline, shared by `mock capture`, `sandbox`, and the scene list.
-
 use std::io::Read;
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
@@ -7,9 +5,6 @@ use std::time::{Duration, Instant};
 pub(crate) const POLL: Duration = Duration::from_millis(100);
 pub(crate) const TOOL_TIMEOUT: Duration = Duration::from_secs(20);
 
-/// Runs a command with a deadline. Reader threads drain stdout and stderr while the child runs, so
-/// large output cannot fill a pipe and stall the child. On timeout it kills and reaps the child
-/// before returning.
 pub(crate) fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
     let program = command.get_program().to_string_lossy().into_owned();
 

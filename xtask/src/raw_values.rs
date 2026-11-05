@@ -120,20 +120,19 @@ fn collect_files(directory: &Path, files: &mut Vec<PathBuf>) -> anyhow::Result<(
 fn scan_source(path: &str, source: &str) -> Vec<String> {
     let masked = mask_source(source);
     let mut failures = Vec::new();
-    let mut cursor = 0;
     let mut reported_line = None;
 
-    while let Some(offset) = next_raw_value(&masked, cursor) {
+    for offset in raw_value_offsets(&masked) {
         let line = line_number(&masked, offset);
 
-        if reported_line != Some(line) {
-            let text = source.lines().nth(line - 1).unwrap_or("");
-
-            failures.push(format!("{path}:{line}: {}", text.trim()));
-            reported_line = Some(line);
+        if reported_line == Some(line) {
+            continue;
         }
 
-        cursor = offset + 1;
+        let text = source.lines().nth(line - 1).unwrap_or("");
+
+        failures.push(format!("{path}:{line}: {}", text.trim()));
+        reported_line = Some(line);
     }
 
     failures
@@ -147,78 +146,65 @@ fn line_number(masked: &str, offset: usize) -> usize {
         + 1
 }
 
-fn next_raw_value(text: &str, from: usize) -> Option<usize> {
-    let mut earliest: Option<usize> = None;
-    let mut consider = |candidate: Option<usize>| {
-        if let Some(offset) = candidate {
-            earliest = Some(earliest.map_or(offset, |current| current.min(offset)));
-        }
-    };
+fn offsets_where<'a>(
+    text: &'a str,
+    pattern: &'a str,
+    accepts: impl Fn(usize) -> bool + 'a,
+) -> impl Iterator<Item = usize> + 'a {
+    text.match_indices(pattern)
+        .map(|(index, _)| index)
+        .filter(move |index| accepts(*index))
+}
 
-    for name in RAW_CALLS {
-        consider(find_bare_call(text, from, name));
-    }
+fn raw_value_offsets(text: &str) -> Vec<usize> {
+    let mut offsets = Vec::new();
 
-    for name in NAMED_COLORS {
-        consider(find_bare_call(text, from, name));
+    for name in RAW_CALLS.iter().chain(NAMED_COLORS) {
+        offsets.extend(offsets_where(text, name, |index| {
+            is_bare_call(text, index, name)
+        }));
     }
 
     for name in CONSTRUCTORS {
-        consider(find_constructor(text, from, name));
+        let from_call = format!("{name}::from");
+
+        offsets.extend(offsets_where(text, &from_call, |index| {
+            is_bare_call(text, index, &from_call)
+        }));
+        offsets.extend(offsets_where(text, name, |index| {
+            is_bare_call(text, index, name)
+        }));
+        offsets.extend(offsets_where(text, name, |index| {
+            is_bare_struct_literal(text, index, name)
+        }));
     }
 
-    consider(find_hex_color(text, from));
-    consider(find_preset_helper(text, from));
+    offsets.extend(offsets_where(text, "0x", |index| is_hex_color(text, index)));
+    offsets.extend(offsets_where(text, ".", |dot| {
+        is_preset_helper_call(text, dot)
+    }));
+    offsets.sort_unstable();
 
-    earliest
+    offsets
 }
 
 #[cfg(test)]
 fn line_has_raw_value(text: &str) -> bool {
-    next_raw_value(text, 0).is_some()
+    !raw_value_offsets(text).is_empty()
 }
 
-fn find_constructor(text: &str, from: usize, name: &str) -> Option<usize> {
-    let from_call = format!("{name}::from");
-    let mut earliest: Option<usize> = None;
-    let mut consider = |candidate: Option<usize>| {
-        if let Some(offset) = candidate {
-            earliest = Some(earliest.map_or(offset, |current| current.min(offset)));
-        }
-    };
+fn is_bare_struct_literal(text: &str, index: usize, name: &str) -> bool {
+    let before = text[..index].chars().next_back();
+    let is_member = before == Some('.') || before.is_some_and(is_identifier_char);
 
-    consider(find_bare_call(text, from, &from_call));
-    consider(find_bare_call(text, from, name));
-    consider(find_bare_struct_literal(text, from, name));
-
-    earliest
-}
-
-fn find_bare_struct_literal(text: &str, from: usize, name: &str) -> Option<usize> {
-    let mut start = from;
-
-    while let Some(offset) = text[start..].find(name) {
-        let index = start + offset;
-        let before = text[..index].chars().next_back();
-        let is_member = before == Some('.') || before.is_some_and(is_identifier_char);
-
-        if is_member || preceded_by_arrow(text, index) {
-            start = index + name.len();
-            continue;
-        }
-
-        let rest = text[index + name.len()..].trim_start();
-
-        if let Some(fields) = rest.strip_prefix('{')
-            && starts_with_struct_fields(fields.trim_start(), name)
-        {
-            return Some(index);
-        }
-
-        start = index + name.len();
+    if is_member || preceded_by_arrow(text, index) {
+        return false;
     }
 
-    None
+    let rest = text[index + name.len()..].trim_start();
+
+    rest.strip_prefix('{')
+        .is_some_and(|fields| starts_with_struct_fields(fields.trim_start(), name))
 }
 
 fn preceded_by_arrow(text: &str, index: usize) -> bool {
@@ -241,71 +227,35 @@ fn starts_with_struct_fields(fields: &str, name: &str) -> bool {
         .any(|prefix| fields.starts_with(prefix))
 }
 
-fn find_bare_call(text: &str, from: usize, name: &str) -> Option<usize> {
-    let mut start = from;
+fn is_bare_call(text: &str, index: usize, name: &str) -> bool {
+    let before = text[..index].chars().next_back();
+    let called_as_method = before == Some('.');
+    let inside_identifier = before.is_some_and(is_identifier_char);
 
-    while let Some(offset) = text[start..].find(name) {
-        let index = start + offset;
-        let before = text[..index].chars().next_back();
-        let called_as_method = before == Some('.');
-        let inside_identifier = before.is_some_and(is_identifier_char);
-
-        if !called_as_method && !inside_identifier {
-            let after = text[index + name.len()..].trim_start();
-
-            if after.starts_with('(') {
-                return Some(index);
-            }
-        }
-
-        start = index + name.len();
+    if called_as_method || inside_identifier {
+        return false;
     }
 
-    None
+    text[index + name.len()..].trim_start().starts_with('(')
 }
 
-fn find_hex_color(text: &str, from: usize) -> Option<usize> {
-    let mut start = from;
+fn is_hex_color(text: &str, index: usize) -> bool {
+    let digits: String = text[index + 2..]
+        .chars()
+        .take_while(|character| character.is_ascii_hexdigit())
+        .collect();
+    let after = text[index + 2 + digits.len()..].chars().next();
+    let is_color_length = digits.len() == 6 || digits.len() == 8;
 
-    while let Some(offset) = text[start..].find("0x") {
-        let index = start + offset;
-        let digits: String = text[index + 2..]
-            .chars()
-            .take_while(|character| character.is_ascii_hexdigit())
-            .collect();
-        let after = text[index + 2 + digits.len()..].chars().next();
-        let is_color_length = digits.len() == 6 || digits.len() == 8;
-
-        if is_color_length && !after.is_some_and(is_identifier_char) {
-            return Some(index);
-        }
-
-        start = index + 2;
-    }
-
-    None
+    is_color_length && !after.is_some_and(is_identifier_char)
 }
 
-fn find_preset_helper(text: &str, from: usize) -> Option<usize> {
-    let mut index = from;
+fn is_preset_helper_call(text: &str, dot: usize) -> bool {
+    let name_start = dot + 1;
+    let name_end = identifier_end(text, name_start);
+    let name = &text[name_start..name_end];
 
-    while let Some(offset) = text[index..].find('.') {
-        let dot = index + offset;
-        let name_start = dot + 1;
-        let name_end = identifier_end(text, name_start);
-
-        if name_end > name_start {
-            let name = &text[name_start..name_end];
-
-            if text[name_end..].trim_start().starts_with('(') && is_preset_helper(name) {
-                return Some(dot);
-            }
-        }
-
-        index = name_start;
-    }
-
-    None
+    text[name_end..].trim_start().starts_with('(') && is_preset_helper(name)
 }
 
 fn identifier_end(text: &str, start: usize) -> usize {

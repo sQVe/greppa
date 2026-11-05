@@ -313,3 +313,39 @@ fn scan_allows_hex_numbers_that_are_not_color_length() {
         assert!(!line_has_raw_value(case), "wrongly reported: {case}");
     }
 }
+
+#[test]
+fn scan_reports_raw_values_of_different_kinds_in_source_order() {
+    let source = "\
+let a = 0x112233;\n\
+div().p_2();\n\
+let b = Rgba { r: 0.1, g: 0.2, b: 0.3, a: 1.0 };\n\
+let c = px(1.0);\n\
+let d = Pixels::from(2.0);\n\
+let e = white();\n";
+
+    assert_eq!(
+        scan_source("src/a.rs", source),
+        [
+            "src/a.rs:1: let a = 0x112233;",
+            "src/a.rs:2: div().p_2();",
+            "src/a.rs:3: let b = Rgba { r: 0.1, g: 0.2, b: 0.3, a: 1.0 };",
+            "src/a.rs:4: let c = px(1.0);",
+            "src/a.rs:5: let d = Pixels::from(2.0);",
+            "src/a.rs:6: let e = white();",
+        ]
+    );
+}
+
+#[test]
+fn scan_reports_a_line_with_several_raw_values_once() {
+    let source = "let a = px(1.0); let b = rgb(0x112233); div().p_2();\nlet c = Pixels(3.0);\n";
+
+    assert_eq!(
+        scan_source("src/a.rs", source),
+        [
+            "src/a.rs:1: let a = px(1.0); let b = rgb(0x112233); div().p_2();",
+            "src/a.rs:2: let c = Pixels(3.0);",
+        ]
+    );
+}

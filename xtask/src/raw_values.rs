@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Context as _;
+use ra_ap_rustc_lexer::{FrontmatterAllowed, LiteralKind, TokenKind, tokenize};
 
 const UI_SOURCE: &str = "crates/greppa-ui/src";
 const THEME_FILE: &str = "theme.rs";
@@ -346,387 +347,43 @@ fn is_identifier_char(character: char) -> bool {
 }
 
 fn mask_source(source: &str) -> String {
-    let characters: Vec<char> = source.chars().collect();
     let mut masked = String::with_capacity(source.len());
-    let mut index = 0;
+    let mut start = 0;
 
-    while index < characters.len() {
-        if starts_with(&characters, index, &['/', '/']) {
-            index = skip_line_comment(&characters, index, &mut masked);
-        } else if starts_with(&characters, index, &['/', '*']) {
-            index = skip_block_comment(&characters, index, &mut masked);
-        } else if let Some(end) = raw_string_end(&characters, index) {
-            mask_range(&characters, index, end, &mut masked);
-            index = end;
-        } else if characters[index] == '"' {
-            index = skip_quoted(&characters, index, &mut masked);
-        } else if characters[index] == '\'' {
-            index = skip_char_or_lifetime(&characters, index, &mut masked);
+    for token in tokenize(source, FrontmatterAllowed::No) {
+        let end = start + token.len as usize;
+        let text = &source[start..end];
+        let hides_text = matches!(
+            token.kind,
+            TokenKind::LineComment { .. }
+                | TokenKind::BlockComment { .. }
+                | TokenKind::Literal {
+                    kind: LiteralKind::Char { .. }
+                        | LiteralKind::Byte { .. }
+                        | LiteralKind::Str { .. }
+                        | LiteralKind::ByteStr { .. }
+                        | LiteralKind::CStr { .. }
+                        | LiteralKind::RawStr { .. }
+                        | LiteralKind::RawByteStr { .. }
+                        | LiteralKind::RawCStr { .. },
+                    ..
+                }
+        );
+
+        if hides_text {
+            let blanks = text
+                .bytes()
+                .map(|byte| if byte == b'\n' { '\n' } else { ' ' });
+            masked.extend(blanks);
         } else {
-            masked.push(characters[index]);
-            index += 1;
+            masked.push_str(text);
         }
+
+        start = end;
     }
 
     masked
 }
 
-fn starts_with(characters: &[char], index: usize, pattern: &[char]) -> bool {
-    characters.len() >= index + pattern.len()
-        && characters[index..index + pattern.len()] == *pattern
-}
-
-fn push_masked(masked: &mut String, character: char) {
-    if character == '\n' {
-        masked.push('\n');
-    } else {
-        masked.push(' ');
-    }
-}
-
-fn mask_range(characters: &[char], start: usize, end: usize, masked: &mut String) {
-    for character in characters.iter().take(end).skip(start) {
-        push_masked(masked, *character);
-    }
-}
-
-fn skip_line_comment(characters: &[char], mut index: usize, masked: &mut String) -> usize {
-    while index < characters.len() && characters[index] != '\n' {
-        push_masked(masked, characters[index]);
-        index += 1;
-    }
-
-    index
-}
-
-fn skip_block_comment(characters: &[char], mut index: usize, masked: &mut String) -> usize {
-    let mut depth = 0;
-
-    while index < characters.len() {
-        if starts_with(characters, index, &['/', '*']) {
-            depth += 1;
-            push_masked(masked, '/');
-            push_masked(masked, '*');
-            index += 2;
-        } else if starts_with(characters, index, &['*', '/']) {
-            depth -= 1;
-            push_masked(masked, '*');
-            push_masked(masked, '/');
-            index += 2;
-
-            if depth == 0 {
-                break;
-            }
-        } else {
-            push_masked(masked, characters[index]);
-            index += 1;
-        }
-    }
-
-    index
-}
-
-fn skip_quoted(characters: &[char], mut index: usize, masked: &mut String) -> usize {
-    push_masked(masked, '"');
-    index += 1;
-
-    while index < characters.len() {
-        let character = characters[index];
-
-        if character == '\\' && index + 1 < characters.len() {
-            push_masked(masked, character);
-            push_masked(masked, characters[index + 1]);
-            index += 2;
-            continue;
-        }
-
-        push_masked(masked, character);
-        index += 1;
-
-        if character == '"' {
-            break;
-        }
-    }
-
-    index
-}
-
-fn skip_char_or_lifetime(characters: &[char], index: usize, masked: &mut String) -> usize {
-    if characters.get(index + 1) == Some(&'\\') {
-        push_masked(masked, '\'');
-        let mut cursor = index + 1;
-
-        while cursor < characters.len() {
-            push_masked(masked, characters[cursor]);
-
-            if characters[cursor] == '\'' && cursor > index + 1 {
-                cursor += 1;
-                break;
-            }
-
-            cursor += 1;
-        }
-
-        return cursor;
-    }
-
-    if let (Some(&single), Some(&closing)) = (characters.get(index + 1), characters.get(index + 2))
-        && closing == '\''
-    {
-        push_masked(masked, '\'');
-        push_masked(masked, single);
-        push_masked(masked, '\'');
-        return index + 3;
-    }
-
-    masked.push('\'');
-    index + 1
-}
-
-fn raw_string_end(characters: &[char], index: usize) -> Option<usize> {
-    let mut cursor = index;
-
-    if characters.get(cursor) == Some(&'b') {
-        cursor += 1;
-    }
-
-    if characters.get(cursor) != Some(&'r') {
-        return None;
-    }
-
-    cursor += 1;
-    let mut hashes = 0;
-
-    while characters.get(cursor) == Some(&'#') {
-        hashes += 1;
-        cursor += 1;
-    }
-
-    if characters.get(cursor) != Some(&'"') {
-        return None;
-    }
-
-    cursor += 1;
-
-    while cursor < characters.len() {
-        if characters[cursor] == '"' {
-            let mut closing = 0;
-
-            while characters.get(cursor + 1 + closing) == Some(&'#') {
-                closing += 1;
-            }
-
-            if closing == hashes {
-                return Some(cursor + 1 + hashes);
-            }
-        }
-
-        cursor += 1;
-    }
-
-    Some(characters.len())
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn scan_reports_a_literal_with_its_path_and_line() {
-        let source = "fn scene() {\n    let width = px(3.0);\n}\n";
-
-        assert_eq!(
-            scan_source("src/scenes/a.rs", source),
-            ["src/scenes/a.rs:2: let width = px(3.0);"]
-        );
-    }
-
-    #[test]
-    fn scan_ignores_comment_lines() {
-        let source = "// let width = px(3.0);\n";
-
-        assert_eq!(scan_source("src/a.rs", source), Vec::<String>::new());
-    }
-
-    #[test]
-    fn scan_ignores_raw_text_in_strings_and_comments() {
-        let source = "\
-let label = String::from(\"rgb(0x112233)\");\n\
-let detail = r\"px(3.0) Pixels(3.0)\";\n\
-let row = theme.text.row; // instead of px(3.0)\n\
-/* px(3.0)\n   rgb(0x112233) */\n\
-let other = \"white()\";\n";
-
-        assert_eq!(scan_source("src/a.rs", source), Vec::<String>::new());
-    }
-
-    #[test]
-    fn scan_reports_constructor_literals() {
-        let cases = [
-            "let x = Pixels::from(3.0);",
-            "let x = Pixels(3.0);",
-            "let x = Rgba { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };",
-            "let x = Hsla { h: 0.0, s: 0.0, l: 0.0, a: 1.0 };",
-            "let x = Rgba::from(0.0);",
-            "let x = Hsla::from(0.0);",
-        ];
-
-        for case in cases {
-            assert!(line_has_raw_value(case), "not reported: {case}");
-        }
-    }
-
-    #[test]
-    fn scan_reports_a_multiline_struct_literal_at_its_start_line() {
-        let source = "\
-let color = Rgba {\n\
-    r: 0.1,\n\
-    g: 0.2,\n\
-    b: 0.3,\n\
-    a: 1.0,\n\
-};\n\
-let other = Hsla {\n\
-    h: 0.1,\n\
-    s: 0.2,\n\
-    l: 0.3,\n\
-    a: 1.0,\n\
-};\n";
-
-        assert_eq!(
-            scan_source("src/a.rs", source),
-            [
-                "src/a.rs:1: let color = Rgba {",
-                "src/a.rs:7: let other = Hsla {",
-            ]
-        );
-    }
-
-    #[test]
-    fn scan_reports_spaced_and_multiline_calls_at_their_start_line() {
-        let source = "\
-let a = hsla (0.1, 0.2, 0.3, 1.0);\n\
-let b = px\n\
-    (3.0);\n\
-let c = rgb\n\
-    (1, 2, 3);\n";
-
-        assert_eq!(
-            scan_source("src/a.rs", source),
-            [
-                "src/a.rs:1: let a = hsla (0.1, 0.2, 0.3, 1.0);",
-                "src/a.rs:2: let b = px",
-                "src/a.rs:4: let c = rgb",
-            ]
-        );
-    }
-
-    #[test]
-    fn scan_ignores_a_return_type_and_reports_the_body_literal() {
-        let source = "fn color() -> Rgba {\n    Rgba { r: 0.1, g: 0.2, b: 0.3, a: 1.0 }\n}\n";
-
-        assert_eq!(
-            scan_source("src/a.rs", source),
-            ["src/a.rs:2: Rgba { r: 0.1, g: 0.2, b: 0.3, a: 1.0 }"]
-        );
-    }
-
-    #[test]
-    fn scan_allows_length_and_color_types() {
-        let allowed = [
-            "fn f(size: Pixels) -> Pixels { size }",
-            "let color: Rgba = theme.colors.surface;",
-            "fn color() -> Rgba { theme.colors.surface }",
-            "let weight: FontWeight = theme.text.selected_weight;",
-        ];
-
-        for case in allowed {
-            assert!(!line_has_raw_value(case), "wrongly reported: {case}");
-        }
-    }
-
-    #[test]
-    fn scan_reports_each_kind_of_raw_value() {
-        let cases = [
-            "let x = px(3.0);",
-            "let x = rems(0.5);",
-            "let x = rems_from_px(3.0);",
-            "let x = rgb(0x112233);",
-            "let x = rgba(0x11223344);",
-            "let x = hsla(0.5, 0.5, 0.5, 1.0);",
-            "let x = hsl(0.5, 0.5, 0.5);",
-            "let x = 0x112233;",
-            "let x = white();",
-            "let x = black();",
-            "let x = transparent_black();",
-            "div().p_2();",
-            "div().gap_1();",
-            "div().text_sm();",
-            "div().rounded_md();",
-            "div().w_64();",
-            "div().border_l_2();",
-        ];
-
-        for case in cases {
-            assert!(line_has_raw_value(case), "not reported: {case}");
-        }
-    }
-
-    #[test]
-    fn scan_allows_theme_tokens_and_relative_layout() {
-        let allowed = [
-            "div().px(theme.spacing.small);",
-            "div().bg(theme.colors.surface);",
-            "div().size_full();",
-            "div().w_full();",
-            "div().text_color(theme.colors.foreground);",
-            "div().text_size(theme.text.row);",
-        ];
-
-        for case in allowed {
-            assert!(!line_has_raw_value(case), "wrongly reported: {case}");
-        }
-    }
-
-    #[test]
-    fn scan_directory_exempts_theme_file() {
-        let directory = crate::test_support::temporary_directory();
-        fs::write(directory.path().join("theme.rs"), "let x = px(3.0);\n").expect("write theme");
-        fs::write(directory.path().join("scene.rs"), "let y = 1.0;\n").expect("write scene");
-
-        let failures = scan_directory(directory.path(), directory.path()).expect("scan");
-
-        assert!(failures.is_empty());
-    }
-
-    #[test]
-    fn scan_directory_scans_a_nested_theme_file() {
-        let directory = crate::test_support::temporary_directory();
-        fs::create_dir_all(directory.path().join("scenes")).expect("create scenes");
-        fs::write(
-            directory.path().join("scenes/theme.rs"),
-            "let x = px(3.0);\n",
-        )
-        .expect("write nested theme");
-
-        let failures = scan_directory(directory.path(), directory.path()).expect("scan");
-
-        assert_eq!(failures.len(), 1);
-        assert!(failures[0].ends_with("theme.rs:1: let x = px(3.0);"));
-    }
-
-    #[test]
-    fn scan_directory_finds_literals_in_other_files() {
-        let directory = crate::test_support::temporary_directory();
-        fs::write(directory.path().join("theme.rs"), "let x = px(3.0);\n").expect("write theme");
-        fs::write(
-            directory.path().join("scene.rs"),
-            "fn f() {\n    let y = rgb(0x112233);\n}\n",
-        )
-        .expect("write scene");
-
-        let failures = scan_directory(directory.path(), directory.path()).expect("scan");
-
-        assert_eq!(failures.len(), 1);
-        assert!(failures[0].ends_with("scene.rs:2: let y = rgb(0x112233);"));
-    }
-}
+mod tests;

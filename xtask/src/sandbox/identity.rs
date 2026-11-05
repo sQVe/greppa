@@ -1,20 +1,37 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use crate::cleanup;
 use crate::process::poll_until;
 
 pub(super) const STOP_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub(super) fn record_xwayland(root: &Path, display: &str) -> anyhow::Result<()> {
+#[derive(Debug, Error)]
+pub(super) enum IdentityError {
+    #[error("The process {pid} did not stop; keeping {}", path.display())]
+    DidNotStop { pid: u32, path: PathBuf },
+    #[error("The process {pid} is not the expected {expected}. Actual: {actual}")]
+    UnexpectedProcess {
+        pid: u32,
+        expected: String,
+        actual: String,
+    },
+    #[error("The {expected} process {pid} is gone before it could be recorded.")]
+    MissingProcess { pid: u32, expected: String },
+    #[error("The {expected} process {pid} did not name itself in time.")]
+    DidNotNameItself { pid: u32, expected: String },
+}
+
+pub(super) fn record_xwayland(root: &Path, display: &str, timeout: Duration) -> anyhow::Result<()> {
     let Some((weston, _)) = read_record(&root.join("weston.pid")) else {
         return Ok(());
     };
 
-    poll_until(STOP_TIMEOUT, || {
+    poll_until(timeout, || {
         for pid in child_pids(weston) {
             let Ok(cmdline) = fs::read(format!("/proc/{pid}/cmdline")) else {
                 continue;
@@ -22,7 +39,7 @@ pub(super) fn record_xwayland(root: &Path, display: &str) -> anyhow::Result<()> 
             let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
 
             if cmdline.contains("Xwayland") && cmdline.contains(display) {
-                record_process(&root.join("xwayland.pid"), pid, "Xwayland", STOP_TIMEOUT)?;
+                record_process(&root.join("xwayland.pid"), pid, "Xwayland", timeout)?;
                 return Ok(Some(()));
             }
         }
@@ -87,33 +104,48 @@ pub(super) fn record_process(
     expected: &str,
     timeout: Duration,
 ) -> anyhow::Result<()> {
+    let mut mismatch = None;
     let recorded = poll_until(timeout, || {
-        if let Some(started) = process_start(pid) {
-            let cmdline = fs::read(format!("/proc/{pid}/cmdline"))
-                .with_context(|| format!("Could not read the process {pid}"))?;
-            let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
-
-            if cmdline.contains(expected) {
-                fs::write(path, format!("{pid} {started}\n"))
-                    .with_context(|| format!("Could not record the {expected} process"))?;
-
-                return Ok(Some(()));
+        let Some(started) = process_start(pid) else {
+            return Err(IdentityError::MissingProcess {
+                pid,
+                expected: expected.to_string(),
             }
+            .into());
+        };
 
-            if !cmdline.trim().is_empty() {
-                anyhow::bail!(
-                    "The process {pid} is not the expected {expected}. Actual: {cmdline}"
-                );
-            }
-        } else {
-            anyhow::bail!("The {expected} process {pid} is gone before it could be recorded.");
+        let cmdline = fs::read(format!("/proc/{pid}/cmdline"))
+            .with_context(|| format!("Could not read the process {pid}"))?;
+        let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
+
+        if cmdline.contains(expected) {
+            fs::write(path, format!("{pid} {started}\n"))
+                .with_context(|| format!("Could not record the {expected} process"))?;
+
+            return Ok(Some(()));
+        }
+
+        if !cmdline.trim().is_empty() {
+            mismatch = Some(cmdline);
         }
 
         Ok(None)
     })?;
 
     if recorded.is_none() {
-        anyhow::bail!("The {expected} process {pid} did not name itself in time.");
+        return Err(match mismatch {
+            Some(actual) => IdentityError::UnexpectedProcess {
+                pid,
+                expected: expected.to_string(),
+                actual,
+            }
+            .into(),
+            None => IdentityError::DidNotNameItself {
+                pid,
+                expected: expected.to_string(),
+            }
+            .into(),
+        });
     }
 
     Ok(())
@@ -155,7 +187,7 @@ pub(super) fn stop_window(root: &Path) -> anyhow::Result<()> {
     };
 
     if process_start(pid) == Some(started) && process_is_ours(pid, root) {
-        return stop_process(&path, pid, started, STOP_TIMEOUT);
+        return stop_process(&path, pid, started, STOP_TIMEOUT, open_pidfd);
     }
 
     cleanup::remove_file(&path);
@@ -170,7 +202,7 @@ pub(super) fn stop_recorded(path: &Path) -> anyhow::Result<()> {
     };
 
     if process_start(pid) == Some(started) {
-        return stop_process(path, pid, started, STOP_TIMEOUT);
+        return stop_process(path, pid, started, STOP_TIMEOUT, open_pidfd);
     }
 
     cleanup::remove_file(path);
@@ -178,7 +210,18 @@ pub(super) fn stop_recorded(path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn stop_process(path: &Path, pid: u32, started: u64, timeout: Duration) -> anyhow::Result<()> {
+fn open_pidfd(raw: rustix::process::Pid) -> std::io::Result<rustix::fd::OwnedFd> {
+    rustix::process::pidfd_open(raw, rustix::process::PidfdFlags::empty())
+        .map_err(std::io::Error::from)
+}
+
+fn stop_process(
+    path: &Path,
+    pid: u32,
+    started: u64,
+    timeout: Duration,
+    open: impl FnOnce(rustix::process::Pid) -> std::io::Result<rustix::fd::OwnedFd>,
+) -> anyhow::Result<()> {
     if !identity_still_matches(pid, started) {
         cleanup::remove_file(path);
         return Ok(());
@@ -188,7 +231,7 @@ fn stop_process(path: &Path, pid: u32, started: u64, timeout: Duration) -> anyho
         cleanup::remove_file(path);
         return Ok(());
     };
-    let pidfd = match rustix::process::pidfd_open(raw, rustix::process::PidfdFlags::empty()) {
+    let pidfd = match open(raw) {
         Ok(pidfd) => pidfd,
         Err(error) => {
             if !identity_still_matches(pid, started) {
@@ -248,7 +291,11 @@ fn stop_loop(path: &Path, pid: u32, started: u64, timeout: Duration) -> anyhow::
     })?;
 
     if stopped.is_none() {
-        anyhow::bail!("The process {pid} did not stop; keeping {}", path.display());
+        return Err(IdentityError::DidNotStop {
+            pid,
+            path: path.to_path_buf(),
+        }
+        .into());
     }
 
     Ok(())

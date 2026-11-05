@@ -432,4 +432,34 @@ mod tests {
         assert!(lock.exists());
         assert!(socket.exists());
     }
+
+    #[test]
+    fn wait_for_display_returns_a_display_that_appears_later() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("weston.log");
+        let writer_path = log.clone();
+        let writer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(150));
+            fs::write(&writer_path, "xserver listening on display :7\n").expect("write the log");
+        });
+
+        let display = wait_for_display(&log, Duration::from_secs(2)).expect("the display appears");
+
+        writer.join().expect("the writer thread");
+        assert_eq!(display, ":7");
+    }
+
+    #[test]
+    fn wait_for_display_reports_a_timeout() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("weston.log");
+
+        let error = wait_for_display(&log, Duration::from_millis(150))
+            .expect_err("a missing display times out");
+
+        assert_eq!(
+            error.to_string(),
+            "weston did not print a display within 0 seconds."
+        );
+    }
 }

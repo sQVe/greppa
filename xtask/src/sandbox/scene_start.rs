@@ -94,3 +94,55 @@ fn wait_for_ready(log_path: &Path, pid: u32, timeout: Duration) -> anyhow::Resul
         )
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ready_line() -> String {
+        r#"{"scene":"smoke-2","origin":{"x":0.0,"y":0.0},"size":{"width":1400.0,"height":900.0},"scale":1.0,"title":"greppa smoke-2"}"#
+            .to_string()
+    }
+
+    #[test]
+    fn wait_for_ready_returns_a_printed_ready_line() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("scene.log");
+        fs::write(&log, format!("noise\n{}\n", ready_line())).expect("write the log");
+
+        let ready =
+            wait_for_ready(&log, std::process::id(), Duration::from_secs(1)).expect("a ready line");
+
+        assert_eq!(ready.scene, "smoke-2");
+    }
+
+    #[test]
+    fn wait_for_ready_parses_the_log_before_it_reports_a_missing_process() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("scene.log");
+        fs::write(&log, format!("{}\n", ready_line())).expect("write the log");
+
+        let ready = wait_for_ready(&log, u32::MAX, Duration::from_secs(1))
+            .expect("the ready line wins over the exit check");
+
+        assert_eq!(ready.scene, "smoke-2");
+    }
+
+    #[test]
+    fn wait_for_ready_reports_a_scene_that_exited() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("scene.log");
+        fs::write(&log, "no ready line here\n").expect("write the log");
+
+        let error = wait_for_ready(&log, u32::MAX, Duration::from_secs(1))
+            .expect_err("a missing process is reported");
+
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "The scene exited before it printed a ready line; see {}",
+                log.display()
+            )
+        );
+    }
+}

@@ -1,16 +1,20 @@
 use std::io::BufRead as _;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::time::Instant;
 
 use super::*;
 
 struct ChildGuard {
     child: std::process::Child,
+    reaped: bool,
 }
 
 impl ChildGuard {
     fn new(child: std::process::Child) -> Self {
-        Self { child }
+        Self {
+            child,
+            reaped: false,
+        }
     }
 
     fn spawn(command: &mut Command) -> Self {
@@ -22,13 +26,49 @@ impl ChildGuard {
     }
 
     fn is_running(&mut self) -> bool {
-        self.child.try_wait().expect("check the child").is_none()
+        !self.reaped && self.child.try_wait().expect("check the child").is_none()
+    }
+
+    fn wait_for_exit(&mut self, timeout: Duration) -> bool {
+        if self.reaped {
+            return true;
+        }
+
+        let exited = poll_until(timeout, || {
+            Ok(self.child.try_wait().expect("check the child"))
+        })
+        .expect("the exit wait cannot fail")
+        .is_some();
+        self.reaped = exited;
+
+        exited
+    }
+
+    fn wait_until_ready(&self, fragment: &str, timeout: Duration) {
+        let ready = poll_until(timeout, || {
+            let Ok(cmdline) = fs::read(format!("/proc/{}/cmdline", self.id())) else {
+                return Ok(None);
+            };
+            let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
+
+            Ok(cmdline.contains(fragment).then_some(()))
+        })
+        .expect("the readiness check cannot fail");
+
+        assert!(ready.is_some(), "the child never named itself {fragment}");
+    }
+
+    fn reap(&mut self) {
+        if !self.reaped {
+            crate::test_support::stop_child(&mut self.child);
+            self.reaped = true;
+        }
     }
 }
 
 impl Drop for ChildGuard {
     fn drop(&mut self) {
-        crate::test_support::stop_child(&mut self.child);
+        self.reap();
     }
 }
 
@@ -39,11 +79,20 @@ fn spawn_sleep() -> ChildGuard {
     ChildGuard::spawn(&mut command)
 }
 
+fn spawn_ready_sleep() -> ChildGuard {
+    let child = spawn_sleep();
+    child.wait_until_ready("sleep", Duration::from_secs(2));
+
+    child
+}
+
 fn spawn_without_marker() -> ChildGuard {
     let mut command = Command::new("sleep");
     command.arg("30").env_remove("GREPPA_SANDBOX_ROOT");
+    let child = ChildGuard::spawn(&mut command);
+    child.wait_until_ready("sleep", Duration::from_secs(2));
 
-    ChildGuard::spawn(&mut command)
+    child
 }
 
 fn spawn_with_marker(root: &Path) -> ChildGuard {
@@ -51,8 +100,19 @@ fn spawn_with_marker(root: &Path) -> ChildGuard {
     command
         .arg("30")
         .env("GREPPA_SANDBOX_ROOT", root.as_os_str());
+    let child = ChildGuard::spawn(&mut command);
+    child.wait_until_ready("sleep", Duration::from_secs(2));
 
-    ChildGuard::spawn(&mut command)
+    child
+}
+
+fn spawn_named(name: &str) -> ChildGuard {
+    let mut command = Command::new("bash");
+    command.args(["-c", &format!("exec -a \"{name}\" sleep 30")]);
+    let child = ChildGuard::spawn(&mut command);
+    child.wait_until_ready(name, Duration::from_secs(2));
+
+    child
 }
 
 fn spawn_term_ignorer() -> ChildGuard {
@@ -60,15 +120,17 @@ fn spawn_term_ignorer() -> ChildGuard {
     command.args(["-c", "trap \"\" TERM; echo ready; exec sleep 30"]);
     command.stdout(Stdio::piped());
 
-    let mut child = command.spawn().expect("spawn the term-ignoring child");
-    let stdout = child.stdout.take().expect("piped stdout");
+    let mut child = ChildGuard::spawn(&mut command);
+    let stdout = child.child.stdout.take().expect("piped stdout");
     let mut reader = std::io::BufReader::new(stdout);
     let mut ready = String::new();
     reader.read_line(&mut ready).expect("read the ready line");
 
     assert_eq!(ready.trim(), "ready", "the child installed its TERM trap");
 
-    ChildGuard::new(child)
+    child.wait_until_ready("sleep", Duration::from_secs(2));
+
+    child
 }
 
 fn spawn_exiting() -> ChildGuard {
@@ -84,16 +146,10 @@ fn record_child(path: &Path, child: &ChildGuard) -> u64 {
 }
 
 fn wait_for_zombie(pid: u32, timeout: Duration) {
-    let started = Instant::now();
+    let ready = poll_until(timeout, || Ok(process_is_zombie(pid).then_some(())))
+        .expect("the zombie check cannot fail");
 
-    while !process_is_zombie(pid) {
-        assert!(
-            started.elapsed() < timeout,
-            "the child did not become a zombie in time"
-        );
-
-        std::thread::sleep(Duration::from_millis(10));
-    }
+    assert!(ready.is_some(), "the child did not become a zombie in time");
 }
 
 #[test]
@@ -121,7 +177,10 @@ fn stop_window_stops_a_child_with_the_matching_marker() {
 
     stop_window(root.path()).expect("stop_window");
 
-    assert!(!child.is_running(), "the marked child is stopped");
+    assert!(
+        child.wait_for_exit(Duration::from_secs(2)),
+        "the marked child is stopped"
+    );
     assert!(!path.exists(), "the record is removed");
 }
 
@@ -146,12 +205,15 @@ fn stop_window_leaves_a_child_with_a_marker_for_another_root_running() {
 fn stop_recorded_stops_a_recorded_child() {
     let directory = crate::test_support::temporary_directory();
     let path = directory.path().join("record");
-    let mut child = spawn_sleep();
+    let mut child = spawn_ready_sleep();
     record_child(&path, &child);
 
     stop_recorded(&path).expect("stop_recorded");
 
-    assert!(!child.is_running(), "the recorded child is stopped");
+    assert!(
+        child.wait_for_exit(Duration::from_secs(2)),
+        "the recorded child is stopped"
+    );
     assert!(!path.exists(), "the record is removed");
 }
 
@@ -159,7 +221,7 @@ fn stop_recorded_stops_a_recorded_child() {
 fn stop_recorded_leaves_a_child_with_a_changed_start_time_running() {
     let directory = crate::test_support::temporary_directory();
     let path = directory.path().join("record");
-    let mut child = spawn_sleep();
+    let mut child = spawn_ready_sleep();
     let started = process_start(child.id()).expect("the child has a start time");
     fs::write(&path, format!("{} {}\n", child.id(), started + 1)).expect("write the record");
 
@@ -176,12 +238,22 @@ fn stop_recorded_leaves_a_child_with_a_changed_start_time_running() {
 fn stop_process_stops_a_child_and_removes_the_record() {
     let directory = crate::test_support::temporary_directory();
     let path = directory.path().join("record");
-    let mut child = spawn_sleep();
+    let mut child = spawn_ready_sleep();
     let started = record_child(&path, &child);
 
-    stop_process(&path, child.id(), started, Duration::from_secs(2)).expect("stop_process");
+    stop_process(
+        &path,
+        child.id(),
+        started,
+        Duration::from_secs(2),
+        open_pidfd,
+    )
+    .expect("stop_process");
 
-    assert!(!child.is_running(), "a plain child is stopped by TERM");
+    assert!(
+        child.wait_for_exit(Duration::from_secs(2)),
+        "a plain child is stopped by TERM"
+    );
     assert!(!path.exists(), "the record is removed");
 }
 
@@ -192,11 +264,20 @@ fn stop_process_keeps_the_record_when_the_child_ignores_term() {
     let mut child = spawn_term_ignorer();
     let started = record_child(&path, &child);
 
-    let error = stop_process(&path, child.id(), started, Duration::from_millis(300))
-        .expect_err("a child that ignores TERM must time out");
+    let error = stop_process(
+        &path,
+        child.id(),
+        started,
+        Duration::from_millis(300),
+        open_pidfd,
+    )
+    .expect_err("a child that ignores TERM must time out");
 
     assert!(
-        error.to_string().contains("did not stop"),
+        matches!(
+            error.downcast_ref::<IdentityError>(),
+            Some(IdentityError::DidNotStop { pid, .. }) if *pid == child.id()
+        ),
         "unexpected error: {error:#}"
     );
     assert!(
@@ -218,6 +299,43 @@ fn stop_loop_treats_a_zombie_as_stopped() {
     stop_loop(&path, pid, started, Duration::from_secs(1)).expect("stop_loop");
 
     assert!(!path.exists(), "a zombie's record is removed");
+}
+
+#[test]
+fn stop_process_removes_the_record_when_a_failed_open_meets_a_changed_identity() {
+    let directory = crate::test_support::temporary_directory();
+    let path = directory.path().join("record");
+    let mut child = spawn_ready_sleep();
+    let pid = child.id();
+    let started = record_child(&path, &child);
+
+    let result = stop_process(&path, pid, started, Duration::from_secs(1), |_| {
+        child.reap();
+        Err(std::io::Error::from(rustix::io::Errno::NOSYS))
+    });
+
+    assert!(result.is_ok(), "a changed identity is treated as stopped");
+    assert!(!path.exists(), "the stale record is removed");
+}
+
+#[test]
+fn stop_process_reports_a_failed_open_with_an_unchanged_identity() {
+    let directory = crate::test_support::temporary_directory();
+    let path = directory.path().join("record");
+    let child = spawn_ready_sleep();
+    let pid = child.id();
+    let started = record_child(&path, &child);
+
+    let error = stop_process(&path, pid, started, Duration::from_secs(1), |_| {
+        Err(std::io::Error::from(rustix::io::Errno::NOSYS))
+    })
+    .expect_err("an open failure with a live process is an error");
+
+    assert!(
+        error.downcast_ref::<std::io::Error>().is_some(),
+        "unexpected error: {error:#}"
+    );
+    assert!(path.exists(), "the record is kept when the open fails");
 }
 
 #[test]
@@ -244,7 +362,7 @@ fn child_pids_finds_a_child_and_not_a_stranger() {
 fn record_process_writes_the_pid_and_start_time() {
     let directory = crate::test_support::temporary_directory();
     let path = directory.path().join("record");
-    let child = spawn_sleep();
+    let child = spawn_ready_sleep();
 
     record_process(&path, child.id(), "sleep", Duration::from_secs(1)).expect("record_process");
 
@@ -260,13 +378,24 @@ fn record_process_writes_the_pid_and_start_time() {
 fn record_process_rejects_a_wrong_name_and_writes_no_file() {
     let directory = crate::test_support::temporary_directory();
     let path = directory.path().join("record");
-    let child = spawn_sleep();
+    let child = spawn_ready_sleep();
 
-    let error = record_process(&path, child.id(), "not-the-name", Duration::from_secs(1))
-        .expect_err("a wrong name must fail");
+    let error = record_process(
+        &path,
+        child.id(),
+        "not-the-name",
+        Duration::from_millis(200),
+    )
+    .expect_err("a wrong name must fail");
 
     assert!(
-        error.to_string().contains("is not the expected"),
+        matches!(
+            error.downcast_ref::<IdentityError>(),
+            Some(IdentityError::UnexpectedProcess { pid, expected, actual })
+                if *pid == child.id()
+                    && expected == "not-the-name"
+                    && actual.starts_with("sleep")
+        ),
         "unexpected error: {error:#}"
     );
     assert!(!path.exists(), "no record is written");
@@ -281,10 +410,122 @@ fn record_process_rejects_a_missing_pid_and_writes_no_file() {
         .expect_err("a missing pid must fail");
 
     assert!(
-        error.to_string().contains("is gone"),
+        matches!(
+            error.downcast_ref::<IdentityError>(),
+            Some(IdentityError::MissingProcess { pid, expected })
+                if *pid == u32::MAX && expected == "sleep"
+        ),
         "unexpected error: {error:#}"
     );
     assert!(!path.exists(), "no record is written");
+}
+
+#[test]
+fn record_process_reports_an_empty_name_in_time() {
+    let directory = crate::test_support::temporary_directory();
+    let path = directory.path().join("record");
+    let child = spawn_exiting();
+    let pid = child.id();
+
+    wait_for_zombie(pid, Duration::from_secs(3));
+
+    let error = record_process(&path, pid, "sleep", Duration::from_millis(200))
+        .expect_err("an unnamed process must time out");
+
+    assert!(
+        matches!(
+            error.downcast_ref::<IdentityError>(),
+            Some(IdentityError::DidNotNameItself { pid: recorded, expected })
+                if *recorded == pid && expected == "sleep"
+        ),
+        "unexpected error: {error:#}"
+    );
+    assert!(!path.exists(), "no record is written");
+}
+
+#[test]
+fn record_xwayland_records_a_matching_child() {
+    let root = crate::test_support::temporary_sandbox_root("xwayland-match");
+    let path = root.path().join("xwayland.pid");
+    let me = std::process::id();
+    let started = process_start(me).expect("the test process has a start time");
+    fs::write(root.path().join("weston.pid"), format!("{me} {started}\n"))
+        .expect("write weston.pid");
+    let child = spawn_named("Xwayland :97");
+
+    record_xwayland(root.path(), ":97", Duration::from_secs(1)).expect("record_xwayland");
+
+    let (pid, _) = read_record(&path).expect("the xwayland record");
+    assert_eq!(pid, child.id());
+}
+
+#[test]
+fn record_xwayland_ignores_a_different_display() {
+    let root = crate::test_support::temporary_sandbox_root("xwayland-display");
+    let path = root.path().join("xwayland.pid");
+    let me = std::process::id();
+    let started = process_start(me).expect("the test process has a start time");
+    fs::write(root.path().join("weston.pid"), format!("{me} {started}\n"))
+        .expect("write weston.pid");
+    let _child = spawn_named("Xwayland :97");
+
+    record_xwayland(root.path(), ":98", Duration::from_millis(200)).expect("record_xwayland");
+
+    assert!(!path.exists(), "a different display is not recorded");
+}
+
+#[test]
+fn record_xwayland_ignores_a_child_with_another_name() {
+    let root = crate::test_support::temporary_sandbox_root("xwayland-name");
+    let path = root.path().join("xwayland.pid");
+    let me = std::process::id();
+    let started = process_start(me).expect("the test process has a start time");
+    fs::write(root.path().join("weston.pid"), format!("{me} {started}\n"))
+        .expect("write weston.pid");
+    let _child = spawn_named("OtherProcess");
+
+    record_xwayland(root.path(), ":97", Duration::from_millis(200)).expect("record_xwayland");
+
+    assert!(!path.exists(), "a child with another name is not recorded");
+}
+
+#[test]
+fn the_identity_errors_render_their_messages() {
+    let cases = [
+        (
+            IdentityError::DidNotStop {
+                pid: 7,
+                path: PathBuf::from("/tmp/x"),
+            },
+            "The process 7 did not stop; keeping /tmp/x",
+        ),
+        (
+            IdentityError::UnexpectedProcess {
+                pid: 7,
+                expected: "weston".to_string(),
+                actual: "other".to_string(),
+            },
+            "The process 7 is not the expected weston. Actual: other",
+        ),
+        (
+            IdentityError::MissingProcess {
+                pid: 7,
+                expected: "weston".to_string(),
+            },
+            "The weston process 7 is gone before it could be recorded.",
+        ),
+        (
+            IdentityError::DidNotNameItself {
+                pid: 7,
+                expected: "weston".to_string(),
+            },
+            "The weston process 7 did not name itself in time.",
+        ),
+    ];
+
+    for (error, expected) in cases {
+        assert_eq!(error.to_string(), expected, "{error:?}");
+    }
 }
 
 #[test]
@@ -318,7 +559,7 @@ fn stop_process_skips_a_mismatched_start_time() {
     let started = process_start(pid).expect("the test process has a start time");
 
     fs::write(&path, format!("{pid} {started}\n")).expect("write the record");
-    let result = stop_process(&path, pid, started + 1, Duration::from_secs(1));
+    let result = stop_process(&path, pid, started + 1, Duration::from_secs(1), open_pidfd);
 
     assert!(result.is_ok());
     assert!(!path.exists(), "a mismatched record is removed");

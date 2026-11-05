@@ -12,7 +12,7 @@ use super::display_start::{
     clean_display_files, display_up, ensure_display, recorded_mode, require_headed_session,
 };
 use super::environment::{sandbox_environment, weston_environment};
-use super::identity::{record_xwayland, stop_recorded, stop_window};
+use super::identity::{STOP_TIMEOUT, record_xwayland, stop_recorded, stop_window};
 use super::input::{
     CLICK_SETTLE, drag, focus_window, glide, move_pointer, warm_up, window_id, xdotool,
 };
@@ -202,7 +202,7 @@ fn start_window_inner(
     install_openers(root)?;
     let ready = start_scene(root, binary, scene, &display)?;
     focus_window(root, &display, &ready.title)?;
-    record_xwayland(root, &display)?;
+    record_xwayland(root, &display, STOP_TIMEOUT)?;
 
     println!(
         "sandbox {name} is up on {display} (log: {})",

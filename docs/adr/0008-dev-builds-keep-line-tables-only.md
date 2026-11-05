@@ -45,8 +45,8 @@ inherits the dependency override, so dependencies stay without debug info there 
 
 ### Keep Cargo's default full debug info
 
-Build every crate with full debug info in `dev`. Rejected because it spends disk space and build
-time in every worktree on debug info that daily work does not use.
+Build workspace crates and runtime dependencies with full debug info in `dev`. Rejected because it
+spends disk space and build time in every worktree on debug info that daily work does not use.
 
 ### No debug info at all in dev
 

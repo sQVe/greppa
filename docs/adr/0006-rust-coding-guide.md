@@ -59,7 +59,7 @@ A module `foo` lives in `foo.rs`, and its children in `foo/`, as Zed requires. M
 A failure that can happen at run time returns a `Result` and propagates with `?`. An error that
 callers branch on gets its own `thiserror` type with data in fields, so callers and tests match a
 variant instead of parsing text. A test that tells failures apart counts as such a caller, because
-an `anyhow` error would leave it only the message text to compare. App code, which is `main` and the
+an error built with `anyhow!` carries only its message, so the test could only compare text. App code, which is `main` and the
 code that only passes errors up to it, uses `anyhow` with context, because a new error type there
 would add code no caller reads. anyhow's `Context` trait is imported as `_`, because `use
 gpui_kit::*;` already brings GPUI's `Context` type into scope. A panic marks a bug, and `expect`

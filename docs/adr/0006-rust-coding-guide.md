@@ -25,23 +25,25 @@ Rust also brings concerns Tau does not cover: ownership, error types, module fil
 suppression, and GPUI's entity and task lifetimes. The owner is new to Rust, so these rules must be
 written down, short enough to follow, and concrete enough to check in review.
 
-Published Rust guidance does not settle the details. rust-analyzer, Zed, the GPUI Kit, uv, Ruff,
-Google, and Microsoft mostly agree on errors and borrowing. They disagree on short names, `mod.rs`
-files, and how much rustdoc to write.
+Published Rust guidance does not settle the details. rust-analyzer's style guide and the GPUI Kit
+coding guides both prefer a borrowed `&str` to a borrowed owned type. Zed and rust-analyzer disagree
+on short names: Zed asks for full words, while rust-analyzer's examples use names such as `s`. Zed
+bans `mod.rs` files.
 
 ## Decision
 
 greppa keeps Tau's coding instructions and adds `docs/coding.md`, which states only the Rust and
-GPUI rules that override or add to them. A Tau rule the guide does not change applies as written,
-so the guide never repeats one. The guide keeps one policy per item. Its reasons live in this ADR.
+GPUI rules that override, clarify, or add to them. A Tau rule the guide does not change applies as
+written, so the guide never repeats one. The guide keeps one policy per item. Its reasons live in
+this ADR.
 
 ### Names
 
-Names use full words, as Tau asks. The exceptions are GPUI's `cx` and `window`, with `window` before
-`cx` as GPUI and Zed order them, names a standard or trait method requires, generic `T`, and short
-lifetimes such as `'a`. These names are the vocabulary every GPUI and Rust example uses, so
-expanding them makes greppa harder to compare with its sources. Other short names, such as `i`,
-`buf`, and `tx`, gain nothing the full word lacks.
+Names use full words, as Tau asks, and the guide lists only the exceptions. The exceptions are
+GPUI's `cx` and `window`, with `window` before `cx` as GPUI and Zed order them, names a standard or
+trait method requires, generic `T`, and short lifetimes such as `'a`. These names are the vocabulary
+every GPUI and Rust example uses, so expanding them makes greppa harder to compare with its sources.
+Other short names, such as `i`, `buf`, and `tx`, gain nothing the full word lacks.
 
 ### Item order and modules
 
@@ -56,10 +58,19 @@ A module `foo` lives in `foo.rs`, and its children in `foo/`, as Zed requires. M
 
 A failure that can happen at run time returns a `Result` and propagates with `?`. An error that
 callers branch on gets its own `thiserror` type with data in fields, so callers and tests match a
-variant instead of parsing text. App code that only reports an error uses `anyhow` with context,
-because a new error type there would add code no caller reads. A panic marks a bug, and `expect`
+variant instead of parsing text. A test that tells failures apart counts as such a caller, because
+an `anyhow` error would leave it only the message text to compare. App code, which is `main` and the
+code that only passes errors up to it, uses `anyhow` with context, because a new error type there
+would add code no caller reads. anyhow's `Context` trait is imported as `_`, because `use
+gpui_kit::*;` already brings GPUI's `Context` type into scope. A panic marks a bug, and `expect`
 says why the call cannot fail, so a panic message points at the broken assumption. A discarded
-`Result` hides failures, as Zed's rules warn, so `let _ =` on a `Result` is not allowed.
+`Result` hides failures, as Zed's rules warn, so `let _ =` on a `Result` is not allowed. `_ =`,
+`drop(result)`, and an unused `.ok()` hide a failure the same way, so the rule names them too.
+
+`Drop` cannot return an error, so a cleanup error there goes to stderr with `eprintln!` under a
+narrow `#[expect(clippy::print_stderr)]`. greppa has no logger, so stderr is the one place such an
+error can go. One fixed form is easier to follow than a judgment of which errors are safe to drop,
+and the `expect` marks each place in review.
 
 ### Statements
 
@@ -70,9 +81,9 @@ name, which keeps the purpose of Tau's rule.
 
 ### Function size
 
-One job per function stays the rule. Tau's 60-line, 500-line, and 4-parameter limits stay review
-signals. A GPUI `render` builder or an exhaustive `match` can be long and still do one job, and
-splitting it to meet a number scatters one layout or one decision.
+Tau's size rules apply as written. The guide only clarifies them for Rust: a GPUI builder chain or
+an exhaustive `match` can be long and still do one job, and splitting it to meet a review signal
+scatters one layout or one decision.
 
 ### Ownership
 
@@ -83,7 +94,9 @@ catches some needless clones.
 
 A lint suppression uses `#[expect(lint, reason = "...")]`. The compiler warns when the expected lint
 no longer fires, so a stale suppression does not linger, and the reason tells the next reader why
-the lint does not apply.
+the lint does not apply. A lint that fires in some builds and not in others uses
+`#[allow(lint, reason = "...")]` instead, because `#[expect]` would warn in the builds where the
+lint is silent. ADR 0004 states the same rule.
 
 ### Doc comments
 
@@ -93,19 +106,27 @@ restate signatures, which Tau's comment rules forbid.
 
 ### GPUI
 
-The guide states the GPUI lifetime rules that Zed and the GPUI Kit document: use the inner `cx` in
-an entity update, keep or deliberately detach `Task` and `Subscription` handles, use weak handles
-from child to parent, keep `render` declarative and notify only on real changes, use stable IDs,
-drop stale background results, and keep GPUI types out of `greppa-core`. Breaking each rule gives a
-panic, lost work, a leak, a render loop, or a stale view that the compiler does not catch.
+The guide states the GPUI lifetime rules that Zed and the GPUI Kit document. In an entity update,
+code uses the closure's state and `cx`. A `Task` is awaited, kept, or deliberately detached, and a
+`Subscription` is kept or deliberately detached. A child holds a weak handle to its parent. `render`
+stays declarative and views notify only on real changes. IDs are stable, stale background results
+are dropped, and GPUI types stay out of `greppa-core`.
+
+The compiler catches some of these mistakes. `entity.update` borrows the outer `cx` mutably, so
+code that uses the outer `cx` in the closure does not compile. Reading or updating the same entity
+through its handle during its update does compile, and GPUI panics at run time with "already being
+updated". A `Task` or `Subscription` is `#[must_use]`, but `let _ =` silences that warning and drops
+the handle at once. The task is cancelled, or the subscription ends. A leak, a render loop, or a stale view also compiles.
+Review must catch these.
 
 ### Tests
 
 Unit tests live in a `#[cfg(test)] mod tests` in the file that owns the behavior. Tests that use a
-crate from outside go in a few targets under `tests/`, because Cargo links each file there as its
-own binary. Case tables are plain loops, which need no dependency. Fakes replace only IO boundaries,
-so tests run real logic. Tests match error variants and data, because `is_err()` passes for any
-failure and message text changes with wording. Mutation survivors are advice, as in Tau.
+crate from outside go in as few targets under `tests/` as possible, usually one, because Cargo links
+each file there as its own binary. Case tables are plain loops, which need no dependency. Fakes
+replace only IO boundaries, so tests run real logic. Tests match error variants and data, because
+`is_err()` passes for any failure and message text changes with wording. Mutation survivors are
+advice, as in Tau.
 
 ### Lints
 
@@ -142,9 +163,8 @@ and GPUI code, such as `cx`, `?` inside an expression, and fluent element builde
 
 ### An external guide adopted whole
 
-Adopt rust-analyzer's style guide, Microsoft's Rust guidelines, or Google's Rust guide as written.
-Rejected because they disagree with each other on names, docs, and errors, and each was written for
-a different kind of project, such as a published library or an IDE.
+Adopt rust-analyzer's style guide or Zed's rules as written. Rejected because they disagree with
+each other on names, and each was written for its own large code base, not for greppa.
 
 ### Helpers before their callers
 
@@ -164,8 +184,8 @@ scatter code to meet a number.
 
 ### `missing_docs` and full rustdoc
 
-Turn on the `missing_docs` lint, as Bevy and Tokio do. Rejected because greppa publishes no library,
-and the lint would force comments that restate names.
+Turn on the `missing_docs` lint. Rejected because greppa publishes no library, and the lint would
+force comments that restate names.
 
 ### Lints that ban `unwrap` and `expect`
 

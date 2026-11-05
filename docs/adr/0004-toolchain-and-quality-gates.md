@@ -40,6 +40,9 @@ checks dependencies with cargo-deny, and runs formatting and linting in prek hoo
   pedantic, nursery, and restriction groups stay off.
 - A suppression is `#[expect(lint, reason = "...")]` on the smallest item that needs it. The
   `allow_attributes_without_reason` lint rejects a suppression without a reason.
+- A lint that fires in some builds and not in others is suppressed with
+  `#[allow(lint, reason = "...")]`, because `#[expect]` warns in the builds where the lint is
+  silent.
 - Unsafe code is denied.
 - CI fails on any warning.
 

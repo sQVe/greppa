@@ -6,8 +6,8 @@ reasons behind each rule are in [ADR 0006](./adr/0006-rust-coding-guide.md).
 
 ## Names
 
-- Use full words for names: `index`, `buffer`, `sender`, `receiver`, `error`, not `i`, `buf`, `tx`,
-  `rx`, `err`.
+These names are exceptions to Tau's full-word naming rule.
+
 - Name a GPUI context `cx` and a GPUI window `window`. Put `window` before `cx` in a parameter list.
 - Keep a name that a standard or trait method requires, such as `fmt`.
 - Use `T` for a generic type parameter and short names such as `'a` for lifetimes.
@@ -24,12 +24,17 @@ reasons behind each rule are in [ADR 0006](./adr/0006-rust-coding-guide.md).
   input, a missing file, or a failed Git command.
 - Give an error its own type, derived with `thiserror`, when a caller branches on what failed. Put
   the data a caller needs in fields, not only in the message.
+- Count a test that tells failures apart as a caller that branches.
 - In app code that only reports an error, use `anyhow::Result` and add context with `.context(...)`
-  or `.with_context(...)`.
+  or `.with_context(...)`. App code is `main` and the code that only passes errors up to it.
+- Import anyhow's trait as `use anyhow::Context as _;`, because GPUI exports a type named
+  `Context`.
 - Panic only on a bug. Use `expect` with a message that says why the call cannot fail, such as
   `.expect("a known scene name parses")`.
-- Never discard a `Result` with `let _ =`. Propagate it, or handle the error in a `match` or
-  `if let Err(error)`.
+- Never discard a `Result`. `let _ =`, `_ =`, `drop(result)`, and an unused `.ok()` all discard it.
+  Propagate it, or handle the error in a `match` or `if let Err(error)`.
+- In `Drop`, where no caller can take a cleanup error, print it with `eprintln!` inside
+  `if let Err(error)`. Put `#[expect(clippy::print_stderr, reason = "...")]` on the `drop` method.
 
 ## Statements and expressions
 
@@ -45,9 +50,7 @@ reasons behind each rule are in [ADR 0006](./adr/0006-rust-coding-guide.md).
 
 ## Function size
 
-- Keep one job per function. Tau's 60-line function, 500-line file, and 4-parameter limits are
-  review signals, not lint thresholds.
-- Do not split a GPUI `render` chain or an exhaustive `match` only to get under 60 lines.
+- Do not split an exhaustive `match` or a GPUI builder chain only to meet Tau's size review signals.
 
 ## Ownership
 
@@ -65,10 +68,16 @@ reasons behind each rule are in [ADR 0006](./adr/0006-rust-coding-guide.md).
 
 ## GPUI
 
-- Inside `entity.update(cx, |state, cx| ...)`, use the closure's `cx`, never the outer one.
-  Updating an entity that is already being updated panics.
-- Store a `Task` or `Subscription` in the view that owns it, or call `.detach()` on purpose.
-  Dropping a `Task` cancels its work, and dropping a `Subscription` ends it.
+- Inside `entity.update(cx, |state, cx| ...)`, use the closure's `state` for the entity's data and
+  the closure's `cx` for GPUI calls.
+- Never read or update an entity through its handle while that entity is being updated. GPUI panics
+  with "cannot update T while it is already being updated", or "cannot read" for a read.
+- Await a `Task`, store it in its owner, or call `.detach()` on purpose. Dropping a `Task` cancels
+  its work. Detaching gives up both cancellation and the result.
+- Store a `Subscription` in its owner, or call `.detach()` on purpose. Dropping a `Subscription`
+  ends it.
+- Never write `let _ =` on a `Task` or `Subscription`. `_` drops it at once, and `let _task = ...`
+  keeps it only to the end of the scope.
 - Give a child that refers to its parent a `WeakEntity`, never an `Entity`. Treat a failed
   `upgrade()` as normal: the parent is gone.
 - Keep `render` declarative: read state, derive values, and build elements. Do not start work,
@@ -82,13 +91,13 @@ reasons behind each rule are in [ADR 0006](./adr/0006-rust-coding-guide.md).
 ## Tests
 
 - Put unit tests in a `#[cfg(test)] mod tests` at the end of the file that owns the behavior.
-- Put a test that uses a crate from the outside in that crate's `tests/`. Keep one target, such as
-  `tests/integration/main.rs` with modules, because Cargo builds each file in `tests/` as its own
-  binary.
+- Put a test that uses a crate from the outside in that crate's `tests/`. Keep as few targets as
+  possible, usually one, such as `tests/integration/main.rs` with modules. Cargo builds each file in
+  `tests/` as its own binary.
 - Write a case table as an array and a plain `for` loop. Name the case in the assert message.
 - Fake only an IO boundary, such as Git, the file system, or the clock, with a small trait the
   production code takes. Do not add a trait only to fake pure code.
-- Assert the error variant and its data with `matches!` or `assert_eq!`, never only `is_err()`. Do
-  not compare a human-readable message unless its exact text is a contract.
+- Assert the error variant and its data with `assert!(matches!(...))` or `assert_eq!`, never only
+  `is_err()`. Do not compare a human-readable message unless its exact text is a contract.
 - Use `#[should_panic(expected = "...")]` only for code that panics on purpose.
 - Treat a surviving mutant from `cargo xtask mutation` as advice, as Tau does.

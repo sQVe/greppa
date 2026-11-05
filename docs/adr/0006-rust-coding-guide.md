@@ -134,8 +134,10 @@ Unit tests live in a `#[cfg(test)] mod tests` in the file that owns the behavior
 crate from outside go in as few targets under `tests/` as possible, usually one, because Cargo links
 each file there as its own binary. Case tables are plain loops, which need no dependency. Fakes
 replace only IO boundaries, so tests run real logic. Tests match error variants and data, because
-`is_err()` passes for any failure and message text changes with wording. Mutation survivors are
-advice, as in Tau.
+`is_err()` passes for any failure and message text changes with wording. Test folders come from
+`tempfile`, because its guard removes the folder even when the test panics, while hand-written
+cleanup at the end of a test never runs after a failed assertion. Mutation survivors are advice, as
+in Tau.
 
 ### Lints
 

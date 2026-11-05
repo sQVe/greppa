@@ -286,6 +286,23 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn runtime_dir_is_private_and_removed_on_drop() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let runtime = RuntimeDir::create("greppa-xtask-test-runtime").expect("runtime dir");
+        let path = runtime.path().to_path_buf();
+        let mode = fs::metadata(&path).expect("metadata").permissions().mode();
+
+        assert_eq!(mode & 0o777, 0o700);
+        assert!(path.join("home").is_dir());
+        assert!(path.join("bin").is_dir());
+
+        drop(runtime);
+
+        assert!(!path.exists());
+    }
+
     fn environment() -> Vec<(String, String)> {
         vec![
             ("XDG_RUNTIME_DIR".to_string(), "/tmp/run".to_string()),

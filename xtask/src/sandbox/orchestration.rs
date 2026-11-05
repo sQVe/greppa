@@ -322,17 +322,9 @@ fn cleanup(root: &Path) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use std::os::unix::fs::PermissionsExt;
-    use std::path::{Path, PathBuf};
 
     use super::super::root::{RootError, RootReason};
     use super::*;
-
-    fn temporary_root(label: &str) -> PathBuf {
-        Path::new("/var/tmp").join(format!(
-            "greppa-sandbox-test-{label}-{}",
-            std::process::id()
-        ))
-    }
 
     #[test]
     fn a_refused_scene_leaves_a_running_sandbox_alone() {
@@ -360,15 +352,12 @@ mod tests {
 
     #[test]
     fn cleanup_refuses_a_symlinked_root_and_leaves_its_target() {
-        let root = temporary_root("symlink");
-        let target =
-            std::env::temp_dir().join(format!("greppa-sandbox-test-target-{}", std::process::id()));
-        crate::test_support::remove_file(&root);
-        crate::test_support::remove_dir_all(&target);
-        fs::create_dir_all(&target).expect("create the target");
-        let marker = target.join("marker");
+        let folder = crate::test_support::temporary_directory();
+        let target = crate::test_support::temporary_directory();
+        let marker = target.path().join("marker");
         fs::write(&marker, "keep").expect("write the marker");
-        std::os::unix::fs::symlink(&target, &root).expect("link the root");
+        let root = folder.path().join("root");
+        std::os::unix::fs::symlink(target.path(), &root).expect("link the root");
 
         let error = cleanup(&root).expect_err("the symlink is refused");
         let root_error = error
@@ -392,19 +381,14 @@ mod tests {
                 .file_type()
                 .is_symlink()
         );
-
-        crate::test_support::remove_file(&root);
-        crate::test_support::remove_dir_all(&target);
     }
 
     #[test]
     fn cleanup_refuses_a_root_that_is_not_private() {
-        let root = temporary_root("mode");
-        crate::test_support::remove_dir_all(&root);
-        fs::create_dir(&root).expect("create the root");
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).expect("set the mode");
+        let root = crate::test_support::temporary_sandbox_root("mode");
+        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755)).expect("set the mode");
 
-        let error = cleanup(&root).expect_err("the mode is refused");
+        let error = cleanup(root.path()).expect_err("the mode is refused");
         let root_error = error
             .downcast_ref::<RootError>()
             .expect("the refusal is a root error");
@@ -415,30 +399,23 @@ mod tests {
                 RootError::Unsafe {
                     path,
                     reason: RootReason::WrongMode { mode: 0o755 },
-                } if path == &root
+                } if path.as_path() == root.path()
             ),
             "unexpected error: {error:#}"
         );
-        let metadata = fs::symlink_metadata(&root).expect("the root");
+        let metadata = fs::symlink_metadata(root.path()).expect("the root");
         assert!(metadata.is_dir());
         assert_eq!(metadata.permissions().mode() & 0o777, 0o755);
-
-        crate::test_support::remove_dir_all(&root);
     }
 
     #[test]
     fn require_up_refuses_a_symlinked_root() {
-        let root = temporary_root("up-symlink");
-        let target = std::env::temp_dir().join(format!(
-            "greppa-sandbox-test-up-target-{}",
-            std::process::id()
-        ));
-        crate::test_support::remove_file(&root);
-        crate::test_support::remove_dir_all(&target);
-        fs::create_dir_all(&target).expect("create the target");
-        let marker = target.join("marker");
+        let folder = crate::test_support::temporary_directory();
+        let target = crate::test_support::temporary_directory();
+        let marker = target.path().join("marker");
         fs::write(&marker, "keep").expect("write the marker");
-        std::os::unix::fs::symlink(&target, &root).expect("link the root");
+        let root = folder.path().join("root");
+        std::os::unix::fs::symlink(target.path(), &root).expect("link the root");
 
         let error = require_up("test", &root).expect_err("the symlink is refused");
         let root_error = error
@@ -462,44 +439,32 @@ mod tests {
                 .file_type()
                 .is_symlink()
         );
-
-        crate::test_support::remove_file(&root);
-        crate::test_support::remove_dir_all(&target);
     }
 
     #[test]
     fn recorded_scene_reports_a_missing_record() {
-        let root = temporary_root("recorded-scene");
-        crate::test_support::remove_dir_all(&root);
-        fs::create_dir(&root).expect("create the root");
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("set the mode");
+        let root = crate::test_support::temporary_sandbox_root("recorded-scene");
 
-        let error = recorded_scene(&root, None).expect_err("a missing record fails");
+        let error = recorded_scene(root.path(), None).expect_err("a missing record fails");
 
         assert_eq!(
             error.to_string(),
             "The sandbox is not up; run 'cargo xtask sandbox up <scene>' first."
         );
-
-        crate::test_support::remove_dir_all(&root);
     }
 
     #[test]
     fn a_failed_start_keeps_its_error_when_cleanup_fails() {
-        let root = temporary_root("failed-start");
+        let root = crate::test_support::temporary_sandbox_root("failed-start");
         let workspace = crate::workspace_root();
-        crate::test_support::remove_dir_all(&root);
-        fs::create_dir(&root).expect("create the root");
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).expect("set the mode");
+        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755)).expect("set the mode");
 
-        let error =
-            start_window(&workspace, "test", &root, "app", false).expect_err("the start fails");
+        let error = start_window(&workspace, "test", root.path(), "app", false)
+            .expect_err("the start fails");
 
         assert_eq!(
             error.to_string(),
             "The real app has no window yet. Use a scene name such as smoke-2."
         );
-
-        crate::test_support::remove_dir_all(&root);
     }
 }

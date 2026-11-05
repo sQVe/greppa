@@ -360,17 +360,13 @@ mod tests {
 
     #[test]
     fn find_program_uses_the_given_path() {
-        let directory = std::env::temp_dir().join(format!("greppa-find-{}", std::process::id()));
-        crate::test_support::remove_dir_all(&directory);
-        std::fs::create_dir_all(&directory).expect("create the test directory");
-        let program = directory.join("fake-tool");
+        let directory = crate::test_support::temporary_directory();
+        let program = directory.path().join("fake-tool");
         std::fs::write(&program, "#!/bin/sh\n").expect("write the fake tool");
 
-        let found = find_program("fake-tool", &directory.to_string_lossy());
+        let found = find_program("fake-tool", &directory.path().to_string_lossy());
         assert_eq!(found, Some(program));
         assert_eq!(find_program("fake-tool", "/nonexistent"), None);
-
-        crate::test_support::remove_dir_all(&directory);
     }
 
     #[test]

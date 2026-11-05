@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn clean_display_files_removes_the_files_of_a_dead_owner() {
-        let folder = RuntimeDir::create("greppa-display-dead").expect("folder");
+        let folder = crate::test_support::temporary_directory();
         let (lock, socket) = display_files(folder.path(), u32::MAX);
 
         clean_display_files_in(folder.path(), ":7", Duration::from_secs(1));
@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn clean_display_files_keeps_the_files_of_a_live_owner() {
-        let folder = RuntimeDir::create("greppa-display-live").expect("folder");
+        let folder = crate::test_support::temporary_directory();
         let (lock, socket) = display_files(folder.path(), std::process::id());
 
         clean_display_files_in(folder.path(), ":7", Duration::ZERO);
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn clean_display_files_keeps_the_files_of_a_new_owner() {
-        let folder = RuntimeDir::create("greppa-display-new").expect("folder");
+        let folder = crate::test_support::temporary_directory();
         let mut dying = Command::new("sleep").arg("30").spawn().expect("sleep");
         let (lock, socket) = display_files(folder.path(), dying.id());
         let replacement = lock.clone();
@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn clean_display_files_ignores_a_display_that_is_not_a_number() {
-        let folder = RuntimeDir::create("greppa-display-name").expect("folder");
+        let folder = crate::test_support::temporary_directory();
         let (lock, socket) = display_files(folder.path(), u32::MAX);
 
         clean_display_files_in(folder.path(), ":7x", Duration::ZERO);

@@ -44,6 +44,7 @@ the commit in its row.
 
 - [0004: Toolchain and quality gates](./0004-toolchain-and-quality-gates.md)
 - [0006: A Rust coding guide adapts Tau's coding rules](./0006-rust-coding-guide.md)
+- [0008: Dev builds keep line tables only, and dependencies keep no debug info](./0008-dev-builds-keep-line-tables-only.md)
 
 ## Retired
 

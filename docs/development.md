@@ -38,6 +38,13 @@ sudo pacman -S --needed alsa-lib fontconfig freetype2 openssl vulkan-headers \
 The `Test (Linux)` job in `.github/workflows/ci.yml` installs the Debian and Ubuntu list before it
 builds GPUI. The check job does not compile code and needs no display.
 
+### Debugger builds
+
+The `dev` profile keeps only line tables for workspace crates and no debug info for dependencies,
+so panic backtraces show files and lines but a debugger cannot show variables. For full debugger
+support in workspace crates, build with `cargo build --profile debugging`. Dependencies still build
+without debug info. The binaries go to `target/debugging/`.
+
 ## Workspace
 
 - `crates/greppa-core` holds review logic: diffs, line ranges, and review state. It never depends on

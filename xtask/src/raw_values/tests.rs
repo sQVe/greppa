@@ -349,3 +349,15 @@ fn scan_reports_a_line_with_several_raw_values_once() {
         ]
     );
 }
+
+#[test]
+fn scan_allows_names_that_only_contain_a_raw_constructor() {
+    let source = "\
+let a = MyRgba { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };\n\
+let b = palette.Rgba { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };\n\
+let c = my_px(3.0);\n\
+let d = layout.px(3.0);\n\
+let e = 0x11223344u32;\n";
+
+    assert_eq!(scan_source("src/a.rs", source), Vec::<String>::new());
+}

@@ -1,5 +1,3 @@
-//! Helpers for test cleanup that never discard a `Result`.
-
 #![allow(
     dead_code,
     reason = "some helpers are used only by test modules that are Linux only"

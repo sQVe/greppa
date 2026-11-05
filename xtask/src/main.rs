@@ -59,6 +59,7 @@ fn sandbox_status(root: &Path, arguments: &[String]) -> ExitCode {
 }
 
 #[cfg(not(target_os = "linux"))]
+#[expect(clippy::print_stderr, reason = "the refusal is the command's output")]
 fn sandbox_status(_root: &Path, _arguments: &[String]) -> ExitCode {
     eprintln!("The sandbox runs on Linux only.");
     ExitCode::FAILURE

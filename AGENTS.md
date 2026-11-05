@@ -5,6 +5,8 @@ repository on disk. Read [the development guide](docs/development.md) for local 
 verification.
 
 - Run `cargo xtask check` before finishing changes.
+- Follow [the Rust coding guide](docs/coding.md) in Rust code. It changes and adds to Tau's coding
+  instructions.
 - Format with `cargo fmt`. rustfmt runs with its default settings.
 - Follow the decisions in [docs/adr](docs/adr/README.md), and record new decisions there. Read that
   guide before adding or changing an ADR. When details of a decision change, edit its ADR in place

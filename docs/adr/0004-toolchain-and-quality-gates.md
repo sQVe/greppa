@@ -35,8 +35,11 @@ checks dependencies with cargo-deny, and runs formatting and linting in prek hoo
 ### Linting
 
 - Clippy lint levels live in `[workspace.lints]`, and every crate uses them.
-- The `all` group warns and `correctness` denies. Single lints, such as `dbg_macro` and `todo`, are
-  added when they are needed. The whole pedantic, nursery, and restriction groups stay off.
+- The `all` group warns and `correctness` denies. Single lints, such as `dbg_macro`, `todo`, and
+  `print_stdout`, are added when they are needed, also from groups that stay off. The whole
+  pedantic, nursery, and restriction groups stay off.
+- A suppression is `#[expect(lint, reason = "...")]` on the smallest item that needs it. The
+  `allow_attributes_without_reason` lint rejects a suppression without a reason.
 - Unsafe code is denied.
 - CI fails on any warning.
 

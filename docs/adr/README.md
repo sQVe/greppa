@@ -42,6 +42,7 @@ the commit in its row.
 ### Project and toolchain
 
 - [0004: Toolchain and quality gates](./0004-toolchain-and-quality-gates.md)
+- [0006: A Rust coding guide adapts Tau's coding rules](./0006-rust-coding-guide.md)
 
 ## Retired
 

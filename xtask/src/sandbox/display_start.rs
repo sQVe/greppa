@@ -147,8 +147,6 @@ pub(super) mod tests {
     use super::super::identity::process_start;
     use super::*;
 
-    /// Records this test process as the sandbox's weston on `display`, so `display_up` accepts
-    /// the root without any real display.
     pub(in crate::sandbox) fn record_live_display(root: &Path, display: &str) {
         let pid = std::process::id();
         let started = process_start(pid).expect("the test process has a start time");

@@ -5,6 +5,8 @@ mod display;
 mod environment;
 mod mock;
 mod mutation;
+#[cfg(target_os = "linux")]
+mod process;
 mod raw_values;
 #[cfg(target_os = "linux")]
 mod sandbox;

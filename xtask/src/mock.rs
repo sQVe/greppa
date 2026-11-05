@@ -55,6 +55,7 @@ mod linux {
 
     use crate::display::{self, Running, RuntimeDir};
     use crate::environment::{self, ChildDirs};
+    use crate::process;
     use crate::scene::{self, LogicalSize, Point, Ready};
 
     const READY_TIMEOUT: Duration = Duration::from_secs(60);
@@ -264,7 +265,7 @@ mod linux {
             .arg(path)
             .env_clear()
             .envs(environment.iter().cloned());
-        let output = display::run_with_timeout(command, display::TOOL_TIMEOUT)?;
+        let output = process::run_with_timeout(command, process::TOOL_TIMEOUT)?;
 
         if !output.status.success() {
             return Err(format!(
@@ -298,7 +299,7 @@ mod linux {
             .arg(crop_path)
             .env_clear()
             .envs(environment.iter().cloned());
-        let output = display::run_with_timeout(command, display::TOOL_TIMEOUT)?;
+        let output = process::run_with_timeout(command, process::TOOL_TIMEOUT)?;
 
         if !output.status.success() {
             return Err(format!(

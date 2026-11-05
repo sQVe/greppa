@@ -153,7 +153,7 @@ pub(crate) fn names(
         .arg("--list")
         .env_clear()
         .envs(environment.iter().cloned());
-    let output = crate::display::run_with_timeout(command, crate::display::TOOL_TIMEOUT)
+    let output = crate::process::run_with_timeout(command, crate::process::TOOL_TIMEOUT)
         .map_err(|error| format!("Could not list the scenes: {error}"))?;
 
     if !output.status.success() {

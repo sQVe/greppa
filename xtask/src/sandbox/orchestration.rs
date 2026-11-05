@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use crate::display;
 use crate::scene;
@@ -183,7 +184,7 @@ fn start_window(
     match start_window_inner(name, root, &binary, &scene, headed) {
         Ok(()) => Ok(()),
         Err(error) => {
-            if let Err(cleanup_error) = cleanup(root) {
+            if let Err(cleanup_error) = cleanup(root, stop_target) {
                 eprintln!("Could not clean up after the failed start: {cleanup_error:#}");
             }
 
@@ -232,15 +233,22 @@ where
     action(&display, &window)
 }
 
+#[derive(Debug, Error, PartialEq, Eq)]
+enum SandboxError {
+    #[error("sandbox {name} is not up; run 'cargo xtask sandbox up <scene>' first")]
+    NotUp { name: String },
+}
+
 fn require_up(name: &str, root: &Path) -> anyhow::Result<String> {
     require_trusted_root(root)?;
 
-    let display = display_up(root).ok_or_else(|| {
-        anyhow::anyhow!("sandbox {name} is not up; run 'cargo xtask sandbox up <scene>' first")
-    })?;
+    let not_up = || SandboxError::NotUp {
+        name: name.to_string(),
+    };
+    let display = display_up(root).ok_or_else(not_up)?;
 
     if !root.join("window").is_file() {
-        anyhow::bail!("sandbox {name} is not up; run 'cargo xtask sandbox up <scene>' first");
+        return Err(not_up().into());
     }
 
     Ok(display)
@@ -303,21 +311,43 @@ fn down(name: &str, root: &Path) -> anyhow::Result<()> {
 
     refuse_unsafe_root(root)?;
     refuse_linked_paths(root)?;
-    cleanup(root)?;
+    cleanup(root, stop_target)?;
     println!("sandbox {name} is gone");
 
     Ok(())
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum StopTarget {
+    Window { root: PathBuf },
+    Recorded { path: PathBuf },
+}
+
+fn stop_target(target: StopTarget) -> anyhow::Result<()> {
+    match target {
+        StopTarget::Window { root } => stop_window(&root),
+        StopTarget::Recorded { path } => stop_recorded(&path),
+    }
+}
+
 /// Stops everything the sandbox recorded, then removes the root. It refuses a root that fails
 /// the owner, mode, or symlink checks, so a failed `up` cannot act on an untrusted path. A
 /// process that will not stop keeps the root so the retry has its record.
-fn cleanup(root: &Path) -> anyhow::Result<()> {
+fn cleanup<F>(root: &Path, mut stop: F) -> anyhow::Result<()>
+where
+    F: FnMut(StopTarget) -> anyhow::Result<()>,
+{
     require_trusted_root(root)?;
 
-    stop_window(root)?;
-    stop_recorded(&root.join("xwayland.pid"))?;
-    stop_recorded(&root.join("weston.pid"))?;
+    stop(StopTarget::Window {
+        root: root.to_path_buf(),
+    })?;
+    stop(StopTarget::Recorded {
+        path: root.join("xwayland.pid"),
+    })?;
+    stop(StopTarget::Recorded {
+        path: root.join("weston.pid"),
+    })?;
     clean_display_files(root);
 
     if root.exists() {
@@ -328,152 +358,4 @@ fn cleanup(root: &Path) -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::os::unix::fs::PermissionsExt;
-
-    use super::super::root::{RootError, RootReason};
-    use super::*;
-
-    #[test]
-    fn a_refused_scene_leaves_a_running_sandbox_alone() {
-        let root = crate::test_support::temporary_sandbox_root("preflight");
-        let marker = root.path().join("scene");
-        fs::write(&marker, "smoke-2\n").expect("write the scene record");
-
-        let error = start_window(
-            Path::new("/nonexistent"),
-            "preflight",
-            root.path(),
-            "app",
-            false,
-        )
-        .expect_err("the app scene is refused");
-
-        assert_eq!(
-            error.to_string(),
-            "The real app has no window yet. Use a scene name such as smoke-2."
-        );
-        assert!(
-            marker.is_file(),
-            "a refused scene must not tear the sandbox down"
-        );
-    }
-
-    #[test]
-    fn cleanup_refuses_a_symlinked_root_and_leaves_its_target() {
-        let folder = crate::test_support::temporary_directory();
-        let target = crate::test_support::temporary_directory();
-        let marker = target.path().join("marker");
-        fs::write(&marker, "keep").expect("write the marker");
-        let root = folder.path().join("root");
-        std::os::unix::fs::symlink(target.path(), &root).expect("link the root");
-
-        let error = cleanup(&root).expect_err("the symlink is refused");
-        let root_error = error
-            .downcast_ref::<RootError>()
-            .expect("the refusal is a root error");
-
-        assert!(
-            matches!(
-                root_error,
-                RootError::Unsafe {
-                    path,
-                    reason: RootReason::Symlink,
-                } if path == &root
-            ),
-            "unexpected error: {error:#}"
-        );
-        assert!(marker.is_file(), "cleanup must not touch the link target");
-        assert!(
-            fs::symlink_metadata(&root)
-                .expect("the root")
-                .file_type()
-                .is_symlink()
-        );
-    }
-
-    #[test]
-    fn cleanup_refuses_a_root_that_is_not_private() {
-        let root = crate::test_support::temporary_sandbox_root("mode");
-        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755)).expect("set the mode");
-
-        let error = cleanup(root.path()).expect_err("the mode is refused");
-        let root_error = error
-            .downcast_ref::<RootError>()
-            .expect("the refusal is a root error");
-
-        assert!(
-            matches!(
-                root_error,
-                RootError::Unsafe {
-                    path,
-                    reason: RootReason::WrongMode { mode: 0o755 },
-                } if path.as_path() == root.path()
-            ),
-            "unexpected error: {error:#}"
-        );
-        let metadata = fs::symlink_metadata(root.path()).expect("the root");
-        assert!(metadata.is_dir());
-        assert_eq!(metadata.permissions().mode() & 0o777, 0o755);
-    }
-
-    #[test]
-    fn require_up_refuses_a_symlinked_root() {
-        let folder = crate::test_support::temporary_directory();
-        let target = crate::test_support::temporary_directory();
-        let marker = target.path().join("marker");
-        fs::write(&marker, "keep").expect("write the marker");
-        let root = folder.path().join("root");
-        std::os::unix::fs::symlink(target.path(), &root).expect("link the root");
-
-        let error = require_up("test", &root).expect_err("the symlink is refused");
-        let root_error = error
-            .downcast_ref::<RootError>()
-            .expect("the refusal is a root error");
-
-        assert!(
-            matches!(
-                root_error,
-                RootError::Unsafe {
-                    path,
-                    reason: RootReason::Symlink,
-                } if path == &root
-            ),
-            "unexpected error: {error:#}"
-        );
-        assert!(marker.is_file(), "the target must not change");
-        assert!(
-            fs::symlink_metadata(&root)
-                .expect("the root")
-                .file_type()
-                .is_symlink()
-        );
-    }
-
-    #[test]
-    fn recorded_scene_reports_a_missing_record() {
-        let root = crate::test_support::temporary_sandbox_root("recorded-scene");
-
-        let error = recorded_scene(root.path(), None).expect_err("a missing record fails");
-
-        assert_eq!(
-            error.to_string(),
-            "The sandbox is not up; run 'cargo xtask sandbox up <scene>' first."
-        );
-    }
-
-    #[test]
-    fn a_failed_start_keeps_its_error_when_cleanup_fails() {
-        let root = crate::test_support::temporary_sandbox_root("failed-start");
-        let workspace = crate::workspace_root();
-        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755)).expect("set the mode");
-
-        let error = start_window(&workspace, "test", root.path(), "app", false)
-            .expect_err("the start fails");
-
-        assert_eq!(
-            error.to_string(),
-            "The real app has no window yet. Use a scene name such as smoke-2."
-        );
-    }
-}
+mod tests;

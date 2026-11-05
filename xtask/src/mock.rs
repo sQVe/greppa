@@ -99,7 +99,11 @@ mod linux {
         format!("{}x{}+{}+{}", crop.width, crop.height, crop.x, crop.y)
     }
 
-    fn mock_environment(runtime: &Path, display: Option<&str>) -> Vec<(String, String)> {
+    fn mock_environment(
+        caller: &[(String, String)],
+        runtime: &Path,
+        display: Option<&str>,
+    ) -> Vec<(String, String)> {
         let mut dirs = ChildDirs::under(runtime);
         dirs.runtime = runtime.to_path_buf();
         let extras: &[(&str, &str)] = match display {
@@ -107,7 +111,7 @@ mod linux {
             None => &[],
         };
 
-        environment::child_environment(&std::env::vars().collect::<Vec<_>>(), &dirs, extras)
+        environment::child_environment(caller, &dirs, extras)
     }
 
     #[derive(Debug, Error)]
@@ -127,14 +131,12 @@ mod linux {
         fn start(
             binary: &Path,
             scene: &str,
-            display: &str,
-            runtime: &Path,
+            environment: &[(String, String)],
         ) -> anyhow::Result<Self> {
-            let environment = mock_environment(runtime, Some(display));
             let mut child = Command::new(binary)
                 .arg(scene)
                 .env_clear()
-                .envs(environment)
+                .envs(environment.iter().cloned())
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::inherit())
@@ -208,18 +210,20 @@ mod linux {
     pub(super) fn capture(root: &Path, scene: &str) -> anyhow::Result<()> {
         let binary = scene::build(root)?;
         let runtime = RuntimeDir::create("greppa-mock")?;
-        let environment = mock_environment(runtime.path(), None);
+        let caller: Vec<_> = std::env::vars().collect();
+        let environment = mock_environment(&caller, runtime.path(), None);
         let names = scene::names(&binary, &environment)?;
         let scene = scene::validate_scene(scene, &names)?;
         let folder = root.join(".tau").join("judge").join(&scene);
 
         prepare_folder(&folder)?;
 
-        let mut weston = start_weston(&runtime)?;
+        let mut weston = start_weston(&runtime, &environment)?;
         let display =
             display::wait_for_display(&runtime.path().join("weston.log"), display::WESTON_TIMEOUT)?;
         weston.set_display(&display);
-        let mut app = Scene::start(&binary, &scene, &display, runtime.path())?;
+        let scene_environment = mock_environment(&caller, runtime.path(), Some(&display));
+        let mut app = Scene::start(&binary, &scene, &scene_environment)?;
         let ready = app.ready(READY_TIMEOUT)?;
 
         std::thread::sleep(SCENE_SETTLE);
@@ -263,16 +267,13 @@ mod linux {
         )
     }
 
-    fn start_weston(runtime: &RuntimeDir) -> anyhow::Result<Running> {
+    fn start_weston(
+        runtime: &RuntimeDir,
+        environment: &[(String, String)],
+    ) -> anyhow::Result<Running> {
         let log = runtime.path().join("weston.log");
         let socket = format!("greppa-mock-{}", std::process::id());
-        let command = display::weston_command(
-            &socket,
-            1400,
-            900,
-            &log,
-            &mock_environment(runtime.path(), None),
-        );
+        let command = display::weston_command(&socket, 1400, 900, &log, environment);
 
         Running::spawn(command, "weston")
     }
@@ -355,130 +356,5 @@ mod linux {
     }
 
     #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn crop_box_scales_the_origin_and_size() {
-            let crop = crop_box(
-                Point { x: 60.0, y: 40.0 },
-                LogicalSize {
-                    width: 420.0,
-                    height: 300.0,
-                },
-                2.0,
-            );
-
-            assert_eq!(
-                crop,
-                Crop {
-                    x: 120,
-                    y: 80,
-                    width: 840,
-                    height: 600,
-                }
-            );
-        }
-
-        #[test]
-        fn crop_geometry_uses_wxh_plus_xy() {
-            let crop = Crop {
-                x: 120,
-                y: 80,
-                width: 840,
-                height: 600,
-            };
-
-            assert_eq!(crop_geometry(crop), "840x600+120+80");
-        }
-
-        #[test]
-        fn crop_fits_checks_every_edge() {
-            let shot = PixelSize {
-                width: 1400,
-                height: 900,
-            };
-            let inside = Crop {
-                x: 60,
-                y: 60,
-                width: 420,
-                height: 300,
-            };
-
-            assert!(crop_fits(inside, shot));
-            assert!(!crop_fits(Crop { x: -1, ..inside }, shot));
-            assert!(!crop_fits(Crop { y: -1, ..inside }, shot));
-            assert!(!crop_fits(
-                Crop {
-                    width: 1400,
-                    ..inside
-                },
-                shot
-            ));
-            assert!(!crop_fits(
-                Crop {
-                    height: 900,
-                    ..inside
-                },
-                shot
-            ));
-        }
-
-        #[test]
-        fn next_ready_reports_a_missing_line() {
-            let (_sender, receiver) = mpsc::channel();
-            let error = next_ready(&receiver, Duration::from_millis(10)).expect_err("timeout");
-
-            assert!(matches!(error, CaptureError::Timeout));
-            assert_eq!(
-                error.to_string(),
-                "The scene did not print a ready line in time."
-            );
-        }
-
-        #[test]
-        fn next_ready_reports_a_closed_stream() {
-            let (sender, receiver) = mpsc::channel();
-            drop(sender);
-
-            let error = next_ready(&receiver, Duration::from_millis(10)).expect_err("closed");
-
-            assert!(matches!(error, CaptureError::Closed));
-            assert_eq!(
-                error.to_string(),
-                "The scene exited before it printed a ready line."
-            );
-        }
-
-        #[test]
-        fn next_ready_skips_lines_until_it_parses_one() {
-            let (sender, receiver) = mpsc::channel();
-            let ready = "{\"scene\":\"demo\",\"origin\":{\"x\":60,\"y\":60},\"size\":{\"width\":420,\"height\":300},\"scale\":1,\"title\":\"greppa-scene-demo\"}";
-
-            sender.send("build noise".to_string()).expect("send noise");
-            sender.send(ready.to_string()).expect("send ready");
-            drop(sender);
-
-            assert!(next_ready(&receiver, Duration::from_millis(100)).is_ok());
-        }
-
-        #[test]
-        fn crop_outside_message_names_the_box_and_shot() {
-            let crop = Crop {
-                x: 60,
-                y: 60,
-                width: 420,
-                height: 300,
-            };
-            let shot = PixelSize {
-                width: 100,
-                height: 100,
-            };
-
-            assert_eq!(
-                crop_outside_message(crop, shot),
-                "The crop 420x300+60+60 falls outside the 100x100 shot."
-            );
-        }
-    }
+    mod tests;
 }

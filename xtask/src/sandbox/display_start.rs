@@ -143,8 +143,73 @@ pub(super) fn clean_display_files(root: &Path) {
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
+    use super::super::identity::process_start;
     use super::*;
+
+    /// Records this test process as the sandbox's weston on `display`, so `display_up` accepts
+    /// the root without any real display.
+    pub(in crate::sandbox) fn record_live_display(root: &Path, display: &str) {
+        let pid = std::process::id();
+        let started = process_start(pid).expect("the test process has a start time");
+
+        fs::write(root.join("weston.pid"), format!("{pid} {started}\n")).expect("write weston.pid");
+        fs::write(root.join("display"), display).expect("write the display");
+    }
+
+    #[test]
+    fn display_up_returns_the_display_of_a_live_record() {
+        let root = crate::test_support::temporary_sandbox_root("display-up");
+        record_live_display(root.path(), ":7\n");
+
+        assert_eq!(display_up(root.path()), Some(":7".to_string()));
+    }
+
+    pub(in crate::sandbox) type StaleDisplayCase = (&'static str, fn(&Path));
+
+    pub(in crate::sandbox) fn stale_display_cases() -> [StaleDisplayCase; 3] {
+        [
+            ("changed start", |root| {
+                let pid = std::process::id();
+                let started = process_start(pid).expect("the test process has a start time");
+
+                fs::write(root.join("weston.pid"), format!("{pid} {}\n", started + 1))
+                    .expect("rewrite weston.pid");
+            }),
+            ("missing pid file", |root| {
+                fs::remove_file(root.join("weston.pid")).expect("remove weston.pid");
+            }),
+            ("no colon", |root| {
+                fs::write(root.join("display"), "7\n").expect("rewrite the display");
+            }),
+        ]
+    }
+
+    #[test]
+    fn display_up_refuses_a_stale_or_missing_record_and_a_display_without_a_colon() {
+        for (case, make_stale) in stale_display_cases() {
+            let root = crate::test_support::temporary_sandbox_root("display-down");
+            record_live_display(root.path(), ":7\n");
+            make_stale(root.path());
+
+            assert_eq!(display_up(root.path()), None, "{case}");
+        }
+    }
+
+    #[test]
+    fn recorded_mode_reads_the_trimmed_record() {
+        let root = crate::test_support::temporary_sandbox_root("mode");
+        fs::write(root.path().join("mode"), "headed\n").expect("write the mode");
+
+        assert_eq!(recorded_mode(root.path()), Some("headed".to_string()));
+    }
+
+    #[test]
+    fn recorded_mode_is_none_without_a_record() {
+        let root = crate::test_support::temporary_sandbox_root("no-mode");
+
+        assert_eq!(recorded_mode(root.path()), None);
+    }
 
     #[test]
     fn require_headed_session_refuses_a_missing_or_blank_wayland_display() {

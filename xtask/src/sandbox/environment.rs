@@ -52,6 +52,9 @@ mod tests {
             ("GREPPA_SANDBOX_ROOT", "/home/user"),
             ("HOME", "/home/user"),
             ("XDG_CONFIG_HOME", "/home/user/.config"),
+            ("XDG_STATE_HOME", "/home/user/.local/state"),
+            ("XDG_DATA_HOME", "/home/user/.local/share"),
+            ("XDG_CACHE_HOME", "/home/user/.cache"),
             ("XDG_RUNTIME_DIR", "/run/user/1000"),
             ("PATH", "/usr/bin:/bin"),
         ]
@@ -90,6 +93,9 @@ mod tests {
             ("GREPPA_SANDBOX_ROOT", "/var/tmp/greppa-sandbox-smoke"),
             ("HOME", "/var/tmp/greppa-sandbox-smoke/home"),
             ("XDG_CONFIG_HOME", "/var/tmp/greppa-sandbox-smoke/config"),
+            ("XDG_STATE_HOME", "/var/tmp/greppa-sandbox-smoke/state"),
+            ("XDG_DATA_HOME", "/var/tmp/greppa-sandbox-smoke/data"),
+            ("XDG_CACHE_HOME", "/var/tmp/greppa-sandbox-smoke/cache"),
             ("XDG_RUNTIME_DIR", "/var/tmp/greppa-sandbox-smoke/run"),
             ("PATH", "/var/tmp/greppa-sandbox-smoke/bin:/usr/bin:/bin"),
         ] {
@@ -109,6 +115,15 @@ mod tests {
             ("DISPLAY", None),
             ("GREPPA_SANDBOX_ROOT", None),
             ("HOME", Some("/var/tmp/greppa-sandbox-smoke/home")),
+            (
+                "XDG_STATE_HOME",
+                Some("/var/tmp/greppa-sandbox-smoke/state"),
+            ),
+            ("XDG_DATA_HOME", Some("/var/tmp/greppa-sandbox-smoke/data")),
+            (
+                "XDG_CACHE_HOME",
+                Some("/var/tmp/greppa-sandbox-smoke/cache"),
+            ),
             ("XDG_RUNTIME_DIR", Some("/var/tmp/greppa-sandbox-smoke/run")),
             (
                 "PATH",
@@ -135,6 +150,15 @@ mod tests {
             (
                 "XDG_CONFIG_HOME",
                 Some("/var/tmp/greppa-sandbox-smoke/config"),
+            ),
+            (
+                "XDG_STATE_HOME",
+                Some("/var/tmp/greppa-sandbox-smoke/state"),
+            ),
+            ("XDG_DATA_HOME", Some("/var/tmp/greppa-sandbox-smoke/data")),
+            (
+                "XDG_CACHE_HOME",
+                Some("/var/tmp/greppa-sandbox-smoke/cache"),
             ),
         ] {
             assert_eq!(value(&environment, key), expected, "{key}");

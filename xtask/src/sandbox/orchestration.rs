@@ -168,10 +168,6 @@ fn prepare_scene(
     Ok((binary, scene))
 }
 
-#[expect(
-    clippy::print_stderr,
-    reason = "a cleanup failure after a failed start must not hide the start error"
-)]
 fn start_window(
     workspace: &Path,
     name: &str,
@@ -180,17 +176,28 @@ fn start_window(
     headed: bool,
 ) -> anyhow::Result<()> {
     let (binary, scene) = prepare_scene(workspace, root, scene_name)?;
+    let started = start_window_inner(name, root, &binary, &scene, headed);
 
-    match start_window_inner(name, root, &binary, &scene, headed) {
-        Ok(()) => Ok(()),
-        Err(error) => {
-            if let Err(cleanup_error) = cleanup(root, stop_target) {
-                eprintln!("Could not clean up after the failed start: {cleanup_error:#}");
-            }
+    clean_up_failed_start(root, started, stop_target)
+}
 
-            Err(error)
-        }
+#[expect(
+    clippy::print_stderr,
+    reason = "a cleanup failure after a failed start must not hide the start error"
+)]
+fn clean_up_failed_start<F>(root: &Path, started: anyhow::Result<()>, stop: F) -> anyhow::Result<()>
+where
+    F: FnMut(StopTarget) -> anyhow::Result<()>,
+{
+    let Err(error) = started else {
+        return Ok(());
+    };
+
+    if let Err(cleanup_error) = cleanup(root, stop) {
+        eprintln!("Could not clean up after the failed start: {cleanup_error:#}");
     }
+
+    Err(error)
 }
 
 #[expect(

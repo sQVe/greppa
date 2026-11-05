@@ -358,3 +358,15 @@ mod linux {
     #[cfg(test)]
     mod tests;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_refuses_arguments_without_a_command() {
+        let folder = crate::test_support::temporary_directory();
+
+        assert_eq!(run(folder.path(), &[]), ExitCode::FAILURE);
+    }
+}

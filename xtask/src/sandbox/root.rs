@@ -217,9 +217,11 @@ pub(super) fn install_openers(root: &Path) -> anyhow::Result<()> {
             return Err(RootError::LinkedOpener { path }.into());
         }
 
+        let log = shell_quote(&opened.to_string_lossy());
+        // The shell follows a symlink on append, so a link planted after installation must be
+        // refused when the stub runs.
         let script = format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >>{}\n",
-            shell_quote(&opened.to_string_lossy())
+            "#!/bin/sh\nif [ -L {log} ]; then\n  echo 'refusing the symlinked opened log' >&2\n  exit 1\nfi\nprintf '%s\\n' \"$*\" >>{log}\n"
         );
 
         fs::write(&path, script).with_context(|| format!("Could not write {}", path.display()))?;

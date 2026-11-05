@@ -5,7 +5,7 @@ use std::process::{Command, Stdio};
 
 use super::*;
 
-struct ChildGuard {
+pub(in crate::sandbox) struct ChildGuard {
     child: std::process::Child,
     reaped: bool,
     group: bool,
@@ -36,11 +36,11 @@ impl ChildGuard {
         self.child.id()
     }
 
-    fn is_running(&mut self) -> bool {
+    pub(in crate::sandbox) fn is_running(&mut self) -> bool {
         !self.reaped && self.child.try_wait().expect("check the child").is_none()
     }
 
-    fn wait_for_exit(&mut self, timeout: Duration) -> bool {
+    pub(in crate::sandbox) fn wait_for_exit(&mut self, timeout: Duration) -> bool {
         if self.reaped {
             return true;
         }
@@ -110,14 +110,14 @@ fn spawn_sleep() -> ChildGuard {
     ChildGuard::spawn(&mut command)
 }
 
-fn spawn_ready_sleep() -> ChildGuard {
+pub(in crate::sandbox) fn spawn_ready_sleep() -> ChildGuard {
     let child = spawn_sleep();
     child.wait_until_ready("sleep", Duration::from_secs(2));
 
     child
 }
 
-fn spawn_without_marker() -> ChildGuard {
+pub(in crate::sandbox) fn spawn_without_marker() -> ChildGuard {
     let mut command = Command::new("sleep");
     command.arg("30").env_remove("GREPPA_SANDBOX_ROOT");
     let child = ChildGuard::spawn(&mut command);
@@ -126,7 +126,7 @@ fn spawn_without_marker() -> ChildGuard {
     child
 }
 
-fn spawn_with_marker(root: &Path) -> ChildGuard {
+pub(in crate::sandbox) fn spawn_with_marker(root: &Path) -> ChildGuard {
     let mut command = Command::new("sleep");
     command
         .arg("30")
@@ -194,7 +194,7 @@ fn spawn_exiting() -> ChildGuard {
     ChildGuard::spawn(&mut Command::new("true"))
 }
 
-fn record_child(path: &Path, child: &ChildGuard) -> u64 {
+pub(in crate::sandbox) fn record_child(path: &Path, child: &ChildGuard) -> u64 {
     let started = process_start(child.id()).expect("the child has a start time");
 
     fs::write(path, format!("{} {started}\n", child.id())).expect("write the record");

@@ -302,4 +302,4 @@ fn stop_loop(path: &Path, pid: u32, started: u64, timeout: Duration) -> anyhow::
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

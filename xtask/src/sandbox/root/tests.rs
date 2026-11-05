@@ -178,6 +178,29 @@ fn install_openers_writes_stubs_that_only_log_the_url() {
 }
 
 #[test]
+fn opener_stubs_refuse_an_opened_log_linked_after_installation() {
+    let root = crate::test_support::temporary_directory();
+    fs::create_dir(root.path().join("bin")).expect("create the bin folder");
+    install_openers(root.path()).expect("the openers are installed");
+    let target = crate::test_support::temporary_directory();
+    let marker = target.path().join("marker");
+    fs::write(&marker, "keep").expect("write the marker");
+    std::os::unix::fs::symlink(&marker, root.path().join("opened")).expect("link the log");
+
+    for opener in ["xdg-open", "open"] {
+        let status = std::process::Command::new(root.path().join("bin").join(opener))
+            .arg("https://example.com")
+            .stderr(std::process::Stdio::null())
+            .status()
+            .expect("run the opener stub");
+
+        assert!(!status.success(), "{opener} refuses the linked log");
+    }
+
+    assert_eq!(fs::read_to_string(&marker).expect("the marker"), "keep");
+}
+
+#[test]
 fn install_openers_refuses_a_linked_opener_and_leaves_its_target() {
     let root = crate::test_support::temporary_sandbox_root("opener-linked");
     prepare_root(root.path()).expect("the root is prepared");

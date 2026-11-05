@@ -1,8 +1,12 @@
 use std::os::unix::fs::PermissionsExt;
+use std::time::Duration;
 
 use thiserror::Error;
 
 use super::super::display_start::tests::{record_live_display, stale_display_cases};
+use super::super::identity::tests::{
+    record_child, spawn_ready_sleep, spawn_with_marker, spawn_without_marker,
+};
 use super::super::root::{RootError, RootReason};
 use super::*;
 
@@ -199,17 +203,90 @@ fn recorded_scene_reports_a_missing_record() {
 
 #[test]
 fn a_failed_start_keeps_its_error_when_cleanup_fails() {
-    let root = crate::test_support::temporary_sandbox_root("failed-start");
-    let workspace = crate::workspace_root();
-    fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755)).expect("set the mode");
+    let root = live_sandbox("failed-start");
+    fs::write(root.path().join("mode"), "headless\n").expect("write the mode");
+    prepare_root(root.path()).expect("the root is prepared");
+    let target = crate::test_support::temporary_directory();
+    let marker = target.path().join("marker");
+    fs::write(&marker, "keep").expect("write the marker");
+    let link = root.path().join("bin").join("xdg-open");
+    std::os::unix::fs::symlink(&marker, &link).expect("link the opener");
+    let mut visited = Vec::new();
 
-    let error =
-        start_window(&workspace, "test", root.path(), "app", false).expect_err("the start fails");
-
-    assert_eq!(
-        error.to_string(),
-        "The real app has no window yet. Use a scene name such as smoke-2."
+    let started = start_window_inner(
+        "test",
+        root.path(),
+        Path::new("/nonexistent/greppa-scene"),
+        "smoke-2",
+        false,
     );
+    let error = clean_up_failed_start(root.path(), started, |target| {
+        visited.push(target);
+        Err(WillNotStop.into())
+    })
+    .expect_err("the start fails");
+
+    assert!(
+        matches!(
+            error.downcast_ref::<RootError>(),
+            Some(RootError::LinkedOpener { path }) if path == &link
+        ),
+        "unexpected error: {error:#}"
+    );
+    assert_eq!(visited, cleanup_order(root.path())[..1]);
+    assert!(
+        root.path().join("weston.pid").is_file(),
+        "the root must stay"
+    );
+    assert_eq!(fs::read_to_string(&marker).expect("the marker"), "keep");
+}
+
+#[test]
+fn stop_target_stops_a_recorded_child_and_removes_its_record() {
+    let root = crate::test_support::temporary_sandbox_root("stop-target");
+    let window_record = root.path().join("pid");
+    let recorded = root.path().join("xwayland.pid");
+
+    let mut window = spawn_with_marker(root.path());
+    record_child(&window_record, &window);
+    stop_target(StopTarget::Window {
+        root: root.path().to_path_buf(),
+    })
+    .expect("the window stops");
+
+    assert!(
+        window.wait_for_exit(Duration::from_secs(2)),
+        "window: stopped"
+    );
+    assert!(!window_record.exists(), "window: the record is removed");
+
+    let mut child = spawn_ready_sleep();
+    record_child(&recorded, &child);
+    stop_target(StopTarget::Recorded {
+        path: recorded.clone(),
+    })
+    .expect("the recorded child stops");
+
+    assert!(
+        child.wait_for_exit(Duration::from_secs(2)),
+        "recorded: stopped"
+    );
+    assert!(!recorded.exists(), "recorded: the record is removed");
+}
+
+#[test]
+fn stop_target_leaves_a_window_without_the_sandbox_marker_running() {
+    let root = crate::test_support::temporary_sandbox_root("stop-target-unmarked");
+    let window_record = root.path().join("pid");
+    let mut window = spawn_without_marker();
+    record_child(&window_record, &window);
+
+    stop_target(StopTarget::Window {
+        root: root.path().to_path_buf(),
+    })
+    .expect("the stale record is dropped");
+
+    assert!(window.is_running(), "an unmarked child must keep running");
 }
 
 fn live_sandbox(label: &str) -> tempfile::TempDir {
@@ -356,4 +433,22 @@ fn down_removes_a_private_root_without_records() {
     down("test", root.path()).expect("the sandbox goes down");
 
     assert!(!root.path().exists());
+}
+
+#[test]
+fn a_failed_command_exits_with_failure() {
+    let root = crate::test_support::temporary_sandbox_root("dispatch");
+    let base = root
+        .path()
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("a named root");
+    let name = base
+        .strip_prefix("greppa-sandbox-")
+        .expect("a sandbox root name");
+    assert_eq!(root_path(name), root.path());
+
+    let code = run(&crate::workspace_root(), name, Sandbox::Log);
+
+    assert_eq!(code, ExitCode::FAILURE, "a missing scene log fails");
 }

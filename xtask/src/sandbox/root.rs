@@ -310,6 +310,42 @@ mod tests {
     }
 
     #[test]
+    fn root_reasons_render_the_refusal_text() {
+        assert_eq!(RootReason::Symlink.to_string(), "it is a symlink");
+        assert_eq!(RootReason::NotDirectory.to_string(), "it is not a folder");
+        assert_eq!(
+            RootReason::WrongOwner.to_string(),
+            "it is not owned by the current user"
+        );
+        assert_eq!(
+            RootReason::WrongMode { mode: 0o755 }.to_string(),
+            "its mode is 755, not 700"
+        );
+    }
+
+    #[test]
+    fn root_errors_render_the_refusal_text() {
+        let unsafe_error = RootError::Unsafe {
+            path: PathBuf::from("/var/tmp/greppa-sandbox-x"),
+            reason: RootReason::WrongMode { mode: 0o755 },
+        };
+
+        assert_eq!(
+            unsafe_error.to_string(),
+            "refusing /var/tmp/greppa-sandbox-x: its mode is 755, not 700"
+        );
+
+        let linked = RootError::LinkedPath {
+            path: PathBuf::from("/var/tmp/greppa-sandbox-x/run"),
+        };
+
+        assert_eq!(
+            linked.to_string(),
+            "refusing the symlinked sandbox path /var/tmp/greppa-sandbox-x/run"
+        );
+    }
+
+    #[test]
     fn linked_paths_lists_control_files() {
         let paths = linked_paths(Path::new("/var/tmp/greppa-sandbox-smoke"));
 
@@ -338,10 +374,13 @@ mod tests {
         let error = refuse_linked_paths(&root).expect_err("the linked path is refused");
 
         assert!(
-            matches!(error, RootError::LinkedPath { .. }),
+            matches!(&error, RootError::LinkedPath { path } if path == &link),
             "unexpected error: {error}"
         );
-        assert!(error.to_string().contains("symlinked"));
+        assert_eq!(
+            error.to_string(),
+            format!("refusing the symlinked sandbox path {}", link.display())
+        );
         assert!(marker.is_file(), "the target must not change");
         assert!(
             fs::symlink_metadata(&link)

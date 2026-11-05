@@ -6,36 +6,37 @@
 )]
 
 use std::fs;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::process::Child;
 
 pub(crate) fn remove_file(path: &Path) {
     if let Err(error) = fs::remove_file(path)
-        && error.kind() != ErrorKind::NotFound
+        && let Some(warning) =
+            crate::cleanup::cleanup_warning(&format!("remove {}", path.display()), &error)
     {
-        panic!("Could not remove {}: {error}", path.display());
+        panic!("{warning}");
     }
 }
 
 pub(crate) fn remove_dir_all(path: &Path) {
     if let Err(error) = fs::remove_dir_all(path)
-        && error.kind() != ErrorKind::NotFound
+        && let Some(warning) =
+            crate::cleanup::cleanup_warning(&format!("remove {}", path.display()), &error)
     {
-        panic!("Could not remove {}: {error}", path.display());
+        panic!("{warning}");
     }
 }
 
 pub(crate) fn stop_child(child: &mut Child) {
     if let Err(error) = child.kill()
-        && error.kind() != ErrorKind::NotFound
+        && let Some(warning) = crate::cleanup::cleanup_warning("stop the process", &error)
     {
-        panic!("Could not stop the process: {error}");
+        panic!("{warning}");
     }
 
     if let Err(error) = child.wait()
-        && error.kind() != ErrorKind::NotFound
+        && let Some(warning) = crate::cleanup::cleanup_warning("reap the process", &error)
     {
-        panic!("Could not reap the process: {error}");
+        panic!("{warning}");
     }
 }

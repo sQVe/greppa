@@ -192,15 +192,15 @@ mod linux {
         )]
         fn drop(&mut self) {
             if let Err(error) = self.child.kill()
-                && error.kind() != std::io::ErrorKind::NotFound
+                && let Some(warning) = crate::cleanup::cleanup_warning("stop the scene", &error)
             {
-                eprintln!("Could not stop the scene: {error}");
+                eprintln!("{warning}");
             }
 
             if let Err(error) = self.child.wait()
-                && error.kind() != std::io::ErrorKind::NotFound
+                && let Some(warning) = crate::cleanup::cleanup_warning("reap the scene", &error)
             {
-                eprintln!("Could not reap the scene: {error}");
+                eprintln!("{warning}");
             }
         }
     }

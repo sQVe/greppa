@@ -193,7 +193,7 @@ fn stop_process(path: &Path, pid: u32, started: u64) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            anyhow::bail!("Could not open the process {pid}: {error}");
+            return Err(error).with_context(|| format!("Could not open the process {pid}"));
         }
     };
 
@@ -207,10 +207,13 @@ fn stop_process(path: &Path, pid: u32, started: u64) -> anyhow::Result<()> {
     reason = "a cleanup failure must not hide the original error"
 )]
 fn send_term(pid: u32, pidfd: &rustix::fd::OwnedFd) {
-    if let Err(error) = rustix::process::pidfd_send_signal(pidfd, rustix::process::Signal::TERM)
-        && error != rustix::io::Errno::SRCH
-    {
-        eprintln!("Could not stop the process {pid}: {error}");
+    if let Err(error) = rustix::process::pidfd_send_signal(pidfd, rustix::process::Signal::TERM) {
+        let error = std::io::Error::from(error);
+
+        if let Some(warning) = cleanup::cleanup_warning(&format!("stop the process {pid}"), &error)
+        {
+            eprintln!("{warning}");
+        }
     }
 }
 

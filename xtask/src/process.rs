@@ -116,9 +116,23 @@ mod tests {
             .expect("a process timeout");
 
         assert!(
-            matches!(timeout, ProcessError::Timeout { program, .. } if program == "sh"),
+            matches!(
+                timeout,
+                ProcessError::Timeout { program, duration }
+                    if program == "sh" && *duration == Duration::from_millis(200)
+            ),
             "unexpected error: {error:#}"
         );
+    }
+
+    #[test]
+    fn a_timeout_names_the_program_and_seconds() {
+        let timeout = ProcessError::Timeout {
+            program: "weston".to_string(),
+            duration: Duration::from_secs(30),
+        };
+
+        assert_eq!(timeout.to_string(), "weston timed out after 30 seconds.");
     }
 
     #[test]

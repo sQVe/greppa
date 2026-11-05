@@ -138,7 +138,7 @@ fn recorded_scene(root: &Path, scene_name: Option<&str>) -> anyhow::Result<Strin
     fs::read_to_string(root.join("scene"))
         .map(|scene| scene.trim().to_string())
         .map_err(|_| {
-            anyhow::anyhow!("The sandbox is not up; run 'cargo xtask sandbox up <scene>' first")
+            anyhow::anyhow!("The sandbox is not up; run 'cargo xtask sandbox up <scene>' first.")
         })
 }
 
@@ -275,7 +275,9 @@ fn opened(root: &Path) -> anyhow::Result<()> {
     match fs::read_to_string(root.join("opened")) {
         Ok(opened) => print!("{opened}"),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => anyhow::bail!("Could not read the opened links: {error}"),
+        Err(error) => {
+            return Err(error).with_context(|| "Could not read the opened links");
+        }
     }
 
     Ok(())
@@ -322,6 +324,7 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::path::{Path, PathBuf};
 
+    use super::super::root::{RootError, RootReason};
     use super::*;
 
     fn temporary_root(label: &str) -> PathBuf {
@@ -368,10 +371,19 @@ mod tests {
         std::os::unix::fs::symlink(&target, &root).expect("link the root");
 
         let error = cleanup(&root).expect_err("the symlink is refused");
+        let root_error = error
+            .downcast_ref::<RootError>()
+            .expect("the refusal is a root error");
 
         assert!(
-            error.to_string().contains("symlink"),
-            "unexpected error: {error}"
+            matches!(
+                root_error,
+                RootError::Unsafe {
+                    path,
+                    reason: RootReason::Symlink,
+                } if path == &root
+            ),
+            "unexpected error: {error:#}"
         );
         assert!(marker.is_file(), "cleanup must not touch the link target");
         assert!(
@@ -393,10 +405,19 @@ mod tests {
         fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).expect("set the mode");
 
         let error = cleanup(&root).expect_err("the mode is refused");
+        let root_error = error
+            .downcast_ref::<RootError>()
+            .expect("the refusal is a root error");
 
         assert!(
-            error.to_string().contains("755"),
-            "unexpected error: {error}"
+            matches!(
+                root_error,
+                RootError::Unsafe {
+                    path,
+                    reason: RootReason::WrongMode { mode: 0o755 },
+                } if path == &root
+            ),
+            "unexpected error: {error:#}"
         );
         let metadata = fs::symlink_metadata(&root).expect("the root");
         assert!(metadata.is_dir());
@@ -420,10 +441,19 @@ mod tests {
         std::os::unix::fs::symlink(&target, &root).expect("link the root");
 
         let error = require_up("test", &root).expect_err("the symlink is refused");
+        let root_error = error
+            .downcast_ref::<RootError>()
+            .expect("the refusal is a root error");
 
         assert!(
-            error.to_string().contains("symlink"),
-            "unexpected error: {error}"
+            matches!(
+                root_error,
+                RootError::Unsafe {
+                    path,
+                    reason: RootReason::Symlink,
+                } if path == &root
+            ),
+            "unexpected error: {error:#}"
         );
         assert!(marker.is_file(), "the target must not change");
         assert!(
@@ -435,5 +465,41 @@ mod tests {
 
         crate::test_support::remove_file(&root);
         crate::test_support::remove_dir_all(&target);
+    }
+
+    #[test]
+    fn recorded_scene_reports_a_missing_record() {
+        let root = temporary_root("recorded-scene");
+        crate::test_support::remove_dir_all(&root);
+        fs::create_dir(&root).expect("create the root");
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("set the mode");
+
+        let error = recorded_scene(&root, None).expect_err("a missing record fails");
+
+        assert_eq!(
+            error.to_string(),
+            "The sandbox is not up; run 'cargo xtask sandbox up <scene>' first."
+        );
+
+        crate::test_support::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_failed_start_keeps_its_error_when_cleanup_fails() {
+        let root = temporary_root("failed-start");
+        let workspace = crate::workspace_root();
+        crate::test_support::remove_dir_all(&root);
+        fs::create_dir(&root).expect("create the root");
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).expect("set the mode");
+
+        let error =
+            start_window(&workspace, "test", &root, "app", false).expect_err("the start fails");
+
+        assert_eq!(
+            error.to_string(),
+            "The real app has no window yet. Use a scene name such as smoke-2."
+        );
+
+        crate::test_support::remove_dir_all(&root);
     }
 }

@@ -1,5 +1,4 @@
 use std::fs;
-use std::io::ErrorKind;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -28,14 +27,17 @@ impl RuntimeDir {
         let mut builder = fs::DirBuilder::new();
         builder.mode(0o700);
 
-        if let Err(error) = builder.create(&path) {
-            anyhow::bail!("Could not create {}: {error}", path.display());
-        }
+        builder
+            .create(&path)
+            .with_context(|| format!("Could not create {}", path.display()))?;
 
         for folder in ["home", "config", "state", "data", "cache", "bin"] {
-            if let Err(error) = builder.create(path.join(folder)) {
+            let folder_path = path.join(folder);
+
+            if let Err(error) = builder.create(&folder_path) {
                 cleanup::remove_dir_all(&path);
-                anyhow::bail!("Could not create {}/{}: {error}", path.display(), folder);
+                return Err(error)
+                    .with_context(|| format!("Could not create {}", folder_path.display()));
             }
         }
 
@@ -54,9 +56,10 @@ impl Drop for RuntimeDir {
     )]
     fn drop(&mut self) {
         if let Err(error) = fs::remove_dir_all(&self.path)
-            && error.kind() != ErrorKind::NotFound
+            && let Some(warning) =
+                cleanup::cleanup_warning(&format!("remove {}", self.path.display()), &error)
         {
-            eprintln!("Could not remove {}: {error}", self.path.display());
+            eprintln!("{warning}");
         }
     }
 }
@@ -93,15 +96,15 @@ impl Drop for Running {
     )]
     fn drop(&mut self) {
         if let Err(error) = self.child.kill()
-            && error.kind() != ErrorKind::NotFound
+            && let Some(warning) = cleanup::cleanup_warning("stop the process", &error)
         {
-            eprintln!("Could not stop the process: {error}");
+            eprintln!("{warning}");
         }
 
         if let Err(error) = self.child.wait()
-            && error.kind() != ErrorKind::NotFound
+            && let Some(warning) = cleanup::cleanup_warning("reap the process", &error)
         {
-            eprintln!("Could not reap the process: {error}");
+            eprintln!("{warning}");
         }
 
         if let Some(display) = &self.display {

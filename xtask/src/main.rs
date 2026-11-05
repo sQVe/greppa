@@ -1,5 +1,4 @@
 mod check;
-#[cfg(target_os = "linux")]
 mod cleanup;
 #[cfg(target_os = "linux")]
 mod display;

@@ -7,7 +7,7 @@ use anyhow::Context as _;
 
 use crate::process::{self, poll_until};
 
-use super::environment::sandbox_environment;
+use super::environment::{caller_environment, sandbox_environment};
 
 const WINDOW_TIMEOUT: Duration = Duration::from_secs(10);
 const INPUT_SETTLE: Duration = Duration::from_millis(150);
@@ -42,7 +42,7 @@ pub(super) fn focus_window(root: &Path, display: &str, title: &str) -> anyhow::R
 
 fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String> {
     let started = Instant::now();
-    let environment = sandbox_environment(root, display);
+    let environment = sandbox_environment(&caller_environment(), root, display);
     let timeout = WINDOW_TIMEOUT.saturating_sub(started.elapsed());
 
     let window = poll_until(timeout, || {
@@ -163,7 +163,7 @@ pub(super) fn move_pointer(
 }
 
 pub(super) fn xdotool(root: &Path, display: &str, arguments: &[String]) -> anyhow::Result<()> {
-    let environment = sandbox_environment(root, display);
+    let environment = sandbox_environment(&caller_environment(), root, display);
     let mut command = Command::new("xdotool");
     command
         .args(arguments)

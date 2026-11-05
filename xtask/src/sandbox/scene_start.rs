@@ -11,7 +11,7 @@ use crate::cleanup;
 use crate::process::poll_until;
 use crate::scene::{self, Ready};
 
-use super::environment::sandbox_environment;
+use super::environment::{caller_environment, sandbox_environment};
 use super::identity::{
     STOP_TIMEOUT, process_is_zombie, process_start, record_process, stop_window,
 };
@@ -50,7 +50,7 @@ pub(super) fn start_scene(
     command
         .arg(scene)
         .env_clear()
-        .envs(sandbox_environment(root, display))
+        .envs(sandbox_environment(&caller_environment(), root, display))
         .stdin(Stdio::null())
         .stdout(log)
         .stderr(errors)

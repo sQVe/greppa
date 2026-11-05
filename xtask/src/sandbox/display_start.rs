@@ -4,11 +4,12 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use crate::cleanup;
 use crate::display;
 
-use super::environment::{nested_weston_environment, weston_environment};
+use super::environment::{caller_environment, nested_weston_environment, weston_environment};
 use super::identity::{STOP_TIMEOUT, record_matches, record_process, stop_recorded};
 use super::root::{prepare_root, socket_name};
 
@@ -35,15 +36,15 @@ pub(super) fn ensure_display(name: &str, root: &Path, headed: bool) -> anyhow::R
     cleanup::remove_file(&root.join("xwayland.pid"));
 
     let mut command = if headed {
-        let runtime = caller_runtime_dir()?;
-        let environment = nested_weston_environment(root, &runtime);
+        let runtime = caller_runtime_dir(std::env::var("XDG_RUNTIME_DIR").ok().as_deref())?;
+        let environment = nested_weston_environment(&caller_environment(), root, &runtime);
 
         display::nested_weston_command(
             &socket_name(name),
             WINDOW_WIDTH,
             WINDOW_HEIGHT,
             &log,
-            &wayland_display()?,
+            &wayland_display(std::env::var("WAYLAND_DISPLAY").ok().as_deref())?,
             &environment,
         )
     } else {
@@ -52,7 +53,7 @@ pub(super) fn ensure_display(name: &str, root: &Path, headed: bool) -> anyhow::R
             WINDOW_WIDTH,
             WINDOW_HEIGHT,
             &log,
-            &weston_environment(root),
+            &weston_environment(&caller_environment(), root),
         )
     };
 
@@ -98,35 +99,113 @@ pub(super) fn recorded_mode(root: &Path) -> Option<String> {
         .map(|mode| mode.trim().to_string())
 }
 
-pub(super) fn require_headed_session(headed: bool) -> anyhow::Result<()> {
+#[derive(Debug, Error, PartialEq, Eq)]
+pub(super) enum HeadedSessionError {
+    #[error(
+        "Headed mode needs WAYLAND_DISPLAY. Run it from the Wayland session, or leave out --headed."
+    )]
+    NoWaylandDisplay,
+    #[error("Headed mode needs an absolute XDG_RUNTIME_DIR to reach the Wayland socket.")]
+    NoAbsoluteRuntimeDir,
+}
+
+pub(super) fn require_headed_session(
+    headed: bool,
+    wayland: Option<&str>,
+    runtime: Option<&str>,
+) -> Result<(), HeadedSessionError> {
     if headed {
-        wayland_display()?;
-        caller_runtime_dir()?;
+        wayland_display(wayland)?;
+        caller_runtime_dir(runtime)?;
     }
 
     Ok(())
 }
 
-fn wayland_display() -> anyhow::Result<String> {
-    match std::env::var("WAYLAND_DISPLAY") {
-        Ok(display) if !display.trim().is_empty() => Ok(display),
-        _ => anyhow::bail!(
-            "Headed mode needs WAYLAND_DISPLAY. Run it from the Wayland session, or leave out --headed."
-        ),
+fn wayland_display(value: Option<&str>) -> Result<String, HeadedSessionError> {
+    match value {
+        Some(display) if !display.trim().is_empty() => Ok(display.to_string()),
+        _ => Err(HeadedSessionError::NoWaylandDisplay),
     }
 }
 
-fn caller_runtime_dir() -> anyhow::Result<PathBuf> {
-    match std::env::var("XDG_RUNTIME_DIR") {
-        Ok(directory) if directory.starts_with('/') => Ok(PathBuf::from(directory)),
-        _ => anyhow::bail!(
-            "Headed mode needs an absolute XDG_RUNTIME_DIR to reach the Wayland socket."
-        ),
+fn caller_runtime_dir(value: Option<&str>) -> Result<PathBuf, HeadedSessionError> {
+    match value {
+        Some(directory) if directory.starts_with('/') => Ok(PathBuf::from(directory)),
+        _ => Err(HeadedSessionError::NoAbsoluteRuntimeDir),
     }
 }
 
 pub(super) fn clean_display_files(root: &Path) {
     if let Ok(display) = fs::read_to_string(root.join("display")) {
         display::clean_display_files(display.trim());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn require_headed_session_refuses_a_missing_or_blank_wayland_display() {
+        for (case, wayland) in [
+            ("missing", None),
+            ("empty", Some("")),
+            ("blank", Some(" \t")),
+        ] {
+            assert_eq!(
+                require_headed_session(true, wayland, Some("/run/user/1000")),
+                Err(HeadedSessionError::NoWaylandDisplay),
+                "{case}"
+            );
+        }
+    }
+
+    #[test]
+    fn require_headed_session_refuses_a_missing_or_relative_runtime_folder() {
+        for (case, runtime) in [("missing", None), ("relative", Some("run/user/1000"))] {
+            assert_eq!(
+                require_headed_session(true, Some("wayland-1"), runtime),
+                Err(HeadedSessionError::NoAbsoluteRuntimeDir),
+                "{case}"
+            );
+        }
+    }
+
+    #[test]
+    fn require_headed_session_accepts_a_valid_session() {
+        assert_eq!(
+            require_headed_session(true, Some("wayland-1"), Some("/run/user/1000")),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn require_headed_session_needs_nothing_when_headless() {
+        assert_eq!(require_headed_session(false, None, None), Ok(()));
+    }
+
+    #[test]
+    fn headed_values_are_returned_unchanged() {
+        assert_eq!(
+            wayland_display(Some(" wayland-1 ")),
+            Ok(" wayland-1 ".to_string())
+        );
+        assert_eq!(
+            caller_runtime_dir(Some("/run/user/1000")),
+            Ok(PathBuf::from("/run/user/1000"))
+        );
+    }
+
+    #[test]
+    fn headed_session_errors_render_the_refusal_text() {
+        assert_eq!(
+            HeadedSessionError::NoWaylandDisplay.to_string(),
+            "Headed mode needs WAYLAND_DISPLAY. Run it from the Wayland session, or leave out --headed."
+        );
+        assert_eq!(
+            HeadedSessionError::NoAbsoluteRuntimeDir.to_string(),
+            "Headed mode needs an absolute XDG_RUNTIME_DIR to reach the Wayland socket."
+        );
     }
 }

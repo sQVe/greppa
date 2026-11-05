@@ -11,7 +11,7 @@ use super::command::{Sandbox, require_program};
 use super::display_start::{
     clean_display_files, display_up, ensure_display, recorded_mode, require_headed_session,
 };
-use super::environment::{sandbox_environment, weston_environment};
+use super::environment::{caller_environment, sandbox_environment, weston_environment};
 use super::identity::{STOP_TIMEOUT, record_xwayland, stop_recorded, stop_window};
 use super::input::{
     CLICK_SETTLE, drag, focus_window, glide, move_pointer, warm_up, window_id, xdotool,
@@ -102,7 +102,11 @@ fn up(
     require_program("weston")?;
     require_program("Xwayland")?;
     require_program("xdotool")?;
-    require_headed_session(headed)?;
+    require_headed_session(
+        headed,
+        std::env::var("WAYLAND_DISPLAY").ok().as_deref(),
+        std::env::var("XDG_RUNTIME_DIR").ok().as_deref(),
+    )?;
 
     start_window(workspace, name, root, scene_name, headed)
 }
@@ -121,7 +125,11 @@ fn restart(
     require_trusted_root(root)?;
 
     let headed = headed.unwrap_or_else(|| recorded_mode(root).as_deref() == Some("headed"));
-    require_headed_session(headed)?;
+    require_headed_session(
+        headed,
+        std::env::var("WAYLAND_DISPLAY").ok().as_deref(),
+        std::env::var("XDG_RUNTIME_DIR").ok().as_deref(),
+    )?;
 
     let scene = recorded_scene(root, scene_name)?;
 
@@ -153,7 +161,7 @@ fn prepare_scene(
     }
 
     let binary = scene::build(workspace)?;
-    let names = scene::names(&binary, &weston_environment(root))?;
+    let names = scene::names(&binary, &weston_environment(&caller_environment(), root))?;
     let scene = scene::validate_scene(scene_name, &names)?;
 
     Ok((binary, scene))
@@ -245,7 +253,7 @@ fn shot(name: &str, root: &Path, file: Option<PathBuf>) -> anyhow::Result<()> {
     let display = require_up(name, root)?;
     let window = window_id(root)?;
     let path = file.unwrap_or_else(|| root.join("shot.png"));
-    let environment = sandbox_environment(root, &display);
+    let environment = sandbox_environment(&caller_environment(), root, &display);
 
     display::import_window(&display, &window, &path, &environment)?;
     println!("{}", path.display());

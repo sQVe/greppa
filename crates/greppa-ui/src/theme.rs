@@ -130,6 +130,27 @@ mod tests {
         minimum: f32,
     }
 
+    #[derive(Debug, PartialEq)]
+    struct ContrastCheck {
+        text: &'static str,
+        surface: &'static str,
+        ratio: f32,
+        minimum: f32,
+    }
+
+    impl ContrastCheck {
+        fn passed(&self) -> bool {
+            self.ratio >= self.minimum
+        }
+
+        fn line(&self) -> String {
+            format!(
+                "{} on {}: {:.2}:1, needs {}:1",
+                self.text, self.surface, self.ratio, self.minimum
+            )
+        }
+    }
+
     fn palette() -> Vec<(&'static str, Rgba)> {
         let colors = Theme::light().colors;
 
@@ -220,56 +241,60 @@ mod tests {
             .unwrap_or_else(|| panic!("the palette has no {name}"))
     }
 
-    fn result(pair: &ContrastPair, palette: &[(&'static str, Rgba)]) -> (bool, String) {
+    fn check(pair: &ContrastPair, palette: &[(&'static str, Rgba)]) -> ContrastCheck {
         let ratio = contrast_ratio(lookup(palette, pair.text), lookup(palette, pair.surface));
-        let line = format!(
-            "{} on {}: {:.2}:1, needs {}:1",
-            pair.text, pair.surface, ratio, pair.minimum
-        );
 
-        (ratio >= pair.minimum, line)
+        ContrastCheck {
+            text: pair.text,
+            surface: pair.surface,
+            ratio,
+            minimum: pair.minimum,
+        }
     }
 
-    fn failures(palette: &[(&'static str, Rgba)]) -> Vec<String> {
+    fn failures(palette: &[(&'static str, Rgba)]) -> Vec<ContrastCheck> {
         pairs()
             .iter()
-            .map(|pair| result(pair, palette))
-            .filter(|(passed, _)| !passed)
-            .map(|(_, line)| line)
+            .map(|pair| check(pair, palette))
+            .filter(|checked| !checked.passed())
             .collect()
     }
 
-    fn expected(known: &[&str], palette: &[(&'static str, Rgba)]) -> Vec<String> {
+    fn expected(
+        known: &[(&'static str, &'static str)],
+        palette: &[(&'static str, Rgba)],
+    ) -> Vec<ContrastCheck> {
         let checked = pairs();
 
         known
             .iter()
-            .map(|key| {
+            .map(|(text, surface)| {
                 let found = checked
                     .iter()
-                    .find(|pair| format!("{} on {}", pair.text, pair.surface) == *key);
+                    .find(|pair| pair.text == *text && pair.surface == *surface)
+                    .unwrap_or_else(|| {
+                        panic!("the known failure {text} on {surface} is not a pair")
+                    });
 
-                let found =
-                    found.unwrap_or_else(|| panic!("the known failure {key} is not a pair"));
-
-                result(found, palette).1
+                check(found, palette)
             })
             .collect()
     }
 
-    fn known_failures() -> &'static [&'static str] {
+    fn known_failures() -> &'static [(&'static str, &'static str)] {
         &[]
     }
 
     #[test]
     fn contrast_check_names_both_tokens_and_the_ratio() {
         let palette = [("foreground", rgb(0x888888)), ("surface", rgb(0xFFFFFF))];
-        let checked = pair("foreground", "surface", 4.5);
+        let checked = check(&pair("foreground", "surface", 4.5), &palette);
 
-        let (passed, line) = result(&checked, &palette);
-
-        assert!(!passed);
-        assert_eq!(line, "foreground on surface: 3.54:1, needs 4.5:1");
+        assert_eq!(checked.text, "foreground");
+        assert_eq!(checked.surface, "surface");
+        assert_eq!(checked.minimum, 4.5);
+        assert!((checked.ratio - 3.54).abs() < 0.01);
+        assert!(!checked.passed(), "{} should fail", checked.line());
     }
 
     #[test]
@@ -287,7 +312,8 @@ mod tests {
         assert!(
             reported
                 .iter()
-                .any(|line| line.starts_with("foreground on background:"))
+                .any(|checked| checked.text == "foreground" && checked.surface == "background"),
+            "the new failing foreground on background pair is not reported"
         );
         assert_ne!(reported, expected(&[], &broken));
     }
@@ -296,17 +322,27 @@ mod tests {
     fn a_listed_pair_that_starts_to_pass_is_reported() {
         assert_ne!(
             failures(&palette()),
-            expected(&["foreground on surface"], &palette())
+            expected(&[("foreground", "surface")], &palette())
         );
     }
 
     #[test]
+    fn expected_selects_the_pair_named_by_a_known_failure() {
+        let checks = expected(&[("foreground", "surface")], &palette());
+
+        assert_eq!(checks.len(), 1);
+        assert_eq!(checks[0].text, "foreground");
+        assert_eq!(checks[0].surface, "surface");
+        assert_eq!(checks[0].minimum, 4.5);
+    }
+
+    #[test]
     fn every_pair_names_its_text_and_surface_once() {
-        let keys: Vec<String> = pairs()
+        let keys: Vec<(&str, &str)> = pairs()
             .iter()
-            .map(|pair| format!("{} on {}", pair.text, pair.surface))
+            .map(|pair| (pair.text, pair.surface))
             .collect();
-        let unique: HashSet<&String> = keys.iter().collect();
+        let unique: HashSet<(&str, &str)> = keys.iter().copied().collect();
 
         assert_eq!(unique.len(), keys.len());
     }

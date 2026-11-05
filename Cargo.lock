@@ -2630,6 +2630,7 @@ name = "greppa-ui"
 version = "0.0.0"
 dependencies = [
  "gpui-kit",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

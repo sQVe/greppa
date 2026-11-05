@@ -22,6 +22,10 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
+#[expect(
+    clippy::print_stderr,
+    reason = "the usage message is the command's output"
+)]
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
     let root = workspace_root();

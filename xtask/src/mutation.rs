@@ -442,6 +442,10 @@ fn ran_report(mode: Mode, survivors: &[Survivor], unmutated: &[String]) -> (Valu
     (report, exit)
 }
 
+#[expect(
+    clippy::print_stdout,
+    reason = "the mutation report is the command's stdout output"
+)]
 pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
     let request = match parse_request(arguments) {
         Ok(request) => request,

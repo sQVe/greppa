@@ -1,7 +1,7 @@
 use std::process::ExitCode;
 
 use gpui_kit::*;
-use greppa_ui::scenes::{SCENE_NAMES, SceneName, render_scene, unknown_scene_message};
+use greppa_ui::scenes::{SCENE_NAMES, SceneName, render_scene};
 use greppa_ui::theme::{layout, theme};
 
 struct SceneView {
@@ -54,6 +54,11 @@ fn ready_line(name: SceneName, scale: f32, title: &str) -> String {
     )
 }
 
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "the list and ready line go to stdout, the errors to stderr"
+)]
 fn main() -> ExitCode {
     let argument = std::env::args().nth(1);
 
@@ -65,10 +70,13 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    let Some(name) = argument.as_deref().and_then(SceneName::parse) else {
-        eprintln!("{}", unknown_scene_message(argument.as_deref()));
+    let name = match SceneName::from_argument(argument.as_deref()) {
+        Ok(name) => name,
+        Err(error) => {
+            eprintln!("{error}");
 
-        return ExitCode::FAILURE;
+            return ExitCode::FAILURE;
+        }
     };
     let title = format!("greppa-scene-{}", name.as_str());
 

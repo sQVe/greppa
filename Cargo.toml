@@ -13,6 +13,7 @@ publish = false
 [workspace.dependencies]
 gpui-kit = "=0.9.0"
 serde_json = "1"
+thiserror = "2"
 
 [patch.crates-io]
 gpui-component = { path = "vendor/gpui-component" }
@@ -28,3 +29,8 @@ correctness = { level = "deny", priority = -1 }
 dbg_macro = "warn"
 todo = "warn"
 undocumented_unsafe_blocks = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+allow_attributes_without_reason = "warn"
+should_panic_without_expect = "warn"
+redundant_clone = "warn"

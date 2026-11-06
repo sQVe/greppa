@@ -46,15 +46,39 @@ impl Sandbox {
     }
 }
 
-// CI sets GREPPA_E2E_KEEP so a failed run leaves its logs and shots for upload.
+impl Sandbox {
+    // `down` deletes the root, so its logs and shots are copied out first for CI to upload.
+    fn keep_diagnostics(&self, folder: &Path) -> std::io::Result<()> {
+        let target = folder.join(&self.name);
+
+        fs::create_dir_all(&target)?;
+
+        for entry in fs::read_dir(self.root())? {
+            let path = entry?.path();
+            let is_diagnostic = path
+                .extension()
+                .is_some_and(|extension| extension == "log" || extension == "png");
+
+            if is_diagnostic && let Some(file) = path.file_name() {
+                fs::copy(&path, target.join(file))?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl Drop for Sandbox {
     #[expect(
         clippy::print_stderr,
         reason = "no caller can take a cleanup error in drop"
     )]
     fn drop(&mut self) {
-        if std::env::var_os("GREPPA_E2E_KEEP").is_some() {
-            return;
+        if let Some(folder) = std::env::var_os("GREPPA_E2E_ARTIFACTS")
+            && self.root().is_dir()
+            && let Err(error) = self.keep_diagnostics(Path::new(&folder))
+        {
+            eprintln!("could not keep the diagnostics of {}: {error}", self.name);
         }
 
         let output = self.run(&["down"]);

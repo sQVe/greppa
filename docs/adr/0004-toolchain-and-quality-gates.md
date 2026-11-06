@@ -18,7 +18,8 @@ greppa ships under MIT, so every dependency must have a license that allows it.
 ## Decision
 
 greppa pins a stable Rust toolchain, formats with default rustfmt, lints with selected clippy lints,
-checks dependencies with cargo-deny, and runs formatting and linting in prek hooks.
+checks dependencies with cargo-deny, runs formatting and linting in prek hooks, and runs mutation
+testing with cargo-mutants as advice.
 
 ### Toolchain
 
@@ -58,6 +59,20 @@ checks dependencies with cargo-deny, and runs formatting and linting in prek hoo
   before a commit.
 - `cargo xtask check` is the one entry point for the full set of checks.
 
+### Mutation testing
+
+- cargo-mutants mutates greppa-core, greppa-ui, and `xtask`. `.cargo/mutants.toml` leaves out the
+  app binary, which needs a display to run, the mock scenes and their binary, which hold fake data,
+  and test code and test helpers. Each exclusion has a comment that names its reason.
+- A single function that only drives a display or an outside tool, such as Weston, xdotool, or
+  ImageMagick, is skipped with `#[mutants::skip]` and a one-line comment that names the reason.
+  Code that runs without a display stays under mutation, even when its survivors are hard to kill.
+- CI mutates the diff of each pull request with `cargo xtask mutation changed`, and the scheduled
+  run on `main` audits the whole workspace and saves the cargo-mutants report.
+- Survivors are advice. They never fail a pull request or the audit, because some survivors are
+  equivalent mutants that no test can catch, and a hard gate would push people to write tests
+  that only kill a mutant. An error, an unmutated file, or a failing baseline fails the job.
+
 ## Consequences
 
 ### Positive
@@ -67,6 +82,7 @@ checks dependencies with cargo-deny, and runs formatting and linting in prek hoo
 - Default rustfmt needs no config to maintain and matches most Rust code a reader has seen.
 - A GPL dependency or an unknown source fails the build before it ships.
 - Format and lint failures show up before a commit, not only in CI.
+- Mutation testing shows code that no test checks, on each pull request and in the weekly audit.
 
 ### Negative
 
@@ -76,6 +92,8 @@ checks dependencies with cargo-deny, and runs formatting and linting in prek hoo
 - Selected lints catch less than the pedantic group, so some style problems are left to review.
 - A new license in the dependency tree blocks the build until someone reviews and allows it.
 - Hooks add time to each commit, and prek is one more tool to install.
+- Mutation runs take much longer than the tests, and survivors can be left unfixed because they
+  do not fail CI.
 
 ## Alternatives considered
 
@@ -94,6 +112,11 @@ lints greppa would turn off one by one, and only two of the eight surveyed proje
 
 Build with whatever stable release is installed. Rejected because a new release can add lints or
 change formatting, so the same code passes on one machine and fails on another.
+
+### Survivors fail CI
+
+Fail a pull request when a mutant survives. Rejected because equivalent mutants cannot be caught,
+so each one would need a skip or a test that only exists to kill it.
 
 ### No license and advisory checks
 

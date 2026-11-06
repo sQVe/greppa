@@ -192,6 +192,11 @@ fn count_mutants(
         anyhow::bail!("cargo mutants --list failed with {}.", listing.status);
     }
 
+    // cargo-mutants prints nothing, not `[]`, when a diff changes no Rust source.
+    if listing.stdout.trim_ascii().is_empty() {
+        return Ok(BTreeMap::new());
+    }
+
     let mutants: Value = serde_json::from_slice(&listing.stdout)
         .with_context(|| "cargo mutants --list printed invalid JSON")?;
 

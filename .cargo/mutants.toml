@@ -1,10 +1,17 @@
 exclude_globs = [
+  # The app binary only wires GPUI windows together and needs a display to run.
   "crates/greppa/**",
+  # The scene binary only opens a mock scene window and needs a display to run.
   "crates/greppa-ui/src/bin/**",
+  # Mock scenes hold fake data for UI review, not logic that tests check.
   "crates/greppa-ui/src/scenes/**",
-  "xtask/**",
+  # Integration tests: a mutant in a test only weakens the test itself.
   "**/tests/**",
+  # Unit test modules: a mutant in a test only weakens the test itself.
+  "**/tests.rs",
+  # Test helpers: a mutant in a helper only weakens the tests that use it.
   "**/test_support.rs",
+  # Test helper modules: a mutant in a helper only weakens the tests that use it.
   "**/test_support/**",
 ]
 test_tool = "nextest"

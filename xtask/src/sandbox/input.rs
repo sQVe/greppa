@@ -36,6 +36,8 @@ pub(super) fn window_id(root: &Path) -> anyhow::Result<String> {
     Ok(window)
 }
 
+// Sends xdotool input to a live display.
+#[mutants::skip]
 pub(super) fn focus_window(root: &Path, display: &str, title: &str) -> anyhow::Result<()> {
     let window = find_window(root, display, title)?;
 
@@ -47,6 +49,8 @@ pub(super) fn focus_window(root: &Path, display: &str, title: &str) -> anyhow::R
     xdotool(root, display, &["click".to_string(), "1".to_string()])
 }
 
+// Sends xdotool input to a live display.
+#[mutants::skip]
 fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String> {
     let started = Instant::now();
     let environment = sandbox_environment(&caller_environment(), root, display);
@@ -91,6 +95,8 @@ fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String
     })
 }
 
+// Sends xdotool input to a live display.
+#[mutants::skip]
 pub(super) fn warm_up(root: &Path, display: &str, window: &str) -> anyhow::Result<()> {
     move_pointer(root, display, window, 0, 0)?;
     std::thread::sleep(INPUT_SETTLE);
@@ -98,6 +104,8 @@ pub(super) fn warm_up(root: &Path, display: &str, window: &str) -> anyhow::Resul
     Ok(())
 }
 
+// Sends xdotool input to a live display.
+#[mutants::skip]
 pub(super) fn glide(
     root: &Path,
     display: &str,
@@ -118,6 +126,8 @@ pub(super) fn glide(
 
 /// Presses button 1, glides, and always releases after a successful press. The motion error is
 /// returned if both the motion and the release fail, so the caller sees the first cause.
+// Sends xdotool input to a live display.
+#[mutants::skip]
 pub(super) fn drag(
     root: &Path,
     display: &str,
@@ -149,6 +159,8 @@ fn interpolate(from: i32, to: i32, step: u32) -> i32 {
     (i64::from(from) + moved) as i32
 }
 
+// Sends xdotool input to a live display.
+#[mutants::skip]
 pub(super) fn move_pointer(
     root: &Path,
     display: &str,
@@ -169,6 +181,8 @@ pub(super) fn move_pointer(
     )
 }
 
+// Sends xdotool input to a live display.
+#[mutants::skip]
 pub(super) fn xdotool(root: &Path, display: &str, arguments: &[String]) -> anyhow::Result<()> {
     let environment = sandbox_environment(&caller_environment(), root, display);
     let mut command = Command::new("xdotool");

@@ -207,6 +207,8 @@ mod linux {
         }
     }
 
+    // Runs a scene on a live private display.
+    #[mutants::skip]
     pub(super) fn capture(root: &Path, scene: &str) -> anyhow::Result<()> {
         let binary = scene::build(root)?;
         let runtime = RuntimeDir::create("greppa-mock")?;
@@ -278,6 +280,8 @@ mod linux {
         Running::spawn(command, "weston")
     }
 
+    // Runs ImageMagick's identify on a real screenshot.
+    #[mutants::skip]
     fn read_shot_size(path: &Path, environment: &[(String, String)]) -> anyhow::Result<PixelSize> {
         let mut command = Command::new("identify");
         command
@@ -305,6 +309,8 @@ mod linux {
         }
     }
 
+    // Runs ImageMagick's magick on a real screenshot.
+    #[mutants::skip]
     fn crop_image(
         shot: &Path,
         crop_path: &Path,

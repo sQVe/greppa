@@ -35,8 +35,8 @@ sudo pacman -S --needed alsa-lib fontconfig freetype2 openssl vulkan-headers \
   wayland libx11 libxcb libxkbcommon libxkbcommon-x11 pkgconf
 ```
 
-The `Test (Linux)` job in `.github/workflows/ci.yml` installs the Debian and Ubuntu list before it
-builds GPUI. The check job does not compile code and needs no display.
+The `Test (Linux)` and mutation jobs in `.github/workflows/ci.yml` install the Debian and Ubuntu
+list before they build GPUI. The check job does not compile code and needs no display.
 
 ### Debugger builds
 
@@ -203,7 +203,9 @@ cargo xtask mutation audit crates/greppa-core/src/lib.rs
 cargo xtask mutation changed main --max-mutants 50
 ```
 
-`.cargo/mutants.toml` leaves out the app binary, `xtask`, and test helpers. A missed mutant is a
+`.cargo/mutants.toml` leaves out the app binary, the mock scenes, and test code and helpers.
+Functions that only drive a display or an outside tool carry `#[mutants::skip]` and a comment
+that names the reason. A missed mutant is a
 survivor: add a test that fails when that line changes. The command exits 0 when every mutant is
 caught, 2 for survivors in changed mode, and 1 for an error or an unmutated file. cargo-mutants
 writes its logs to `target/mutants/mutants.out`.
@@ -216,6 +218,12 @@ advisories fail cargo-deny without a code change.
 - `Check` runs `cargo xtask check tidy` on Linux.
 - `Test (Linux)` and `Test (macOS)` run `cargo xtask check build`. greppa does not support
   Windows; see [ADR 0007](adr/0007-linux-and-macos-only.md).
+- `Mutation (changed)` runs on pull requests. It runs `cargo xtask mutation changed` against the
+  pull request's base, prints the JSON report, and lists survivors in the job summary. Survivors
+  pass the job; an error or an unmutated file fails it.
+- `Mutation audit` runs on the weekly schedule and on manual runs from `main`. It runs
+  `cargo mutants --workspace` and uploads `mutants.out` as an artifact. Survivors and timeouts
+  pass the job; other cargo-mutants failures fail it.
 
 Only runs on `main` save the build cache. Renovate updates dependencies, actions, and the toolchain
 every Monday, after a release is three days old.

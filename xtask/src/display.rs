@@ -264,6 +264,8 @@ pub(crate) fn wait_for_display(log_path: &Path, timeout: Duration) -> anyhow::Re
     })
 }
 
+// Runs ImageMagick's import against a live X display.
+#[mutants::skip]
 pub(crate) fn import_window(
     display: &str,
     window: &str,

@@ -4,6 +4,9 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use anyhow::Context as _;
+
+use crate::cleanup;
 use crate::process::{POLL, TOOL_TIMEOUT, run_with_timeout};
 
 pub(crate) const WESTON_TIMEOUT: Duration = Duration::from_secs(30);
@@ -15,7 +18,7 @@ pub(crate) struct RuntimeDir {
 }
 
 impl RuntimeDir {
-    pub(crate) fn create(prefix: &str) -> Result<Self, String> {
+    pub(crate) fn create(prefix: &str) -> anyhow::Result<Self> {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|elapsed| elapsed.subsec_nanos())
@@ -24,18 +27,17 @@ impl RuntimeDir {
         let mut builder = fs::DirBuilder::new();
         builder.mode(0o700);
 
-        if let Err(error) = builder.create(&path) {
-            return Err(format!("Could not create {}: {error}", path.display()));
-        }
+        builder
+            .create(&path)
+            .with_context(|| format!("Could not create {}", path.display()))?;
 
         for folder in ["home", "config", "state", "data", "cache", "bin"] {
-            if let Err(error) = builder.create(path.join(folder)) {
-                let _ = fs::remove_dir_all(&path);
-                return Err(format!(
-                    "Could not create {}/{}: {error}",
-                    path.display(),
-                    folder
-                ));
+            let folder_path = path.join(folder);
+
+            if let Err(error) = builder.create(&folder_path) {
+                cleanup::remove_dir_all(&path);
+                return Err(error)
+                    .with_context(|| format!("Could not create {}", folder_path.display()));
             }
         }
 
@@ -48,8 +50,17 @@ impl RuntimeDir {
 }
 
 impl Drop for RuntimeDir {
+    #[expect(
+        clippy::print_stderr,
+        reason = "a cleanup failure in Drop has no caller to report it"
+    )]
     fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
+        if let Err(error) = fs::remove_dir_all(&self.path)
+            && let Some(warning) =
+                cleanup::cleanup_warning(&format!("remove {}", self.path.display()), &error)
+        {
+            eprintln!("{warning}");
+        }
     }
 }
 
@@ -59,13 +70,13 @@ pub(crate) struct Running {
 }
 
 impl Running {
-    pub(crate) fn spawn(mut command: Command, name: &str) -> Result<Self, String> {
+    pub(crate) fn spawn(mut command: Command, name: &str) -> anyhow::Result<Self> {
         let child = command
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|error| format!("Could not start {name}: {error}"))?;
+            .with_context(|| format!("Could not start {name}"))?;
 
         Ok(Self {
             child,
@@ -79,9 +90,22 @@ impl Running {
 }
 
 impl Drop for Running {
+    #[expect(
+        clippy::print_stderr,
+        reason = "a cleanup failure in Drop has no caller to report it"
+    )]
     fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        if let Err(error) = self.child.kill()
+            && let Some(warning) = cleanup::cleanup_warning("stop the process", &error)
+        {
+            eprintln!("{warning}");
+        }
+
+        if let Err(error) = self.child.wait()
+            && let Some(warning) = cleanup::cleanup_warning("reap the process", &error)
+        {
+            eprintln!("{warning}");
+        }
 
         if let Some(display) = &self.display {
             clean_display_files(display);
@@ -124,8 +148,8 @@ fn clean_display_files_in(folder: &Path, display: &str, timeout: Duration) {
         return;
     }
 
-    let _ = fs::remove_file(&lock);
-    let _ = fs::remove_file(&socket);
+    cleanup::remove_file(&lock);
+    cleanup::remove_file(&socket);
 }
 
 fn lock_owner(lock: &Path) -> Option<u32> {
@@ -209,7 +233,7 @@ pub(crate) fn display_from_log(log: &str) -> Option<String> {
     })
 }
 
-pub(crate) fn wait_for_display(log_path: &Path, timeout: Duration) -> Result<String, String> {
+pub(crate) fn wait_for_display(log_path: &Path, timeout: Duration) -> anyhow::Result<String> {
     let deadline = Instant::now() + timeout;
 
     loop {
@@ -220,10 +244,10 @@ pub(crate) fn wait_for_display(log_path: &Path, timeout: Duration) -> Result<Str
         }
 
         if Instant::now() >= deadline {
-            return Err(format!(
+            anyhow::bail!(
                 "weston did not print a display within {} seconds.",
                 timeout.as_secs()
-            ));
+            );
         }
 
         std::thread::sleep(POLL);
@@ -235,7 +259,7 @@ pub(crate) fn import_window(
     window: &str,
     path: &Path,
     environment: &[(String, String)],
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     let mut command = Command::new("import");
 
     command
@@ -247,10 +271,10 @@ pub(crate) fn import_window(
     let output = run_with_timeout(command, TOOL_TIMEOUT)?;
 
     if !output.status.success() {
-        return Err(format!(
+        anyhow::bail!(
             "import failed: {}",
             String::from_utf8_lossy(&output.stderr).trim()
-        ));
+        );
     }
 
     Ok(())
@@ -375,8 +399,7 @@ mod tests {
         let new_owner = std::thread::spawn(move || {
             std::thread::sleep(POLL);
             fs::write(&replacement, format!("{:>10}\n", std::process::id())).expect("new lock");
-            let _ = dying.kill();
-            let _ = dying.wait();
+            crate::test_support::stop_child(&mut dying);
         });
 
         clean_display_files_in(folder.path(), ":7", Duration::from_secs(10));

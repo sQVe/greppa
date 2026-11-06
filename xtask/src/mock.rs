@@ -23,8 +23,8 @@ pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
     reason = "failure messages are the command's output"
 )]
 fn capture_command(root: &Path, scene: &str) -> ExitCode {
-    if let Err(message) = linux::capture(root, scene) {
-        eprintln!("{message}");
+    if let Err(error) = linux::capture(root, scene) {
+        eprintln!("{error:#}");
 
         return ExitCode::FAILURE;
     }
@@ -51,7 +51,9 @@ mod linux {
     use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
     use std::time::{Duration, Instant};
 
+    use anyhow::Context as _;
     use serde_json::json;
+    use thiserror::Error;
 
     use crate::display::{self, Running, RuntimeDir};
     use crate::environment::{self, ChildDirs};
@@ -108,6 +110,14 @@ mod linux {
         environment::child_environment(&std::env::vars().collect::<Vec<_>>(), &dirs, extras)
     }
 
+    #[derive(Debug, Error)]
+    pub(super) enum CaptureError {
+        #[error("The scene did not print a ready line in time.")]
+        Timeout,
+        #[error("The scene exited before it printed a ready line.")]
+        Closed,
+    }
+
     struct Scene {
         child: Child,
         lines: Receiver<String>,
@@ -119,7 +129,7 @@ mod linux {
             scene: &str,
             display: &str,
             runtime: &Path,
-        ) -> Result<Self, String> {
+        ) -> anyhow::Result<Self> {
             let environment = mock_environment(runtime, Some(display));
             let mut child = Command::new(binary)
                 .arg(scene)
@@ -129,12 +139,12 @@ mod linux {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::inherit())
                 .spawn()
-                .map_err(|error| format!("Could not start the scene: {error}"))?;
+                .context("Could not start the scene")?;
 
             let stdout = child
                 .stdout
                 .take()
-                .ok_or("The scene has no stdout to read.")?;
+                .ok_or_else(|| anyhow::anyhow!("The scene has no stdout to read."))?;
             let (sender, lines) = mpsc::channel();
 
             std::thread::spawn(move || {
@@ -150,18 +160,18 @@ mod linux {
             Ok(Self { child, lines })
         }
 
-        fn ready(&mut self, timeout: Duration) -> Result<Ready, String> {
+        fn ready(&mut self, timeout: Duration) -> Result<Ready, CaptureError> {
             next_ready(&self.lines, timeout)
         }
     }
 
-    fn next_ready(lines: &Receiver<String>, timeout: Duration) -> Result<Ready, String> {
+    fn next_ready(lines: &Receiver<String>, timeout: Duration) -> Result<Ready, CaptureError> {
         let deadline = Instant::now() + timeout;
 
         loop {
             let remaining = deadline
                 .checked_duration_since(Instant::now())
-                .ok_or("The scene did not print a ready line in time.")?;
+                .ok_or(CaptureError::Timeout)?;
 
             match lines.recv_timeout(remaining) {
                 Ok(line) => {
@@ -169,24 +179,33 @@ mod linux {
                         return Ok(ready);
                     }
                 }
-                Err(RecvTimeoutError::Timeout) => {
-                    return Err("The scene did not print a ready line in time.".to_string());
-                }
-                Err(RecvTimeoutError::Disconnected) => {
-                    return Err("The scene exited before it printed a ready line.".to_string());
-                }
+                Err(RecvTimeoutError::Timeout) => return Err(CaptureError::Timeout),
+                Err(RecvTimeoutError::Disconnected) => return Err(CaptureError::Closed),
             }
         }
     }
 
     impl Drop for Scene {
+        #[expect(
+            clippy::print_stderr,
+            reason = "a cleanup failure in Drop has no caller to report it"
+        )]
         fn drop(&mut self) {
-            let _ = self.child.kill();
-            let _ = self.child.wait();
+            if let Err(error) = self.child.kill()
+                && let Some(warning) = crate::cleanup::cleanup_warning("stop the scene", &error)
+            {
+                eprintln!("{warning}");
+            }
+
+            if let Err(error) = self.child.wait()
+                && let Some(warning) = crate::cleanup::cleanup_warning("reap the scene", &error)
+            {
+                eprintln!("{warning}");
+            }
         }
     }
 
-    pub(super) fn capture(root: &Path, scene: &str) -> Result<(), String> {
+    pub(super) fn capture(root: &Path, scene: &str) -> anyhow::Result<()> {
         let binary = scene::build(root)?;
         let runtime = RuntimeDir::create("greppa-mock")?;
         let environment = mock_environment(runtime.path(), None);
@@ -212,23 +231,23 @@ mod linux {
         let crop = crop_box(ready.origin, ready.size, ready.scale);
 
         if !crop_fits(crop, shot_size) {
-            return Err(crop_outside_message(crop, shot_size));
+            anyhow::bail!(crop_outside_message(crop, shot_size));
         }
 
         crop_image(&shot, &folder.join("crop.png"), crop, &environment)?;
         write_capture_json(&folder, &ready, shot_size, crop)
     }
 
-    fn prepare_folder(folder: &Path) -> Result<(), String> {
+    fn prepare_folder(folder: &Path) -> anyhow::Result<()> {
         fs::create_dir_all(folder)
-            .map_err(|error| format!("Could not create {}: {error}", folder.display()))?;
+            .with_context(|| format!("Could not create {}", folder.display()))?;
 
         for file in OUTPUT_FILES {
             let path = folder.join(file);
 
             if path.exists() {
                 fs::remove_file(&path)
-                    .map_err(|error| format!("Could not remove {}: {error}", path.display()))?;
+                    .with_context(|| format!("Could not remove {}", path.display()))?;
             }
         }
 
@@ -244,7 +263,7 @@ mod linux {
         )
     }
 
-    fn start_weston(runtime: &RuntimeDir) -> Result<Running, String> {
+    fn start_weston(runtime: &RuntimeDir) -> anyhow::Result<Running> {
         let log = runtime.path().join("weston.log");
         let socket = format!("greppa-mock-{}", std::process::id());
         let command = display::weston_command(
@@ -258,7 +277,7 @@ mod linux {
         Running::spawn(command, "weston")
     }
 
-    fn read_shot_size(path: &Path, environment: &[(String, String)]) -> Result<PixelSize, String> {
+    fn read_shot_size(path: &Path, environment: &[(String, String)]) -> anyhow::Result<PixelSize> {
         let mut command = Command::new("identify");
         command
             .args(["-format", "%w %h"])
@@ -268,10 +287,10 @@ mod linux {
         let output = process::run_with_timeout(command, process::TOOL_TIMEOUT)?;
 
         if !output.status.success() {
-            return Err(format!(
+            anyhow::bail!(
                 "identify failed: {}",
                 String::from_utf8_lossy(&output.stderr).trim()
-            ));
+            );
         }
 
         let text = String::from_utf8_lossy(&output.stdout);
@@ -281,7 +300,7 @@ mod linux {
 
         match (width, height) {
             (Some(width), Some(height)) => Ok(PixelSize { width, height }),
-            _ => Err(format!("identify printed no width and height: {text}")),
+            _ => anyhow::bail!("identify printed no width and height: {text}"),
         }
     }
 
@@ -290,7 +309,7 @@ mod linux {
         crop_path: &Path,
         crop: Crop,
         environment: &[(String, String)],
-    ) -> Result<(), String> {
+    ) -> anyhow::Result<()> {
         let geometry = crop_geometry(crop);
         let mut command = Command::new("magick");
         command
@@ -302,10 +321,10 @@ mod linux {
         let output = process::run_with_timeout(command, process::TOOL_TIMEOUT)?;
 
         if !output.status.success() {
-            return Err(format!(
+            anyhow::bail!(
                 "magick failed: {}",
                 String::from_utf8_lossy(&output.stderr).trim()
-            ));
+            );
         }
 
         Ok(())
@@ -316,7 +335,7 @@ mod linux {
         ready: &Ready,
         shot: PixelSize,
         crop: Crop,
-    ) -> Result<(), String> {
+    ) -> anyhow::Result<()> {
         let record = json!({
             "scene": ready.scene,
             "shot": { "width": shot.width, "height": shot.height },
@@ -332,7 +351,7 @@ mod linux {
         let path = folder.join("capture.json");
 
         fs::write(&path, format!("{record:#}\n"))
-            .map_err(|error| format!("Could not write {}: {error}", path.display()))
+            .with_context(|| format!("Could not write {}", path.display()))
     }
 
     #[cfg(test)]
@@ -410,7 +429,11 @@ mod linux {
             let (_sender, receiver) = mpsc::channel();
             let error = next_ready(&receiver, Duration::from_millis(10)).expect_err("timeout");
 
-            assert_eq!(error, "The scene did not print a ready line in time.");
+            assert!(matches!(error, CaptureError::Timeout));
+            assert_eq!(
+                error.to_string(),
+                "The scene did not print a ready line in time."
+            );
         }
 
         #[test]
@@ -420,7 +443,11 @@ mod linux {
 
             let error = next_ready(&receiver, Duration::from_millis(10)).expect_err("closed");
 
-            assert_eq!(error, "The scene exited before it printed a ready line.");
+            assert!(matches!(error, CaptureError::Closed));
+            assert_eq!(
+                error.to_string(),
+                "The scene exited before it printed a ready line."
+            );
         }
 
         #[test]

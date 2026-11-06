@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use anyhow::Context as _;
+
 const UI_SOURCE: &str = "crates/greppa-ui/src";
 const THEME_FILE: &str = "theme.rs";
 
@@ -58,7 +60,7 @@ const CORNER_SUFFIXES: &[&str] = &["none", "xs", "sm", "md", "lg", "xl", "2xl", 
 
 const TEXT_SUFFIXES: &[&str] = &["xs", "sm", "base", "lg", "xl", "2xl", "3xl"];
 
-pub(crate) fn check(root: &Path) -> Result<(), String> {
+pub(crate) fn check(root: &Path) -> anyhow::Result<()> {
     let directory = root.join(UI_SOURCE);
     let failures = scan_directory(root, &directory)?;
 
@@ -66,10 +68,10 @@ pub(crate) fn check(root: &Path) -> Result<(), String> {
         return Ok(());
     }
 
-    Err(failures.join("\n"))
+    anyhow::bail!("{}", failures.join("\n"))
 }
 
-fn scan_directory(root: &Path, directory: &Path) -> Result<Vec<String>, String> {
+fn scan_directory(root: &Path, directory: &Path) -> anyhow::Result<Vec<String>> {
     let mut files = Vec::new();
     collect_files(directory, &mut files)?;
     files.sort();
@@ -83,7 +85,7 @@ fn scan_directory(root: &Path, directory: &Path) -> Result<Vec<String>, String> 
         }
 
         let source = fs::read_to_string(&file)
-            .map_err(|error| format!("Could not read {}: {error}", file.display()))?;
+            .with_context(|| format!("Could not read {}", file.display()))?;
         let path = file
             .strip_prefix(root)
             .unwrap_or(&file)
@@ -96,12 +98,12 @@ fn scan_directory(root: &Path, directory: &Path) -> Result<Vec<String>, String> 
     Ok(failures)
 }
 
-fn collect_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
+fn collect_files(directory: &Path, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
     let entries = fs::read_dir(directory)
-        .map_err(|error| format!("Could not list {}: {error}", directory.display()))?;
+        .with_context(|| format!("Could not list {}", directory.display()))?;
 
     for entry in entries {
-        let entry = entry.map_err(|error| format!("Could not read an entry: {error}"))?;
+        let entry = entry.with_context(|| "Could not read an entry")?;
         let path = entry.path();
 
         if path.is_dir() {
@@ -532,7 +534,7 @@ mod tests {
     fn temporary_directory(name: &str) -> PathBuf {
         let path =
             std::env::temp_dir().join(format!("greppa-raw-values-{name}-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&path);
+        crate::test_support::remove_dir_all(&path);
         fs::create_dir_all(&path).expect("create temporary directory");
 
         path

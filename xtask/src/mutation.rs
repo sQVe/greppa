@@ -9,6 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 
+use anyhow::Context as _;
 use serde_json::{Value, json};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -55,24 +56,24 @@ enum Outcome {
 const OUTPUT_DIRECTORY: &str = "target/mutants";
 const MAX_JOBS: usize = 4;
 
-fn parse_max_mutants(value: Option<&String>) -> Result<usize, String> {
-    let value = value.ok_or("--max-mutants needs a number.")?;
+fn parse_max_mutants(value: Option<&str>) -> anyhow::Result<usize> {
+    let value = value.ok_or_else(|| anyhow::anyhow!("--max-mutants needs a number."))?;
 
     let parsed: usize = value
         .parse()
-        .map_err(|_| format!("--max-mutants needs a positive integer, not {value}."))?;
+        .map_err(|_| anyhow::anyhow!("--max-mutants needs a positive integer, not {value}."))?;
 
     if parsed == 0 {
-        return Err("--max-mutants must be at least 1.".to_string());
+        anyhow::bail!("--max-mutants must be at least 1.");
     }
 
     Ok(parsed)
 }
 
-fn parse_request(arguments: &[String]) -> Result<Request, String> {
+fn parse_request(arguments: &[String]) -> anyhow::Result<Request> {
     let (mode_name, rest) = arguments
         .split_first()
-        .ok_or("Name a mode: changed or audit.")?;
+        .ok_or_else(|| anyhow::anyhow!("Name a mode: changed or audit."))?;
 
     let mut targets = Vec::new();
     let mut max_mutants = None;
@@ -80,9 +81,9 @@ fn parse_request(arguments: &[String]) -> Result<Request, String> {
 
     while let Some(argument) = remaining.next() {
         if argument == "--max-mutants" {
-            max_mutants = Some(parse_max_mutants(remaining.next())?);
+            max_mutants = Some(parse_max_mutants(remaining.next().map(String::as_str))?);
         } else if argument.starts_with('-') {
-            return Err(format!("Unknown option {argument}."));
+            anyhow::bail!("Unknown option {argument}.");
         } else {
             targets.push(argument.clone());
         }
@@ -90,10 +91,10 @@ fn parse_request(arguments: &[String]) -> Result<Request, String> {
 
     let mode = match mode_name.as_str() {
         "changed" if targets.len() == 1 => Mode::Changed,
-        "changed" => return Err("Changed mode needs exactly one base commit.".to_string()),
+        "changed" => anyhow::bail!("Changed mode needs exactly one base commit."),
         "audit" if !targets.is_empty() => Mode::Audit,
-        "audit" => return Err("Audit mode needs at least one file.".to_string()),
-        _ => return Err(format!("Unknown mode {mode_name}. Use changed or audit.")),
+        "audit" => anyhow::bail!("Audit mode needs at least one file."),
+        _ => anyhow::bail!("Unknown mode {mode_name}. Use changed or audit."),
     };
 
     Ok(Request {
@@ -123,19 +124,19 @@ impl Scope {
 
 /// cargo-mutants matches `--file` as a glob against workspace-relative paths, so `./a.rs` or an
 /// absolute path would match nothing and wrongly report `nothing`.
-fn workspace_relative_path(root: &Path, path: &str) -> Result<String, String> {
+fn workspace_relative_path(root: &Path, path: &str) -> anyhow::Result<String> {
     let file = root
         .join(path)
         .canonicalize()
-        .map_err(|error| format!("Could not find {path}: {error}"))?;
+        .with_context(|| format!("Could not find {path}"))?;
 
     let canonical_root = root
         .canonicalize()
-        .map_err(|error| format!("Could not resolve {}: {error}", root.display()))?;
+        .with_context(|| format!("Could not resolve {}", root.display()))?;
 
     let relative = file
         .strip_prefix(&canonical_root)
-        .map_err(|_| format!("{path} is outside the workspace."))?;
+        .map_err(|_| anyhow::anyhow!("{path} is outside the workspace."))?;
 
     let parts: Vec<String> = relative
         .components()
@@ -145,16 +146,16 @@ fn workspace_relative_path(root: &Path, path: &str) -> Result<String, String> {
     Ok(parts.join("/"))
 }
 
-fn write_diff(root: &Path, output: &Path, base: &str) -> Result<Option<PathBuf>, String> {
+fn write_diff(root: &Path, output: &Path, base: &str) -> anyhow::Result<Option<PathBuf>> {
     let diff = Command::new("git")
         .args(["diff", "--no-ext-diff", base, "--"])
         .current_dir(root)
         .stderr(Stdio::inherit())
         .output()
-        .map_err(|error| format!("Could not start git diff: {error}"))?;
+        .context("Could not start git diff")?;
 
     if !diff.status.success() {
-        return Err(format!("git diff {base} failed with {}.", diff.status));
+        anyhow::bail!("git diff {base} failed with {}.", diff.status);
     }
 
     if diff.stdout.is_empty() {
@@ -164,40 +165,37 @@ fn write_diff(root: &Path, output: &Path, base: &str) -> Result<Option<PathBuf>,
     let path = output.join("changes.diff");
 
     fs::write(&path, &diff.stdout)
-        .map_err(|error| format!("Could not write {}: {error}", path.display()))?;
+        .with_context(|| format!("Could not write {}", path.display()))?;
 
     Ok(Some(path))
 }
 
-fn count_mutants(root: &Path, scope: &Scope) -> Result<BTreeMap<String, usize>, String> {
+fn count_mutants(root: &Path, scope: &Scope) -> anyhow::Result<BTreeMap<String, usize>> {
     let listing = Command::new("cargo")
         .args(["mutants", "--workspace", "--list", "--json"])
         .args(scope.arguments())
         .current_dir(root)
         .stderr(Stdio::inherit())
         .output()
-        .map_err(|error| format!("Could not start cargo mutants: {error}"))?;
+        .context("Could not start cargo mutants")?;
 
     if !listing.status.success() {
-        return Err(format!(
-            "cargo mutants --list failed with {}.",
-            listing.status
-        ));
+        anyhow::bail!("cargo mutants --list failed with {}.", listing.status);
     }
 
     let mutants: Value = serde_json::from_slice(&listing.stdout)
-        .map_err(|error| format!("cargo mutants --list printed invalid JSON: {error}"))?;
+        .with_context(|| "cargo mutants --list printed invalid JSON")?;
 
     let mutants = mutants
         .as_array()
-        .ok_or("cargo mutants --list did not print a JSON array.")?;
+        .ok_or_else(|| anyhow::anyhow!("cargo mutants --list did not print a JSON array."))?;
 
     let mut counts = BTreeMap::new();
 
     for mutant in mutants {
         let file = mutant["file"]
             .as_str()
-            .ok_or("A listed mutant has no file.")?;
+            .ok_or_else(|| anyhow::anyhow!("A listed mutant has no file."))?;
 
         *counts.entry(file.to_string()).or_insert(0) += 1;
     }
@@ -231,7 +229,7 @@ fn job_count() -> usize {
     available.min(MAX_JOBS)
 }
 
-fn run_mutants(root: &Path, output: &Path, scope: &Scope) -> Result<(), String> {
+fn run_mutants(root: &Path, output: &Path, scope: &Scope) -> anyhow::Result<()> {
     let status = Command::new("cargo")
         .args(["mutants", "--workspace", "--no-shuffle", "--jobs"])
         .arg(job_count().to_string())
@@ -241,14 +239,14 @@ fn run_mutants(root: &Path, output: &Path, scope: &Scope) -> Result<(), String> 
         .current_dir(root)
         .stdout(std::io::stderr())
         .status()
-        .map_err(|error| format!("Could not start cargo mutants: {error}"))?;
+        .context("Could not start cargo mutants")?;
 
     // cargo-mutants exits 2 for missed mutants and 3 for timeouts. A timed-out mutant counts as
     // caught, as Stryker counts it in Tau's own mutation script, so only missed mutants survive.
     match status.code() {
         Some(0 | 2 | 3) => Ok(()),
-        Some(4) => Err("The unmutated tree fails to build or pass its tests.".to_string()),
-        _ => Err(format!("cargo mutants failed with {status}.")),
+        Some(4) => anyhow::bail!("The unmutated tree fails to build or pass its tests."),
+        _ => anyhow::bail!("cargo mutants failed with {status}."),
     }
 }
 
@@ -292,15 +290,17 @@ fn span_text(source: &str, start: Position, end: Position) -> String {
     text
 }
 
-fn read_survivor(root: &Path, mutant: &Value) -> Result<Survivor, String> {
+fn read_survivor(root: &Path, mutant: &Value) -> anyhow::Result<Survivor> {
     let file = mutant["file"]
         .as_str()
-        .ok_or("A missed mutant has no file.")?;
-    let start = read_position(&mutant["span"]["start"]).ok_or("A missed mutant has no start.")?;
-    let end = read_position(&mutant["span"]["end"]).ok_or("A missed mutant has no end.")?;
+        .ok_or_else(|| anyhow::anyhow!("A missed mutant has no file."))?;
+    let start = read_position(&mutant["span"]["start"])
+        .ok_or_else(|| anyhow::anyhow!("A missed mutant has no start."))?;
+    let end = read_position(&mutant["span"]["end"])
+        .ok_or_else(|| anyhow::anyhow!("A missed mutant has no end."))?;
 
-    let source = fs::read_to_string(root.join(file))
-        .map_err(|error| format!("Could not read {file}: {error}"))?;
+    let source =
+        fs::read_to_string(root.join(file)).with_context(|| format!("Could not read {file}"))?;
 
     Ok(Survivor {
         file: file.to_string(),
@@ -314,18 +314,18 @@ fn read_survivor(root: &Path, mutant: &Value) -> Result<Survivor, String> {
     })
 }
 
-fn read_survivors(root: &Path, output: &Path) -> Result<Vec<Survivor>, String> {
+fn read_survivors(root: &Path, output: &Path) -> anyhow::Result<Vec<Survivor>> {
     let path = output.join("mutants.out").join("outcomes.json");
 
-    let text = fs::read_to_string(&path)
-        .map_err(|error| format!("Could not read {}: {error}", path.display()))?;
+    let text =
+        fs::read_to_string(&path).with_context(|| format!("Could not read {}", path.display()))?;
 
     let outcomes: Value = serde_json::from_str(&text)
-        .map_err(|error| format!("{} is not valid JSON: {error}", path.display()))?;
+        .with_context(|| format!("{} is not valid JSON", path.display()))?;
 
     let outcomes = outcomes["outcomes"]
         .as_array()
-        .ok_or("outcomes.json has no outcomes list.")?;
+        .ok_or_else(|| anyhow::anyhow!("outcomes.json has no outcomes list."))?;
 
     outcomes
         .iter()
@@ -334,11 +334,11 @@ fn read_survivors(root: &Path, output: &Path) -> Result<Vec<Survivor>, String> {
         .collect()
 }
 
-fn mutate(root: &Path, request: &Request) -> Result<Outcome, String> {
+fn mutate(root: &Path, request: &Request) -> anyhow::Result<Outcome> {
     let output = root.join(OUTPUT_DIRECTORY);
 
     fs::create_dir_all(&output)
-        .map_err(|error| format!("Could not create {}: {error}", output.display()))?;
+        .with_context(|| format!("Could not create {}", output.display()))?;
 
     let scope = match request.mode {
         Mode::Changed => match write_diff(root, &output, &request.targets[0])? {
@@ -354,7 +354,7 @@ fn mutate(root: &Path, request: &Request) -> Result<Outcome, String> {
                 .targets
                 .iter()
                 .map(|path| workspace_relative_path(root, path))
-                .collect::<Result<_, _>>()?,
+                .collect::<anyhow::Result<Vec<_>>>()?,
         },
     };
 
@@ -449,8 +449,8 @@ fn ran_report(mode: Mode, survivors: &[Survivor], unmutated: &[String]) -> (Valu
 pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
     let request = match parse_request(arguments) {
         Ok(request) => request,
-        Err(message) => {
-            println!("{}", error_report(&message));
+        Err(error) => {
+            println!("{}", error_report(&format!("{error:#}")));
             return ExitCode::FAILURE;
         }
     };
@@ -464,7 +464,7 @@ pub(crate) fn run(root: &Path, arguments: &[String]) -> ExitCode {
             survivors,
             unmutated,
         }) => ran_report(request.mode, &survivors, &unmutated),
-        Err(message) => (error_report(&message), 1),
+        Err(error) => (error_report(&format!("{error:#}")), 1),
     };
 
     println!("{report}");
@@ -491,21 +491,19 @@ mod tests {
 
     #[test]
     fn parse_request_reads_modes_and_cap() {
-        let changed = parse_request(&strings(&["changed", "main", "--max-mutants", "5"]));
-        let audit = parse_request(&strings(&["audit", "a.rs", "b.rs"]));
+        let changed = parse_request(&strings(&["changed", "main", "--max-mutants", "5"]))
+            .expect("changed parses");
+        let audit = parse_request(&strings(&["audit", "a.rs", "b.rs"])).expect("audit parses");
 
         assert_eq!(
             changed,
-            Ok(Request {
+            Request {
                 mode: Mode::Changed,
                 targets: strings(&["main"]),
                 max_mutants: Some(5),
-            })
+            }
         );
-        assert_eq!(
-            audit.map(|request| request.targets),
-            Ok(strings(&["a.rs", "b.rs"]))
-        );
+        assert_eq!(audit.targets, strings(&["a.rs", "b.rs"]));
     }
 
     #[test]
@@ -539,15 +537,15 @@ mod tests {
     #[test]
     fn workspace_relative_path_normalizes_existing_files() {
         let root = crate::workspace_root();
-        let expected = Ok("crates/greppa-core/src/lib.rs".to_string());
+        let expected = "crates/greppa-core/src/lib.rs";
         let absolute = root.join("crates/greppa-core/src/lib.rs");
 
         assert_eq!(
-            workspace_relative_path(&root, "./crates/greppa-core/src/lib.rs"),
+            workspace_relative_path(&root, "./crates/greppa-core/src/lib.rs").expect("relative"),
             expected
         );
         assert_eq!(
-            workspace_relative_path(&root, &absolute.display().to_string()),
+            workspace_relative_path(&root, &absolute.display().to_string()).expect("absolute"),
             expected
         );
         assert!(workspace_relative_path(&root, "crates/missing.rs").is_err());
@@ -583,18 +581,18 @@ mod tests {
         )
         .expect("write outcomes");
 
-        let survivors = read_survivors(&root, &output);
+        let survivors = read_survivors(&root, &output).expect("survivors parse");
 
         fs::remove_dir_all(&root).expect("remove temporary directory");
         assert_eq!(
             survivors,
-            Ok(vec![Survivor {
+            vec![Survivor {
                 file: "lib.rs".to_string(),
                 line: 1,
                 mutator: "BinaryOperator".to_string(),
                 original: "<=".to_string(),
                 replacement: ">".to_string(),
-            }])
+            }]
         );
     }
 

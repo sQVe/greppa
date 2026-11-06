@@ -1,4 +1,5 @@
 mod check;
+mod cleanup;
 #[cfg(target_os = "linux")]
 mod display;
 #[cfg(target_os = "linux")]
@@ -12,6 +13,8 @@ mod raw_values;
 mod sandbox;
 #[cfg(target_os = "linux")]
 mod scene;
+#[cfg(test)]
+mod test_support;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;

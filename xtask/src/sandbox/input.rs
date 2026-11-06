@@ -3,6 +3,8 @@ use std::path::Path;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
+use anyhow::Context as _;
+
 use crate::process;
 
 use super::environment::sandbox_environment;
@@ -15,32 +17,30 @@ const DRAG_STEPS: u32 = 24;
 const FOCUS_X: i32 = 5;
 const FOCUS_Y: i32 = 5;
 
-pub(super) fn window_id(root: &Path) -> Result<String, String> {
-    let window = fs::read_to_string(root.join("window"))
-        .map_err(|error| format!("Could not read the window id: {error}"))?;
+pub(super) fn window_id(root: &Path) -> anyhow::Result<String> {
+    let window =
+        fs::read_to_string(root.join("window")).with_context(|| "Could not read the window id")?;
     let window = window.trim().to_string();
 
     if window.is_empty() || !window.chars().all(|character| character.is_ascii_digit()) {
-        return Err(format!(
-            "The recorded window id \"{window}\" is not numeric."
-        ));
+        anyhow::bail!("The recorded window id \"{window}\" is not numeric.");
     }
 
     Ok(window)
 }
 
-pub(super) fn focus_window(root: &Path, display: &str, title: &str) -> Result<(), String> {
+pub(super) fn focus_window(root: &Path, display: &str, title: &str) -> anyhow::Result<()> {
     let window = find_window(root, display, title)?;
 
     fs::write(root.join("window"), format!("{window}\n"))
-        .map_err(|error| format!("Could not write the window id: {error}"))?;
+        .with_context(|| "Could not write the window id")?;
 
     move_pointer(root, display, &window, FOCUS_X, FOCUS_Y)?;
     std::thread::sleep(INPUT_SETTLE);
     xdotool(root, display, &["click".to_string(), "1".to_string()])
 }
 
-fn find_window(root: &Path, display: &str, title: &str) -> Result<String, String> {
+fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String> {
     let deadline = Instant::now() + WINDOW_TIMEOUT;
     let environment = sandbox_environment(root, display);
 
@@ -64,26 +64,26 @@ fn find_window(root: &Path, display: &str, title: &str) -> Result<String, String
                 [id] => return Ok(id.clone()),
                 [] => {}
                 _ => {
-                    return Err(format!(
+                    anyhow::bail!(
                         "Found {} windows titled \"{title}\"; expected one.",
                         ids.len()
-                    ));
+                    );
                 }
             }
         }
 
         if Instant::now() >= deadline {
-            return Err(format!(
+            anyhow::bail!(
                 "The window titled \"{title}\" did not appear within {} seconds.",
                 WINDOW_TIMEOUT.as_secs()
-            ));
+            );
         }
 
         std::thread::sleep(process::POLL);
     }
 }
 
-pub(super) fn warm_up(root: &Path, display: &str, window: &str) -> Result<(), String> {
+pub(super) fn warm_up(root: &Path, display: &str, window: &str) -> anyhow::Result<()> {
     move_pointer(root, display, window, 0, 0)?;
     std::thread::sleep(INPUT_SETTLE);
 
@@ -96,7 +96,7 @@ pub(super) fn glide(
     window: &str,
     from: (i32, i32),
     to: (i32, i32),
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     for step in 0..=DRAG_STEPS {
         let x = interpolate(from.0, to.0, step);
         let y = interpolate(from.1, to.1, step);
@@ -116,7 +116,7 @@ pub(super) fn drag(
     window: &str,
     from: (i32, i32),
     to: (i32, i32),
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     warm_up(root, display, window)?;
     move_pointer(root, display, window, from.0, from.1)?;
     std::thread::sleep(CLICK_SETTLE);
@@ -147,7 +147,7 @@ pub(super) fn move_pointer(
     window: &str,
     x: i32,
     y: i32,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     xdotool(
         root,
         display,
@@ -161,7 +161,7 @@ pub(super) fn move_pointer(
     )
 }
 
-pub(super) fn xdotool(root: &Path, display: &str, arguments: &[String]) -> Result<(), String> {
+pub(super) fn xdotool(root: &Path, display: &str, arguments: &[String]) -> anyhow::Result<()> {
     let environment = sandbox_environment(root, display);
     let mut command = Command::new("xdotool");
     command
@@ -171,11 +171,11 @@ pub(super) fn xdotool(root: &Path, display: &str, arguments: &[String]) -> Resul
     let output = process::run_with_timeout(command, process::TOOL_TIMEOUT)?;
 
     if !output.status.success() {
-        return Err(format!(
+        anyhow::bail!(
             "xdotool {} failed: {}",
             arguments.join(" "),
             String::from_utf8_lossy(&output.stderr).trim()
-        ));
+        );
     }
 
     Ok(())

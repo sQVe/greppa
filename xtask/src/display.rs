@@ -2,14 +2,28 @@ use std::fs;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use crate::cleanup;
-use crate::process::{POLL, TOOL_TIMEOUT, run_with_timeout};
+use crate::process::{TOOL_TIMEOUT, poll_until, run_with_timeout};
 
 pub(crate) const WESTON_TIMEOUT: Duration = Duration::from_secs(30);
+
+#[derive(Debug, Error)]
+enum DisplayError {
+    #[error("weston did not print a display within {} seconds.", timeout.as_secs())]
+    DisplayTimeout {
+        timeout: Duration,
+        #[allow(
+            dead_code,
+            reason = "the timeout is the message contract; the log path is test-visible data"
+        )]
+        log: PathBuf,
+    },
+}
 
 /// A private XDG runtime directory, mode 700, removed on drop. Creation is atomic and refuses an
 /// existing path, so a planted symlink cannot redirect it.
@@ -133,14 +147,11 @@ fn clean_display_files_in(folder: &Path, display: &str, timeout: Duration) {
     let owner = lock_owner(&lock);
 
     if let Some(pid) = owner {
-        let deadline = Instant::now() + timeout;
+        let stopped = poll_until(timeout, || Ok((!lock_owner_is_alive(pid)).then_some(())))
+            .expect("the wait for the lock owner cannot fail");
 
-        while lock_owner_is_alive(pid) {
-            if Instant::now() >= deadline {
-                return;
-            }
-
-            std::thread::sleep(POLL);
+        if stopped.is_none() {
+            return;
         }
     }
 
@@ -234,24 +245,23 @@ pub(crate) fn display_from_log(log: &str) -> Option<String> {
 }
 
 pub(crate) fn wait_for_display(log_path: &Path, timeout: Duration) -> anyhow::Result<String> {
-    let deadline = Instant::now() + timeout;
-
-    loop {
+    let display = poll_until(timeout, || {
         if let Ok(log) = fs::read_to_string(log_path)
             && let Some(display) = display_from_log(&log)
         {
-            return Ok(display);
+            return Ok(Some(display));
         }
 
-        if Instant::now() >= deadline {
-            anyhow::bail!(
-                "weston did not print a display within {} seconds.",
-                timeout.as_secs()
-            );
-        }
+        Ok(None)
+    })?;
 
-        std::thread::sleep(POLL);
-    }
+    display.ok_or_else(|| {
+        DisplayError::DisplayTimeout {
+            timeout,
+            log: log_path.to_path_buf(),
+        }
+        .into()
+    })
 }
 
 pub(crate) fn import_window(
@@ -285,6 +295,7 @@ mod tests {
     use std::ffi::OsStr;
 
     use super::*;
+    use crate::process::POLL;
 
     #[test]
     fn runtime_dir_is_private_and_removed_on_drop() {
@@ -435,5 +446,52 @@ mod tests {
 
         assert!(lock.exists());
         assert!(socket.exists());
+    }
+
+    #[test]
+    fn wait_for_display_returns_a_display_that_appears_later() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("weston.log");
+        let writer_path = log.clone();
+        let writer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(150));
+            fs::write(&writer_path, "xserver listening on display :7\n").expect("write the log");
+        });
+
+        let display = wait_for_display(&log, Duration::from_secs(2)).expect("the display appears");
+
+        writer.join().expect("the writer thread");
+        assert_eq!(display, ":7");
+    }
+
+    #[test]
+    fn wait_for_display_reports_a_timeout() {
+        let folder = crate::test_support::temporary_directory();
+        let log = folder.path().join("weston.log");
+        let timeout = Duration::from_millis(150);
+
+        let error = wait_for_display(&log, timeout).expect_err("a missing display times out");
+
+        assert!(
+            matches!(
+                error.downcast_ref::<DisplayError>(),
+                Some(DisplayError::DisplayTimeout { timeout: recorded, log: recorded_log })
+                    if *recorded == timeout && recorded_log == &log
+            ),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn the_display_errors_render_their_messages() {
+        let error = DisplayError::DisplayTimeout {
+            timeout: Duration::from_secs(3),
+            log: PathBuf::from("/tmp/weston.log"),
+        };
+
+        assert_eq!(
+            error.to_string(),
+            "weston did not print a display within 3 seconds."
+        );
     }
 }

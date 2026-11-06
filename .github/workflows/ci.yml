@@ -84,6 +84,63 @@ jobs:
           tool: cargo-nextest
       - run: cargo xtask check build
 
+  end-to-end:
+    name: End to end (Linux)
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Ubuntu 24.04's Xwayland aborts on the first xdotool input under headless Weston, so the job
+    # runs the same current Weston and Xwayland as local runs.
+    container:
+      image: archlinux@sha256:b1c2fe6e717bfd5673af8fc217e1e1c3ce0dcbb1d53c3414c8425e7ce79fc6d9
+    timeout-minutes: 30
+    steps:
+      - name: Install the build tools and the sandbox stack
+        run: |
+          pacman -Syu --noconfirm --needed \
+            alsa-lib \
+            base-devel \
+            curl \
+            fontconfig \
+            freetype2 \
+            git \
+            imagemagick \
+            libxcb \
+            libxkbcommon \
+            libxkbcommon-x11 \
+            openssl \
+            pkgconf \
+            rustup \
+            ttf-dejavu \
+            vulkan-icd-loader \
+            vulkan-swrast \
+            wayland \
+            weston \
+            xdotool \
+            xorg-xwayland
+          install -d -m 1777 /tmp/.X11-unix
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest
+      - name: Run the sandbox end to end
+        env:
+          GREPPA_E2E_ARTIFACTS: ${{ runner.temp }}/sandbox-end-to-end
+        run: cargo nextest run -p xtask --run-ignored only --test sandbox_end_to_end
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: sandbox-end-to-end
+          path: |
+            ${{ runner.temp }}/sandbox-end-to-end/
+            .tau/judge/smoke-2/
+          if-no-files-found: warn
+
   mutation:
     name: Mutation (changed)
     if: github.event_name == 'pull_request'

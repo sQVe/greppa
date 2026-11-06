@@ -32,10 +32,14 @@ verification.
 - Every size, spacing, corner radius, text size, and color in `greppa-ui` comes from
   `crates/greppa-ui/src/theme.rs`. `cargo xtask check` rejects a raw value anywhere else in
   `greppa-ui`, and a contrast test checks the theme's text and control pairs.
-- Design new UI as a mock scene first, with real greppa parts and fake data. Open a scene with
-  `cargo run --package greppa-ui --bin greppa-scene -- <scene>`, capture it with
-  `cargo xtask mock capture <scene>`, and gate it with the judge-mock skill in
-  `.pi/skills/judge-mock/`. See [ADR 0005](docs/adr/0005-two-ai-judges-gate-ui-mocks.md).
+- Design new UI as a mock scene first, with real greppa parts and fake data. Open a scene in the
+  sandbox with `cargo xtask sandbox up <scene>`, capture it with `cargo xtask mock capture <scene>`,
+  and gate it with the judge-mock skill in `.pi/skills/judge-mock/`. See
+  [ADR 0005](docs/adr/0005-two-ai-judges-gate-ui-mocks.md).
+- Try and QA greppa only in the sandbox. `cargo xtask sandbox up <scene>` opens a throwaway window
+  on a private headless display. Never send input or run the app against the real display. See
+  [the development guide](docs/development.md) and
+  [ADR 0008](docs/adr/0008-qa-in-a-private-xwayland-sandbox.md).
 - The toolchain is pinned in `rust-toolchain.toml`. Lint levels live in `[workspace.lints]`, and CI
   fails on warnings. Add single clippy lints, not whole groups. See
   [ADR 0004](docs/adr/0004-toolchain-and-quality-gates.md).

@@ -4,10 +4,11 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use crate::process::{self, poll_until};
 
-use super::environment::sandbox_environment;
+use super::environment::{caller_environment, sandbox_environment};
 
 const WINDOW_TIMEOUT: Duration = Duration::from_secs(10);
 const INPUT_SETTLE: Duration = Duration::from_millis(150);
@@ -17,13 +18,19 @@ const DRAG_STEPS: u32 = 24;
 const FOCUS_X: i32 = 5;
 const FOCUS_Y: i32 = 5;
 
+#[derive(Debug, Error, PartialEq, Eq)]
+enum WindowError {
+    #[error("The recorded window id \"{window}\" is not numeric.")]
+    NotNumeric { window: String },
+}
+
 pub(super) fn window_id(root: &Path) -> anyhow::Result<String> {
     let window =
         fs::read_to_string(root.join("window")).with_context(|| "Could not read the window id")?;
     let window = window.trim().to_string();
 
     if window.is_empty() || !window.chars().all(|character| character.is_ascii_digit()) {
-        anyhow::bail!("The recorded window id \"{window}\" is not numeric.");
+        return Err(WindowError::NotNumeric { window }.into());
     }
 
     Ok(window)
@@ -42,7 +49,7 @@ pub(super) fn focus_window(root: &Path, display: &str, title: &str) -> anyhow::R
 
 fn find_window(root: &Path, display: &str, title: &str) -> anyhow::Result<String> {
     let started = Instant::now();
-    let environment = sandbox_environment(root, display);
+    let environment = sandbox_environment(&caller_environment(), root, display);
     let timeout = WINDOW_TIMEOUT.saturating_sub(started.elapsed());
 
     let window = poll_until(timeout, || {
@@ -163,7 +170,7 @@ pub(super) fn move_pointer(
 }
 
 pub(super) fn xdotool(root: &Path, display: &str, arguments: &[String]) -> anyhow::Result<()> {
-    let environment = sandbox_environment(root, display);
+    let environment = sandbox_environment(&caller_environment(), root, display);
     let mut command = Command::new("xdotool");
     command
         .args(arguments)
@@ -191,5 +198,50 @@ mod tests {
         assert_eq!(interpolate(10, 20, 0), 10);
         assert_eq!(interpolate(10, 20, DRAG_STEPS), 20);
         assert_eq!(interpolate(20, 10, DRAG_STEPS / 2), 15);
+    }
+
+    #[test]
+    fn window_id_reads_the_trimmed_record() {
+        let root = crate::test_support::temporary_directory();
+        fs::write(root.path().join("window"), "123\n").expect("write the window");
+
+        assert_eq!(window_id(root.path()).expect("a numeric id"), "123");
+    }
+
+    #[test]
+    fn window_id_refuses_an_id_that_is_not_a_number() {
+        for (case, recorded, window) in [
+            ("empty", "", ""),
+            ("whitespace", " \n", ""),
+            ("letters", "abc\n", "abc"),
+            ("trailing letter", "12a\n", "12a"),
+        ] {
+            let root = crate::test_support::temporary_directory();
+            fs::write(root.path().join("window"), recorded).expect("write the window");
+
+            let error = window_id(root.path()).expect_err("the id is refused");
+
+            assert_eq!(
+                error.downcast_ref::<WindowError>(),
+                Some(&WindowError::NotNumeric {
+                    window: window.to_string()
+                }),
+                "{case}"
+            );
+        }
+    }
+
+    #[test]
+    fn window_id_reports_a_missing_record() {
+        let root = crate::test_support::temporary_directory();
+
+        let error = window_id(root.path()).expect_err("a missing record fails");
+
+        assert_eq!(
+            error
+                .downcast_ref::<std::io::Error>()
+                .map(std::io::Error::kind),
+            Some(std::io::ErrorKind::NotFound)
+        );
     }
 }

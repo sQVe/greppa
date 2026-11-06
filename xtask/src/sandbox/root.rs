@@ -49,6 +49,10 @@ pub(super) enum RootError {
     Unsafe { path: PathBuf, reason: RootReason },
     #[error("refusing the symlinked sandbox path {}", path.display())]
     LinkedPath { path: PathBuf },
+    #[error("refusing to remove {}: it is not a sandbox folder", path.display())]
+    NotSandboxFolder { path: PathBuf },
+    #[error("refusing the symlinked opener {}", path.display())]
+    LinkedOpener { path: PathBuf },
 }
 
 pub(super) fn root_metadata_problem(
@@ -191,10 +195,10 @@ fn current_uid() -> anyhow::Result<u32> {
 
 pub(super) fn remove_root(root: &Path) -> anyhow::Result<()> {
     if !remove_root_allowed(root) {
-        anyhow::bail!(
-            "refusing to remove {}: it is not a sandbox folder",
-            root.display()
-        );
+        return Err(RootError::NotSandboxFolder {
+            path: root.to_path_buf(),
+        }
+        .into());
     }
 
     fs::remove_dir_all(root).with_context(|| format!("Could not remove {}", root.display()))
@@ -210,12 +214,12 @@ pub(super) fn install_openers(root: &Path) -> anyhow::Result<()> {
             .map(|metadata| metadata.file_type().is_symlink())
             .unwrap_or(false)
         {
-            anyhow::bail!("refusing the symlinked opener {}", path.display());
+            return Err(RootError::LinkedOpener { path }.into());
         }
 
+        let log = shell_quote(&opened.to_string_lossy());
         let script = format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >>{}\n",
-            shell_quote(&opened.to_string_lossy())
+            "#!/bin/sh\nif [ -L {log} ]; then\n  echo 'refusing the symlinked opened log' >&2\n  exit 1\nfi\nprintf '%s\\n' \"$*\" >>{log}\n"
         );
 
         fs::write(&path, script).with_context(|| format!("Could not write {}", path.display()))?;
@@ -231,147 +235,4 @@ fn shell_quote(value: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::path::{Path, PathBuf};
-
-    use super::*;
-
-    #[test]
-    fn root_path_is_under_the_temporary_folder() {
-        assert_eq!(
-            root_path("smoke"),
-            PathBuf::from("/var/tmp/greppa-sandbox-smoke")
-        );
-    }
-
-    #[test]
-    fn remove_root_accepts_only_sandbox_folders() {
-        assert!(remove_root_allowed(Path::new(
-            "/var/tmp/greppa-sandbox-smoke"
-        )));
-        assert!(!remove_root_allowed(Path::new("/var/tmp/other")));
-        assert!(!remove_root_allowed(Path::new(
-            "/home/user/greppa-sandbox-smoke"
-        )));
-        assert!(!remove_root_allowed(Path::new("/var/tmp/greppa-sandbox-")));
-    }
-
-    #[test]
-    fn root_metadata_problem_names_each_reason() {
-        let good = RootMetadata {
-            is_symlink: false,
-            is_dir: true,
-            owner: 1000,
-            mode: 0o700,
-        };
-
-        assert_eq!(root_metadata_problem(&good, 1000), None);
-        assert_eq!(
-            root_metadata_problem(
-                &RootMetadata {
-                    is_symlink: true,
-                    ..good
-                },
-                1000
-            ),
-            Some(RootReason::Symlink)
-        );
-        assert_eq!(
-            root_metadata_problem(
-                &RootMetadata {
-                    is_dir: false,
-                    ..good
-                },
-                1000
-            ),
-            Some(RootReason::NotDirectory)
-        );
-        assert_eq!(
-            root_metadata_problem(&good, 1001),
-            Some(RootReason::WrongOwner)
-        );
-        assert_eq!(
-            root_metadata_problem(
-                &RootMetadata {
-                    mode: 0o755,
-                    ..good
-                },
-                1000
-            ),
-            Some(RootReason::WrongMode { mode: 0o755 })
-        );
-    }
-
-    #[test]
-    fn root_reasons_render_the_refusal_text() {
-        assert_eq!(RootReason::Symlink.to_string(), "it is a symlink");
-        assert_eq!(RootReason::NotDirectory.to_string(), "it is not a folder");
-        assert_eq!(
-            RootReason::WrongOwner.to_string(),
-            "it is not owned by the current user"
-        );
-        assert_eq!(
-            RootReason::WrongMode { mode: 0o755 }.to_string(),
-            "its mode is 755, not 700"
-        );
-    }
-
-    #[test]
-    fn root_errors_render_the_refusal_text() {
-        let unsafe_error = RootError::Unsafe {
-            path: PathBuf::from("/var/tmp/greppa-sandbox-x"),
-            reason: RootReason::WrongMode { mode: 0o755 },
-        };
-
-        assert_eq!(
-            unsafe_error.to_string(),
-            "refusing /var/tmp/greppa-sandbox-x: its mode is 755, not 700"
-        );
-
-        let linked = RootError::LinkedPath {
-            path: PathBuf::from("/var/tmp/greppa-sandbox-x/run"),
-        };
-
-        assert_eq!(
-            linked.to_string(),
-            "refusing the symlinked sandbox path /var/tmp/greppa-sandbox-x/run"
-        );
-    }
-
-    #[test]
-    fn linked_paths_lists_control_files() {
-        let paths = linked_paths(Path::new("/var/tmp/greppa-sandbox-smoke"));
-
-        assert!(paths.contains(&PathBuf::from("/var/tmp/greppa-sandbox-smoke/display")));
-        assert!(paths.contains(&PathBuf::from("/var/tmp/greppa-sandbox-smoke/run")));
-        assert!(paths.contains(&PathBuf::from("/var/tmp/greppa-sandbox-smoke/bin")));
-    }
-
-    #[test]
-    fn refuse_linked_paths_refuses_a_linked_control_path_and_leaves_it() {
-        let root = crate::test_support::temporary_sandbox_root("linked");
-        let target = crate::test_support::temporary_directory();
-        let marker = target.path().join("marker");
-        fs::write(&marker, "keep").expect("write the marker");
-        let link = root.path().join("run");
-        std::os::unix::fs::symlink(target.path(), &link).expect("link the control path");
-
-        let error = refuse_linked_paths(root.path()).expect_err("the linked path is refused");
-
-        assert!(
-            matches!(&error, RootError::LinkedPath { path } if path == &link),
-            "unexpected error: {error}"
-        );
-        assert_eq!(
-            error.to_string(),
-            format!("refusing the symlinked sandbox path {}", link.display())
-        );
-        assert!(marker.is_file(), "the target must not change");
-        assert!(
-            fs::symlink_metadata(&link)
-                .expect("the link")
-                .file_type()
-                .is_symlink()
-        );
-    }
-}
+mod tests;

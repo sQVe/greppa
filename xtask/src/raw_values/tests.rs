@@ -361,3 +361,23 @@ let e = 0x11223344u32;\n";
 
     assert_eq!(scan_source("src/a.rs", source), Vec::<String>::new());
 }
+
+#[test]
+fn scan_ignores_a_shebang_and_keeps_later_lines() {
+    let source = "#!/usr/bin/env run-cargo-script px(1) \"\nlet width = px(3.0);\n";
+
+    assert_eq!(
+        scan_source("src/a.rs", source),
+        ["src/a.rs:2: let width = px(3.0);"]
+    );
+}
+
+#[test]
+fn scan_ignores_frontmatter_and_keeps_later_lines() {
+    let source = "---\nlabel = \"px(1)\n---\nlet width = px(3.0);\n";
+
+    assert_eq!(
+        scan_source("src/a.rs", source),
+        ["src/a.rs:4: let width = px(3.0);"]
+    );
+}

@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Context as _;
-use ra_ap_rustc_lexer::{FrontmatterAllowed, LiteralKind, TokenKind, tokenize};
+use ra_ap_rustc_lexer::{FrontmatterAllowed, LiteralKind, TokenKind, strip_shebang, tokenize};
 
 const UI_SOURCE: &str = "crates/greppa-ui/src";
 const THEME_FILE: &str = "theme.rs";
@@ -296,17 +296,29 @@ fn is_identifier_char(character: char) -> bool {
     character.is_ascii_alphanumeric() || character == '_'
 }
 
+fn push_blanks(masked: &mut String, text: &str) {
+    let blanks = text
+        .bytes()
+        .map(|byte| if byte == b'\n' { '\n' } else { ' ' });
+
+    masked.extend(blanks);
+}
+
 fn mask_source(source: &str) -> String {
     let mut masked = String::with_capacity(source.len());
-    let mut start = 0;
+    let shebang_end = strip_shebang(source).unwrap_or(0);
+    let mut start = shebang_end;
 
-    for token in tokenize(source, FrontmatterAllowed::No) {
+    push_blanks(&mut masked, &source[..shebang_end]);
+
+    for token in tokenize(&source[shebang_end..], FrontmatterAllowed::Yes) {
         let end = start + token.len as usize;
         let text = &source[start..end];
         let hides_text = matches!(
             token.kind,
             TokenKind::LineComment { .. }
                 | TokenKind::BlockComment { .. }
+                | TokenKind::Frontmatter { .. }
                 | TokenKind::Literal {
                     kind: LiteralKind::Char { .. }
                         | LiteralKind::Byte { .. }
@@ -321,10 +333,7 @@ fn mask_source(source: &str) -> String {
         );
 
         if hides_text {
-            let blanks = text
-                .bytes()
-                .map(|byte| if byte == b'\n' { '\n' } else { ' ' });
-            masked.extend(blanks);
+            push_blanks(&mut masked, text);
         } else {
             masked.push_str(text);
         }

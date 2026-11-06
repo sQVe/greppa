@@ -158,6 +158,17 @@ fn report_finds_nothing_without_work() {
 }
 
 #[test]
+fn report_finds_nothing_when_the_listing_prints_nothing() {
+    let fixture = Fixture::new();
+    let cargo = fixture.cargo("", 0, "exit 0");
+    let git = fixture.git(DIFF, 0);
+
+    let report = fixture.report(&["changed", "main"], &cargo, &git);
+
+    assert_eq!(status(&report), (Some("nothing"), 0));
+}
+
+#[test]
 fn report_runs_the_selected_files_within_the_diff() {
     let fixture = Fixture::new();
     let cargo = fixture.cargo(LISTING, 0, "exit 0");

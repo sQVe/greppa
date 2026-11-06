@@ -1,4 +1,4 @@
-# ADR 0008: QA in a private Xwayland sandbox
+# ADR 0009: QA in a private Xwayland sandbox
 
 **Date**: 2026-11-05\
 **Status**: Accepted\

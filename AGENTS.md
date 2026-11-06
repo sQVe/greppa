@@ -39,7 +39,7 @@ verification.
 - Try and QA greppa only in the sandbox. `cargo xtask sandbox up <scene>` opens a throwaway window
   on a private headless display. Never send input or run the app against the real display. See
   [the development guide](docs/development.md) and
-  [ADR 0008](docs/adr/0008-qa-in-a-private-xwayland-sandbox.md).
+  [ADR 0009](docs/adr/0009-qa-in-a-private-xwayland-sandbox.md).
 - The toolchain is pinned in `rust-toolchain.toml`. Lint levels live in `[workspace.lints]`, and CI
   fails on warnings. Add single clippy lints, not whole groups. See
   [ADR 0004](docs/adr/0004-toolchain-and-quality-gates.md).

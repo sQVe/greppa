@@ -110,6 +110,7 @@ jobs:
             openssl \
             pkgconf \
             rustup \
+            ttf-dejavu \
             vulkan-icd-loader \
             vulkan-swrast \
             wayland \

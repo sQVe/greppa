@@ -84,6 +84,70 @@ jobs:
           tool: cargo-nextest
       - run: cargo xtask check build
 
+  end-to-end:
+    name: End to end (Linux)
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install GPUI system packages and the sandbox tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            imagemagick \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libssl-dev \
+            libvulkan-dev \
+            libwayland-dev \
+            libx11-dev \
+            libx11-xcb-dev \
+            libxcb-randr0-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxcb-xkb-dev \
+            libxcb1-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            mesa-vulkan-drivers \
+            pkg-config \
+            weston \
+            xdotool \
+            xwayland
+      # ImageMagick 6 has no magick command; its convert takes the same arguments that capture passes.
+      - name: Provide magick on ImageMagick 6
+        run: |
+          if ! command -v magick > /dev/null; then
+            sudo ln -s "$(command -v convert)" /usr/local/bin/magick
+          fi
+          magick -version
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest
+      - name: Run the sandbox end to end
+        env:
+          GREPPA_E2E_KEEP: "1"
+        run: cargo nextest run -p xtask --run-ignored only --test sandbox_end_to_end
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: sandbox-end-to-end
+          path: |
+            /var/tmp/greppa-sandbox-*/scene.log
+            /var/tmp/greppa-sandbox-*/weston.log
+            /var/tmp/greppa-sandbox-*/*.png
+            .tau/judge/smoke-2/
+          if-no-files-found: warn
+
   mutation:
     name: Mutation (changed)
     if: github.event_name == 'pull_request'

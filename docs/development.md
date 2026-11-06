@@ -172,6 +172,9 @@ runs with an environment allowlist, so the caller's `DISPLAY`, `WAYLAND_DISPLAY`
 never reach it. `GREPPA_SANDBOX=<name>` runs a second sandbox side by side. A command that needs a
 missing tool exits with a message that names the tool.
 
+An ignored test drives the sandbox and `mock capture` end to end. It needs the same tools as the
+sandbox. Run it with `cargo nextest run -p xtask --run-ignored only --test sandbox_end_to_end`.
+
 Run the sandbox on Linux. It needs weston with the headless backend and Xwayland, xdotool, and
 ImageMagick 7 with `import`, plus the Vulkan driver that capture needs.
 

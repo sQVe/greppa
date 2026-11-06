@@ -92,6 +92,9 @@ These names are exceptions to Tau's full-word naming rule.
 ## Tests
 
 - Put unit tests in a `#[cfg(test)] mod tests` at the end of the file that owns the behavior.
+- A test that touches the file system gets its folder from `tempfile`, through the shared helper in
+  `xtask/src/test_support.rs` (or `tempfile` directly in other crates), never from a path built by
+  hand. The `TempDir` guard must stay alive while the test uses its folder.
 - Put a test that uses a crate from the outside in that crate's `tests/`. Keep as few targets as
   possible, usually one, such as `tests/integration/main.rs` with modules. Cargo builds each file in
   `tests/` as its own binary.

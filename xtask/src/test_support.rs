@@ -4,25 +4,29 @@
 )]
 
 use std::fs;
-use std::path::Path;
+use std::os::unix::fs::PermissionsExt as _;
 use std::process::Child;
 
-pub(crate) fn remove_file(path: &Path) {
-    if let Err(error) = fs::remove_file(path)
-        && let Some(warning) =
-            crate::cleanup::cleanup_warning(&format!("remove {}", path.display()), &error)
-    {
-        panic!("{warning}");
-    }
+use tempfile::{Builder, TempDir};
+
+pub(crate) fn temporary_directory() -> TempDir {
+    Builder::new()
+        .prefix("greppa-xtask-test-")
+        .tempdir()
+        .expect("create a temporary directory")
 }
 
-pub(crate) fn remove_dir_all(path: &Path) {
-    if let Err(error) = fs::remove_dir_all(path)
-        && let Some(warning) =
-            crate::cleanup::cleanup_warning(&format!("remove {}", path.display()), &error)
-    {
-        panic!("{warning}");
-    }
+pub(crate) fn temporary_sandbox_root(label: &str) -> TempDir {
+    let prefix = format!("greppa-sandbox-test-{label}-");
+    let root = Builder::new()
+        .prefix(&prefix)
+        .tempdir_in("/var/tmp")
+        .expect("create a temporary sandbox root");
+
+    fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700))
+        .expect("secure the sandbox root");
+
+    root
 }
 
 pub(crate) fn stop_child(child: &mut Child) {

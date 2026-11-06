@@ -236,13 +236,6 @@ mod tests {
 
     use super::*;
 
-    fn temporary_root(label: &str) -> PathBuf {
-        Path::new("/var/tmp").join(format!(
-            "greppa-sandbox-test-{label}-{}",
-            std::process::id()
-        ))
-    }
-
     #[test]
     fn root_path_is_under_the_temporary_folder() {
         assert_eq!(
@@ -356,22 +349,14 @@ mod tests {
 
     #[test]
     fn refuse_linked_paths_refuses_a_linked_control_path_and_leaves_it() {
-        let root = temporary_root("linked");
-        let target = std::env::temp_dir().join(format!(
-            "greppa-sandbox-test-linked-target-{}",
-            std::process::id()
-        ));
-        crate::test_support::remove_dir_all(&root);
-        crate::test_support::remove_dir_all(&target);
-        fs::create_dir_all(&root).expect("create the root");
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("secure the root");
-        fs::create_dir_all(&target).expect("create the target");
-        let marker = target.join("marker");
+        let root = crate::test_support::temporary_sandbox_root("linked");
+        let target = crate::test_support::temporary_directory();
+        let marker = target.path().join("marker");
         fs::write(&marker, "keep").expect("write the marker");
-        let link = root.join("run");
-        std::os::unix::fs::symlink(&target, &link).expect("link the control path");
+        let link = root.path().join("run");
+        std::os::unix::fs::symlink(target.path(), &link).expect("link the control path");
 
-        let error = refuse_linked_paths(&root).expect_err("the linked path is refused");
+        let error = refuse_linked_paths(root.path()).expect_err("the linked path is refused");
 
         assert!(
             matches!(&error, RootError::LinkedPath { path } if path == &link),
@@ -388,8 +373,5 @@ mod tests {
                 .file_type()
                 .is_symlink()
         );
-
-        crate::test_support::remove_dir_all(&root);
-        crate::test_support::remove_dir_all(&target);
     }
 }

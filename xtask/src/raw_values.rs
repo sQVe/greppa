@@ -531,15 +531,6 @@ fn raw_string_end(characters: &[char], index: usize) -> Option<usize> {
 mod tests {
     use super::*;
 
-    fn temporary_directory(name: &str) -> PathBuf {
-        let path =
-            std::env::temp_dir().join(format!("greppa-raw-values-{name}-{}", std::process::id()));
-        crate::test_support::remove_dir_all(&path);
-        fs::create_dir_all(&path).expect("create temporary directory");
-
-        path
-    }
-
     #[test]
     fn scan_reports_a_literal_with_its_path_and_line() {
         let source = "fn scene() {\n    let width = px(3.0);\n}\n";
@@ -698,43 +689,43 @@ let c = rgb\n\
 
     #[test]
     fn scan_directory_exempts_theme_file() {
-        let directory = temporary_directory("theme-exempt");
-        fs::write(directory.join("theme.rs"), "let x = px(3.0);\n").expect("write theme");
-        fs::write(directory.join("scene.rs"), "let y = 1.0;\n").expect("write scene");
+        let directory = crate::test_support::temporary_directory();
+        fs::write(directory.path().join("theme.rs"), "let x = px(3.0);\n").expect("write theme");
+        fs::write(directory.path().join("scene.rs"), "let y = 1.0;\n").expect("write scene");
 
-        let failures = scan_directory(&directory, &directory).expect("scan");
+        let failures = scan_directory(directory.path(), directory.path()).expect("scan");
 
-        fs::remove_dir_all(&directory).expect("remove temporary directory");
         assert!(failures.is_empty());
     }
 
     #[test]
     fn scan_directory_scans_a_nested_theme_file() {
-        let directory = temporary_directory("nested-theme");
-        fs::create_dir_all(directory.join("scenes")).expect("create scenes");
-        fs::write(directory.join("scenes/theme.rs"), "let x = px(3.0);\n")
-            .expect("write nested theme");
+        let directory = crate::test_support::temporary_directory();
+        fs::create_dir_all(directory.path().join("scenes")).expect("create scenes");
+        fs::write(
+            directory.path().join("scenes/theme.rs"),
+            "let x = px(3.0);\n",
+        )
+        .expect("write nested theme");
 
-        let failures = scan_directory(&directory, &directory).expect("scan");
+        let failures = scan_directory(directory.path(), directory.path()).expect("scan");
 
-        fs::remove_dir_all(&directory).expect("remove temporary directory");
         assert_eq!(failures.len(), 1);
         assert!(failures[0].ends_with("theme.rs:1: let x = px(3.0);"));
     }
 
     #[test]
     fn scan_directory_finds_literals_in_other_files() {
-        let directory = temporary_directory("other-files");
-        fs::write(directory.join("theme.rs"), "let x = px(3.0);\n").expect("write theme");
+        let directory = crate::test_support::temporary_directory();
+        fs::write(directory.path().join("theme.rs"), "let x = px(3.0);\n").expect("write theme");
         fs::write(
-            directory.join("scene.rs"),
+            directory.path().join("scene.rs"),
             "fn f() {\n    let y = rgb(0x112233);\n}\n",
         )
         .expect("write scene");
 
-        let failures = scan_directory(&directory, &directory).expect("scan");
+        let failures = scan_directory(directory.path(), directory.path()).expect("scan");
 
-        fs::remove_dir_all(&directory).expect("remove temporary directory");
         assert_eq!(failures.len(), 1);
         assert!(failures[0].ends_with("scene.rs:2: let y = rgb(0x112233);"));
     }

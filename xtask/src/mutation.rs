@@ -553,8 +553,8 @@ mod tests {
 
     #[test]
     fn read_survivors_keeps_only_missed_mutants() {
-        let root = std::env::temp_dir().join(format!("greppa-xtask-{}", std::process::id()));
-        let output = root.join("out");
+        let root = crate::test_support::temporary_directory();
+        let output = root.path().join("out");
         let mutant = |summary: &str, replacement: &str| {
             json!({
                 "summary": summary,
@@ -574,16 +574,15 @@ mod tests {
         ] });
 
         fs::create_dir_all(output.join("mutants.out")).expect("create output");
-        fs::write(root.join("lib.rs"), "a <= b\n").expect("write source");
+        fs::write(root.path().join("lib.rs"), "a <= b\n").expect("write source");
         fs::write(
             output.join("mutants.out/outcomes.json"),
             outcomes.to_string(),
         )
         .expect("write outcomes");
 
-        let survivors = read_survivors(&root, &output).expect("survivors parse");
+        let survivors = read_survivors(root.path(), &output).expect("survivors parse");
 
-        fs::remove_dir_all(&root).expect("remove temporary directory");
         assert_eq!(
             survivors,
             vec![Survivor {

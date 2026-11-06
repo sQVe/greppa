@@ -265,8 +265,8 @@ mod tests {
 
     #[test]
     fn record_matches_rejects_a_changed_start_time() {
-        let path =
-            std::env::temp_dir().join(format!("greppa-sandbox-test-record-{}", std::process::id()));
+        let directory = crate::test_support::temporary_directory();
+        let path = directory.path().join("record");
         let pid = std::process::id();
         let started = process_start(pid).expect("the test process has a start time");
 
@@ -275,14 +275,12 @@ mod tests {
 
         fs::write(&path, format!("{pid} {}\n", started + 1)).expect("write the changed record");
         assert!(!record_matches(&path));
-
-        crate::test_support::remove_file(&path);
     }
 
     #[test]
     fn stop_process_skips_a_mismatched_start_time() {
-        let path =
-            std::env::temp_dir().join(format!("greppa-sandbox-test-stop-{}", std::process::id()));
+        let directory = crate::test_support::temporary_directory();
+        let path = directory.path().join("record");
         let pid = std::process::id();
         let started = process_start(pid).expect("the test process has a start time");
 
@@ -295,10 +293,8 @@ mod tests {
 
     #[test]
     fn stop_after_open_refuses_a_changed_identity_without_signaling() {
-        let path = std::env::temp_dir().join(format!(
-            "greppa-sandbox-test-after-open-{}",
-            std::process::id()
-        ));
+        let directory = crate::test_support::temporary_directory();
+        let path = directory.path().join("record");
         let pid = std::process::id();
         let started = process_start(pid).expect("the test process has a start time");
         fs::write(&path, format!("{pid} {started}\n")).expect("write the record");

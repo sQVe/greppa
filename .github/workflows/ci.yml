@@ -88,8 +88,35 @@ jobs:
     name: End to end (Linux)
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Ubuntu 24.04's Xwayland aborts on the first xdotool input under headless Weston, so the job
+    # runs the same current Weston and Xwayland as local runs.
+    container:
+      image: archlinux@sha256:b1c2fe6e717bfd5673af8fc217e1e1c3ce0dcbb1d53c3414c8425e7ce79fc6d9
     timeout-minutes: 30
     steps:
+      - name: Install the build tools and the sandbox stack
+        run: |
+          pacman -Syu --noconfirm --needed \
+            alsa-lib \
+            base-devel \
+            curl \
+            fontconfig \
+            freetype2 \
+            git \
+            imagemagick \
+            libxcb \
+            libxkbcommon \
+            libxkbcommon-x11 \
+            openssl \
+            pkgconf \
+            rustup \
+            vulkan-icd-loader \
+            vulkan-swrast \
+            wayland \
+            weston \
+            xdotool \
+            xorg-xwayland
+          install -d -m 1777 /tmp/.X11-unix
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -97,39 +124,6 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Install GPUI system packages and the sandbox tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends --yes \
-            imagemagick \
-            libasound2-dev \
-            libfontconfig1-dev \
-            libfreetype6-dev \
-            libssl-dev \
-            libvulkan-dev \
-            libwayland-dev \
-            libx11-dev \
-            libx11-xcb-dev \
-            libxcb-randr0-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            libxcb-xkb-dev \
-            libxcb1-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            mesa-vulkan-drivers \
-            pkg-config \
-            weston \
-            xdotool \
-            xwayland
-      # ImageMagick 6 has no magick command; its convert takes the same arguments that capture passes.
-      - name: Provide magick on ImageMagick 6
-        run: |
-          if ! command -v magick > /dev/null; then
-            sudo ln -s "$(command -v convert)" /usr/local/bin/magick
-          fi
-          magick -version
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest

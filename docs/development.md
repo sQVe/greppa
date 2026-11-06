@@ -190,6 +190,11 @@ On Debian and Ubuntu:
 sudo apt-get install --no-install-recommends weston xwayland imagemagick xdotool
 ```
 
+Input needs Weston 15 with Xwayland 24.1.14 or newer, as Arch ships. With the older versions in
+Ubuntu 24.04 and Debian 13, Xwayland aborts on the first `xdotool` input, so `shot` works but
+`click`, `type`, and `key` do not. CI runs the end-to-end test in an Arch Linux container for this
+reason.
+
 Never send input or run greppa against the real display.
 
 ## Mutation testing

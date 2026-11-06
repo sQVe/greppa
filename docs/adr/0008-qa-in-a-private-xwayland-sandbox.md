@@ -59,6 +59,9 @@ private display. During a demo the user's own mouse over the window mixes with t
 ### Negative
 
 - The sandbox needs Linux, Weston, Xwayland, xdotool, ImageMagick, and a Vulkan driver.
+- Input needs a current Weston and Xwayland. Weston 14 with Xwayland 24.1.6 and older, as in
+  Ubuntu 24.04 and Debian 13, abort Xwayland on the first `xdotool` input; Weston 15 with Xwayland
+  24.1.14 works. CI runs the end-to-end test in an Arch Linux container.
 - A short-lived xdotool process does not keep the pointer hover across commands. A later
   requirement for hover needs a persistent connection. Held keys and mouse buttons do persist on
   the private server, so the sandbox must release them on every exit.

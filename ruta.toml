@@ -1,0 +1,10 @@
+name = "greppa"
+
+[app]
+command = ["target/debug/greppa-scene"]
+title = "greppa-scene"
+width = 640
+height = 480
+
+[ready]
+line = "json"

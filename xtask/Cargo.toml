@@ -9,16 +9,12 @@ publish.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-mutants = "0.0.3"
 ra-ap-rustc_lexer.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-
-[target.'cfg(target_os = "linux")'.dependencies]
-rustix = { version = "1", features = ["process"] }
 
 [lints]
 workspace = true

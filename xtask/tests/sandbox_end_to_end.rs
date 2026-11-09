@@ -4,6 +4,123 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+#[path = "../src/test_support.rs"]
+mod test_support;
+
+#[test]
+fn sandbox_passes_arguments_stdio_working_directory_and_status_to_ruta() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let folder = test_support::temporary_directory();
+    let ruta = folder.path().join("ruta");
+    fs::write(
+        &ruta,
+        "#!/bin/sh\nprintf '%s\\n' \"$PWD\" \"$@\"\nprintf 'ruta stderr\\n' >&2\nexit 23\n",
+    )
+    .expect("write a fake ruta");
+    fs::set_permissions(&ruta, fs::Permissions::from_mode(0o700)).expect("make ruta executable");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args([
+            "sandbox",
+            "future-command",
+            "--unknown",
+            "two words",
+            "--",
+            "up",
+        ])
+        .env("PATH", folder.path())
+        .current_dir(folder.path())
+        .output()
+        .expect("run the wrapper");
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace parent");
+
+    assert_eq!(output.status.code(), Some(23));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!(
+            "{}\nfuture-command\n--unknown\ntwo words\n--\nup\n",
+            workspace.display()
+        )
+    );
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "ruta stderr\n");
+}
+
+#[test]
+fn missing_ruta_names_the_pinned_install_command() {
+    let folder = test_support::temporary_directory();
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["sandbox", "down"])
+        .env("PATH", folder.path())
+        .output()
+        .expect("run the wrapper");
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "ruta is not installed. Run: cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta\n"
+    );
+    assert_eq!(
+        fs::read_dir(folder.path())
+            .expect("list the folder")
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn build_commands_refuse_an_executable_outside_the_configured_target() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let folder = test_support::temporary_directory();
+    let cargo = folder.path().join("cargo");
+    fs::write(&cargo, "#!/bin/sh\nprintf '%s\\n' '{\"reason\":\"compiler-artifact\",\"target\":{\"name\":\"greppa-scene\"},\"executable\":\"/custom/debug/greppa-scene\"}'\n")
+        .expect("write a fake cargo");
+    fs::set_permissions(&cargo, fs::Permissions::from_mode(0o700)).expect("make cargo executable");
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace parent");
+    let expected = format!(
+        "ruta.toml requires {}/target/debug/greppa-scene, but Cargo reported /custom/debug/greppa-scene. Remove CARGO_TARGET_DIR or other target directory overrides.\n",
+        workspace.display()
+    );
+
+    for arguments in [
+        vec!["sandbox", "up", "smoke-2"],
+        vec!["sandbox", "restart"],
+        vec!["mock", "capture", "smoke-2"],
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+            .args(&arguments)
+            .env("PATH", folder.path())
+            .output()
+            .expect("run the wrapper");
+
+        assert_eq!(output.status.code(), Some(1), "{arguments:?}");
+        assert!(output.stdout.is_empty(), "{arguments:?}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            expected,
+            "{arguments:?}"
+        );
+    }
+
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["mock", "unknown", "smoke-2"])
+        .env("PATH", folder.path())
+        .output()
+        .expect("run an unknown mock command");
+
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "Usage:\n  cargo xtask mock capture <scene>\n"
+    );
+}
+
 const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 const SCENE_WINDOW_SIZE: (u32, u32) = (640, 480);
 
@@ -19,18 +136,14 @@ impl Sandbox {
     }
 
     fn root(&self) -> PathBuf {
-        PathBuf::from(format!("/var/tmp/greppa-sandbox-{}", self.name))
-    }
-
-    fn marker(&self) -> String {
-        format!("GREPPA_SANDBOX_ROOT={}", self.root().display())
+        PathBuf::from(format!("/var/tmp/ruta-{}", self.name))
     }
 
     fn run(&self, arguments: &[&str]) -> Output {
         Command::new(env!("CARGO_BIN_EXE_xtask"))
             .arg("sandbox")
             .args(arguments)
-            .env("GREPPA_SANDBOX", &self.name)
+            .env("RUTA_NAME", &self.name)
             .output()
             .expect("run the xtask binary")
     }
@@ -106,22 +219,6 @@ fn png_size(path: &Path) -> (u32, u32) {
     (width, height)
 }
 
-fn processes_with_marker(marker: &str) -> Vec<PathBuf> {
-    let processes = fs::read_dir("/proc").expect("list /proc");
-
-    processes
-        .filter_map(Result::ok)
-        .map(|entry| entry.path().join("environ"))
-        .filter(|environ| {
-            fs::read(environ).is_ok_and(|bytes| {
-                bytes
-                    .split(|byte| *byte == 0)
-                    .any(|variable| variable == marker.as_bytes())
-            })
-        })
-        .collect()
-}
-
 #[test]
 #[ignore = "needs Weston, Xwayland, xdotool, and ImageMagick"]
 fn sandbox_drives_a_scene_and_goes_down() {
@@ -140,25 +237,16 @@ fn sandbox_drives_a_scene_and_goes_down() {
     sandbox.succeed(&["type", "hello"]);
     sandbox.succeed(&["key", "Escape"]);
     sandbox.succeed(&["opened"]);
+
+    if let Some(folder) = std::env::var_os("GREPPA_E2E_ARTIFACTS") {
+        sandbox
+            .keep_diagnostics(Path::new(&folder))
+            .expect("save sandbox diagnostics");
+    }
+
     sandbox.succeed(&["down"]);
 
     assert!(!sandbox.root().exists(), "down removes the sandbox root");
-}
-
-#[test]
-#[ignore = "needs Weston, Xwayland, xdotool, and ImageMagick"]
-fn failed_up_leaves_no_root_and_no_process() {
-    let sandbox = Sandbox::new("bad");
-
-    let output = sandbox.run(&["up", "no-such-scene"]);
-
-    assert!(!output.status.success(), "up with an unknown scene fails");
-    assert!(!sandbox.root().exists(), "a failed up removes its root");
-    assert_eq!(
-        processes_with_marker(&sandbox.marker()),
-        Vec::<PathBuf>::new(),
-        "a failed up stops every process it started"
-    );
 }
 
 #[test]
@@ -171,6 +259,7 @@ fn mock_capture_writes_its_files() {
 
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["mock", "capture", "smoke-2"])
+        .env("RUTA_NAME", format!("e2e-capture-{}", std::process::id()))
         .output()
         .expect("run the xtask binary");
 

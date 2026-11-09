@@ -5,62 +5,12 @@ use anyhow::Context as _;
 use serde_json::Value;
 use thiserror::Error;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Point {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct LogicalSize {
-    pub width: f32,
-    pub height: f32,
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct Ready {
-    pub scene: String,
-    pub origin: Point,
-    pub size: LogicalSize,
-    pub scale: f32,
-    pub title: String,
-}
-
 #[derive(Debug, Error)]
 pub(crate) enum SceneError {
     #[error("{}", unknown_scene_message(name, names))]
     Unknown { name: String, names: Vec<String> },
     #[error("{}", unknown_scene_message(name, names))]
     Empty { name: String, names: Vec<String> },
-}
-
-pub(crate) fn parse_ready(line: &str) -> anyhow::Result<Ready> {
-    let value: Value = serde_json::from_str(line).context("Invalid ready line")?;
-    let missing = |field: &str| anyhow::anyhow!("The ready line has no {field}.");
-
-    Ok(Ready {
-        scene: value["scene"]
-            .as_str()
-            .ok_or_else(|| missing("scene"))?
-            .to_string(),
-        origin: Point {
-            x: number(&value["origin"]["x"]).ok_or_else(|| missing("origin.x"))?,
-            y: number(&value["origin"]["y"]).ok_or_else(|| missing("origin.y"))?,
-        },
-        size: LogicalSize {
-            width: number(&value["size"]["width"]).ok_or_else(|| missing("size.width"))?,
-            height: number(&value["size"]["height"]).ok_or_else(|| missing("size.height"))?,
-        },
-        scale: number(&value["scale"]).ok_or_else(|| missing("scale"))?,
-        title: value["title"]
-            .as_str()
-            .ok_or_else(|| missing("title"))?
-            .to_string(),
-    })
-}
-
-fn number(value: &Value) -> Option<f32> {
-    value.as_f64().map(|value| value as f32)
 }
 
 pub(crate) fn unknown_scene_message(name: &str, names: &[String]) -> String {
@@ -139,7 +89,24 @@ pub(crate) fn build(root: &Path) -> anyhow::Result<PathBuf> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    executable_from_messages(&stdout)
+    let executable = executable_from_messages(&stdout)?;
+    validate_executable(root, &executable)?;
+
+    Ok(executable)
+}
+
+fn validate_executable(root: &Path, executable: &Path) -> anyhow::Result<()> {
+    let expected = root.join("target/debug/greppa-scene");
+
+    if executable != expected {
+        anyhow::bail!(
+            "ruta.toml requires {}, but Cargo reported {}. Remove CARGO_TARGET_DIR or other target directory overrides.",
+            expected.display(),
+            executable.display()
+        );
+    }
+
+    Ok(())
 }
 
 pub(crate) fn executable_from_messages(output: &str) -> anyhow::Result<PathBuf> {
@@ -169,8 +136,7 @@ pub(crate) fn names(
         .arg("--list")
         .env_clear()
         .envs(environment.iter().cloned());
-    let output = crate::process::run_with_timeout(command, crate::process::TOOL_TIMEOUT)
-        .context("Could not list the scenes")?;
+    let output = command.output().context("Could not list the scenes")?;
 
     if !output.status.success() {
         anyhow::bail!("The scene binary did not list its scenes.");
@@ -193,41 +159,6 @@ pub(crate) fn names(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parse_ready_reads_every_field() {
-        let line = "{\"scene\":\"demo\",\"origin\":{\"x\":60,\"y\":60},\"size\":{\"width\":420,\"height\":300},\"scale\":1,\"title\":\"greppa-scene-demo\"}";
-
-        assert_eq!(
-            parse_ready(line).expect("a complete ready line"),
-            Ready {
-                scene: "demo".to_string(),
-                origin: Point { x: 60.0, y: 60.0 },
-                size: LogicalSize {
-                    width: 420.0,
-                    height: 300.0,
-                },
-                scale: 1.0,
-                title: "greppa-scene-demo".to_string(),
-            }
-        );
-    }
-
-    #[test]
-    fn parse_ready_rejects_other_output() {
-        assert!(parse_ready("not json").is_err());
-        assert!(parse_ready("{\"scene\":\"demo\"}").is_err());
-    }
-
-    #[test]
-    fn parse_ready_reports_a_missing_field() {
-        assert!(
-            parse_ready(
-                "{\"scene\":\"demo\",\"origin\":{\"x\":1,\"y\":2},\"size\":{\"width\":3,\"height\":4},\"scale\":1}"
-            )
-            .is_err()
-        );
-    }
 
     fn known_names() -> Vec<String> {
         ["alpha", "beta"]
@@ -293,6 +224,35 @@ mod tests {
         assert!(has("HOME"));
         assert!(has("CARGO_HOME"));
         assert!(has("RUSTUP_HOME"));
+    }
+
+    #[test]
+    fn names_lists_the_binary_without_a_display() {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let folder = crate::test_support::temporary_directory();
+        let binary = folder.path().join("scene");
+        std::fs::write(&binary, "#!/bin/sh\n[ \"$1\" = --list ] || exit 1\n[ -z \"$DISPLAY\" ] || exit 1\nprintf ' alpha \\n\\n beta \\n'\n").expect("write a scene list command");
+        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o700))
+            .expect("make the scene executable");
+
+        assert_eq!(
+            names(&binary, &[]).expect("list known scenes"),
+            ["alpha", "beta"]
+        );
+    }
+
+    #[test]
+    fn executable_must_match_the_ruta_config_path() {
+        let root = Path::new("/workspace");
+        let expected = root.join("target/debug/greppa-scene");
+        validate_executable(root, &expected).expect("the configured executable is accepted");
+        let error = validate_executable(root, Path::new("/custom/debug/greppa-scene"))
+            .expect_err("a custom target directory is refused");
+        assert_eq!(
+            error.to_string(),
+            "ruta.toml requires /workspace/target/debug/greppa-scene, but Cargo reported /custom/debug/greppa-scene. Remove CARGO_TARGET_DIR or other target directory overrides."
+        );
     }
 
     #[test]

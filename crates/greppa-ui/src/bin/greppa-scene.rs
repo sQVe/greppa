@@ -78,7 +78,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let title = format!("greppa-scene-{}", name.as_str());
+    let title = "greppa-scene".to_string();
 
     gpui_kit::application().run(move |cx| {
         gpui_kit::init(cx);

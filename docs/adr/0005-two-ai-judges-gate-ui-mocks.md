@@ -37,9 +37,12 @@ project skill runs each round and holds the procedure, so the procedure can chan
 
 - A scene uses greppa's real UI parts and fake data. Scenes live in `greppa-ui`, and a separate
   scene binary opens one by name, so mocks stay out of the app.
-- `cargo xtask mock capture <scene>` opens the scene in a real GPUI window on a private headless
-  display, and captures a full shot and a crop of exactly the scene. It never uses the developer's
-  display or input. Capture runs on Linux only and does not run in CI.
+- `cargo xtask mock capture <scene>` builds and validates the scene, then calls the installed ruta
+  CLI for a private headless GPUI window, a full shot, and a crop of exactly the scene.
+  ruta owns display isolation and teardown, so greppa does not keep a second capture implementation.
+  It never uses the developer's display or input. Capture runs on Linux only; CI checks its output
+  files. See [the sandbox decision](./0009-qa-in-a-private-xwayland-sandbox.md) and
+  [the setup commands](../development.md#sandbox).
 - The judges see the shot, the crop, and the `cargo xtask check` result.
 
 ### Theme values
@@ -102,8 +105,8 @@ must give. Changing a judge model or the judge instructions requires a smoke tes
 - A model update can change findings, so the smoke test must run again.
 - A scene cannot show the four usability categories. They wait for the real view.
 - Scenes must follow changes to the UI parts, or they show old parts.
-- Capture needs Linux with Weston, Xwayland, ImageMagick, and a Vulkan driver, so mocks cannot be
-  captured on macOS.
+- Capture needs ruta on Linux with Weston, Xwayland, xdotool, ImageMagick, and a Vulkan driver,
+  so mocks cannot be captured on macOS.
 - The pass rule is strict. One severity 2 finding from either judge fails the mock.
 - The raw-value rule is strict. A one-off size still needs a theme token.
 

@@ -1,16 +1,9 @@
 mod check;
-mod cleanup;
-#[cfg(target_os = "linux")]
-mod display;
-#[cfg(target_os = "linux")]
-mod environment;
 mod mock;
 mod mutation;
-#[cfg(target_os = "linux")]
-mod process;
 mod raw_values;
 #[cfg(target_os = "linux")]
-mod sandbox;
+mod ruta;
 #[cfg(target_os = "linux")]
 mod scene;
 #[cfg(test)]
@@ -57,8 +50,18 @@ fn main() -> ExitCode {
 }
 
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::print_stderr,
+    reason = "failure messages are the command's output"
+)]
 fn sandbox_status(root: &Path, arguments: &[String]) -> ExitCode {
-    sandbox::run(root, arguments)
+    match ruta::sandbox(root, arguments) {
+        Ok(status) => status,
+        Err(error) => {
+            eprintln!("{error:#}");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 #[cfg(not(target_os = "linux"))]

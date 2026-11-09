@@ -12,15 +12,26 @@ would take over the screen, the pointer, and the keyboard, and it would depend o
 scale and other windows.
 
 greppa is one native process with no server and no browser, so a sandbox cannot separate the app
-from the rest of the machine. It can separate the display and the input instead. The capture path
-for mocks already starts a private Weston with Xwayland and grabs the window with ImageMagick.
+from the rest of the machine. It can separate the display and the input instead. Several projects
+need the same display, input, capture, and cleanup logic. Separate copies would drift and require
+the same fixes in each project.
 
 ## Decision
 
-`cargo xtask sandbox` gives agents and people a throwaway greppa window on a private headless
-Weston and Xwayland display. Every command runs on that display. Input is xdotool XTest, and a shot
-is ImageMagick `import` of the private window, so a shot's pixels and an input coordinate share one
-scale. Agents try and QA greppa only in the sandbox and never against the real display.
+greppa uses the installed ruta CLI for its private sandbox instead of keeping its own sandbox code.
+`cargo xtask sandbox` builds the scene binary when needed and passes commands to ruta. ruta gives
+agents and people a throwaway greppa window on a private headless Weston and Xwayland display.
+Every command runs on that display. Input is xdotool XTest, and a shot is ImageMagick `import` of
+the private window, so a shot's pixels and an input coordinate share one scale. Agents try and QA
+greppa only in the sandbox and never against the real display.
+
+ruta owns display isolation, input, capture, and process cleanup. greppa owns `ruta.toml`, the scene
+build, and scene-name validation for capture. The config fixes the window title and size so ruta
+can identify and capture the window exactly. People may also call ruta directly after a build;
+[the development guide](../development.md#sandbox) gives the install and run commands.
+
+The scene binary must build to `target/debug/greppa-scene` under the workspace root.
+`ruta.toml` names that fixed program path, and ruta has no per-run override.
 
 The sandbox is persistent across commands, and each command is a separate process. It records each
 process with its start time, so `down` never kills a reused PID. The root folder is owner-only with
@@ -30,11 +41,11 @@ caller's `DISPLAY`, `WAYLAND_DISPLAY`, `LIBEI_SOCKET`, and similar, so no comman
 the real display. The scene build is the one exception: it keeps the caller's Cargo and rustup
 configuration and drops only the display and session variables, because a build needs the toolchain
 environment and never opens a display. `xdg-open` and `open` are stub scripts that log a link for
-`opened` instead of opening it. A name override runs a second sandbox side by side.
+`opened` instead of opening it. `RUTA_NAME` runs a second sandbox side by side at
+`/var/tmp/ruta-<name>`.
 
-`mock capture` uses the same display command and wait code as the sandbox. The sandbox adds its own
-persistent cleanup, because its processes outlive the command that started them, so the two paths
-share the start and wait logic but not the lifetime handling.
+`mock capture` builds and validates the scene, then calls ruta's one-shot capture. ruta owns its
+separate capture root and teardown, so capture leaves a running interactive sandbox untouched.
 
 ### Headed demos
 
@@ -52,13 +63,17 @@ private display. During a demo the user's own mouse over the window mixes with t
 - A shot's coordinates match the input coordinates, so a click can be read from a shot.
 - Recorded start times stop a reused PID from being stopped.
 - The environment allowlist and the stub openers keep a command inside the sandbox.
-- The same display code serves capture and the sandbox.
+- ruta shares display and cleanup fixes across projects and serves both capture and the sandbox.
 - A headed demo shows the same private display that the headless sandbox uses, so an agent can
   switch to a visible window without changing how it drives the app.
 
 ### Negative
 
-- The sandbox needs Linux, Weston, Xwayland, xdotool, ImageMagick, and a Vulkan driver.
+- The sandbox needs an installed ruta, Linux, Weston, Xwayland, xdotool, ImageMagick, and a Vulkan
+  driver.
+- A change to ruta's CLI or config can break the wrappers, so greppa pins its release.
+- A custom Cargo target directory cannot run the sandbox or capture because the wrappers require
+  the configured scene binary path.
 - Input needs a current Weston and Xwayland. Weston 14 with Xwayland 24.1.6 and older, as in
   Ubuntu 24.04 and Debian 13, abort Xwayland on the first `xdotool` input; Weston 15 with Xwayland
   24.1.14 works. CI runs the end-to-end test in an Arch Linux container.
@@ -78,9 +93,9 @@ private display. During a demo the user's own mouse over the window mixes with t
 ### A persistent x11rb connection
 
 Talk to XTEST from Rust with `x11rb` and its `xtest` feature, and keep the connection open across
-commands. Deferred because the first version needs only move, click, drag, type, and key, and
-xdotool already provides them. A persistent connection becomes worthwhile when hover or held
-modifiers must survive across commands; it also needs its own keymap and modifier handling.
+commands. Deferred because xdotool already provides every input the sandbox needs, held keys
+included. A persistent connection becomes worthwhile when hover must survive across commands; it
+also needs its own keymap and modifier handling.
 
 ### Native Wayland with Sway
 
@@ -94,8 +109,8 @@ input and capture APIs together adds risk without a demonstrated benefit for thi
 Open the window on the desktop that is already running. Rejected because the window would take over
 the screen and the input, and the result would depend on the desktop's scale and other windows.
 
-### A Python or shell script
+### A sandbox inside xtask
 
-Write the sandbox as a Python or bash program as the reference implementation did. Rejected because
-`xtask` is the repository's task runner, the repository has no Python, and Rust holds the argument
-parsing and isolation checks in one tested place.
+Keep a local copy of the sandbox in Rust. Rejected because each project would maintain and test
+its own display, input, and cleanup logic. Thin wrappers keep greppa's build and validation steps
+local while ruta shares sandbox fixes across projects.

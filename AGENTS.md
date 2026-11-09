@@ -36,8 +36,12 @@ verification.
   sandbox with `cargo xtask sandbox up <scene>`, capture it with `cargo xtask mock capture <scene>`,
   and gate it with the judge-mock skill in `.pi/skills/judge-mock/`. See
   [ADR 0005](docs/adr/0005-two-ai-judges-gate-ui-mocks.md).
-- Try and QA greppa only in the sandbox. `cargo xtask sandbox up <scene>` opens a throwaway window
-  on a private headless display. Never send input or run the app against the real display. See
+- Try and QA greppa only in the ruta sandbox. Install it with
+  `cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta`.
+  `cargo xtask sandbox up <scene>` builds the scene binary and calls ruta on a private headless
+  display. After a build, you may also run `ruta` directly from the workspace root.
+  `RUTA_NAME=<name>` selects a separate sandbox at `/var/tmp/ruta-<name>`.
+  Never send input or run the app against the real display. See
   [the development guide](docs/development.md) and
   [ADR 0009](docs/adr/0009-qa-in-a-private-xwayland-sandbox.md).
 - The toolchain is pinned in `rust-toolchain.toml`. Lint levels live in `[workspace.lints]`, and CI

@@ -118,13 +118,14 @@ Capture a scene for the judges:
 cargo xtask mock capture smoke-2
 ```
 
-The command builds the scene binary, starts a private headless display, runs the scene, waits for
-the ready JSON line, grabs the window with ImageMagick `import`, crops it with `magick`, and writes
-`shot.png`, `crop.png`, and `capture.json` to `.tau/judge/smoke-2/`. The crop is exactly the scene
-panel; the shot shows the surrounding base color. Capture stops the scene and the display on
-success and on failure, and it never uses the real display or input. `.tau/` is git-ignored.
+The command builds the scene binary, validates the scene name, removes stale capture files, and
+calls `ruta capture --out .tau/judge/smoke-2 -- smoke-2`. ruta writes `shot.png`, `crop.png`, and
+`capture.json` there. The crop is exactly the scene panel; the shot shows the surrounding base
+color. ruta stops the scene and its private display on success and on failure, without stopping a
+running interactive sandbox. It never uses the real display or input. `.tau/` is git-ignored.
 
-Capture is Linux only and does not run in CI. It needs:
+Capture is Linux only. The end-to-end CI job checks that it writes all three files. It needs ruta
+and:
 
 - weston with the headless backend and Xwayland.
 - ImageMagick 7 with `import`, `magick`, and `identify`.
@@ -133,9 +134,17 @@ Capture is Linux only and does not run in CI. It needs:
 
 ## Sandbox
 
-Agents and people try and QA greppa in a throwaway window on a private headless Weston and
-Xwayland display. Nothing shows on the real desktop, and no input reaches the real pointer or
-keyboard.
+Agents and people try and QA greppa through ruta in a throwaway window on a private headless
+Weston and Xwayland display. Nothing shows on the real desktop, and no input reaches the real
+pointer or keyboard. Install the pinned release:
+
+```sh
+cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta
+```
+
+`ruta.toml` names the scene binary, JSON ready line, fixed `greppa-scene` title, and 640x480 window.
+The wrappers require the binary at `target/debug/greppa-scene`; remove `CARGO_TARGET_DIR` or other
+target directory overrides if the build reports another path.
 
 ```sh
 cargo xtask sandbox up smoke-2
@@ -152,7 +161,11 @@ cargo xtask sandbox restart
 cargo xtask sandbox down
 ```
 
-`up [--headed] <scene>` builds `greppa-scene` and opens the scene. Without `--headed` it stays on the
+The wrapper builds `greppa-scene` for `up` and `restart`, then passes all arguments to ruta.
+Other commands go straight to ruta. After a build, you can also run `ruta up smoke-2`, `ruta shot`,
+and `ruta down` directly from the workspace root.
+
+`up [--headed] <scene>` opens the scene. Without `--headed` it stays on the
 private display. With `--headed` it also runs Weston nested on your Wayland session, as one window on
 the desktop, so you can demo a feature to someone. Only that Weston process gets the caller's
 `WAYLAND_DISPLAY` and runtime directory; the scene, `xdotool`, and `import` stay on the private
@@ -166,10 +179,10 @@ coordinates. `log` prints the scene's output. `opened` lists the links that a st
 `open` logged instead of opening. `down` stops every process the sandbox started and removes its
 root folder. A failed `up` cleans up the same way.
 
-The root is `/var/tmp/greppa-sandbox-<name>`, owner-only with mode 700. It holds the sandbox's own
+The root is `/var/tmp/ruta-<name>`, owner-only with mode 700. The default name is `greppa`. It holds the sandbox's own
 `HOME`, XDG config, state, runtime, data, and cache folders and its own Weston socket. Each command
 runs with an environment allowlist, so the caller's `DISPLAY`, `WAYLAND_DISPLAY`, and `LIBEI_SOCKET`
-never reach it. `GREPPA_SANDBOX=<name>` runs a second sandbox side by side. A command that needs a
+never reach it. `RUTA_NAME=<name>` runs a second sandbox side by side. A command that needs a
 missing tool exits with a message that names the tool.
 
 An ignored test drives the sandbox and `mock capture` end to end. It needs the same tools as the

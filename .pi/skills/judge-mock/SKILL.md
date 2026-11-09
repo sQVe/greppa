@@ -16,6 +16,16 @@ for a real app view.
 
 Keep each round's files in `.tau/judge/<mock>/`. Git ignores that folder.
 
+Capture uses ruta. Install it before the first round:
+
+```sh
+cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta
+```
+
+`RUTA_NAME=<name>` selects a separate sandbox at `/var/tmp/ruta-<name>`.
+After building the scene binary, you may also run ruta directly from the workspace root.
+See [the development guide](../../../docs/development.md#sandbox) for the sandbox tools.
+
 ## Steps
 
 1. Run the check and save its output:
@@ -34,9 +44,11 @@ Keep each round's files in `.tau/judge/<mock>/`. Git ignores that folder.
    cargo xtask mock capture <mock>
    ```
 
-   The command builds the scene binary, opens the scene on a private headless display, and writes
-   `shot.png`, `crop.png`, and `capture.json` to `.tau/judge/<mock>/`. The crop is exactly the
-   scene panel, and the full shot gives the neighboring context.
+   The command builds and validates the scene, removes stale capture files, and calls
+   `ruta capture --out .tau/judge/<mock> -- <mock>`. ruta opens the scene on a private headless
+   display and writes `shot.png`, `crop.png`, and `capture.json` there. The crop is exactly the
+   scene panel, and the full shot gives the neighboring context. ruta stops the capture's scene
+   and display without stopping a running interactive sandbox.
 
    Scope `app` has no capture command yet. Once real views exist, capture them the same way: the
    app draws the view at the fixed scene origin and size, and `cargo xtask mock capture` grabs the

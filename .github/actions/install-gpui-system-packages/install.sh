@@ -26,6 +26,9 @@ packages=(
 # apt-get gets no package sources, so it cannot ask a mirror for a package that the archives lack.
 # It then fails without changing the system. `--no-download` cannot do this: apt-get rejects it
 # together with package files.
+#
+# The package names are passed too. The archives hold only what the runner image lacked when they
+# were saved, so a later image that drops a package would otherwise leave it out.
 install_from_archive_directory() {
   local archives=("$archive_directory"/*.deb)
 
@@ -36,7 +39,7 @@ install_from_archive_directory() {
   sudo apt-get install --no-install-recommends --yes \
     --option Dir::Etc::sourcelist=/dev/null \
     --option Dir::Etc::sourceparts=/dev/null \
-    "${archives[@]}"
+    "${archives[@]}" "${packages[@]}"
 }
 
 if install_from_archive_directory; then

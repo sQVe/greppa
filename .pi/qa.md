@@ -50,8 +50,6 @@ Run every command from the worktree root.
 
 ## Scene window
 
-Checked: 2026-11-11 at 15f53b6.
-
 ### Reach it
 
 Run every command from the worktree root, with a `RUTA_NAME` from the brief.
@@ -92,7 +90,7 @@ If step 2, 3, or 4 fails, report it to the parent and test nothing.
 
 ### Use it safely
 
-Besides the checks above, use only these commands. Coordinates are window pixels, the same as in a
+Besides the checks in this section, use only these commands. Coordinates are window pixels, the same as in a
 shot.
 
 ```sh
@@ -128,8 +126,10 @@ Never:
 
 ### What to check
 
-- The shot has the width and height that `ruta.toml` sets.
-- The scene fills its panel, with no blank or clipped area.
+- The shot has the width and height that `ruta.toml` sets. `magick identify <file>` prints the
+  shot's size.
+- The panel is whole: no border, row, or label is cut off. Empty space below the last row is
+  normal.
 - Text is readable, and no label overlaps another.
 - When the brief says the scene handles no input, a shot after a click, a key, and a scroll is the
   same picture as before.

@@ -78,14 +78,16 @@ every session and for a session that did not start the sandbox.
    It must print `<worktree root>/target/debug/greppa-scene`. A path that ends in `(deleted)`
    means someone rebuilt the binary after the window opened.
 
-3. Check that no source is newer than the binary:
+3. Check that no source is newer than the binary, and that `ruta.toml` is not newer than the
+   sandbox:
 
    ```sh
    find crates/greppa-ui vendor/gpui-component Cargo.toml Cargo.lock rust-toolchain.toml \
      -newer target/debug/greppa-scene -type f
+   find ruta.toml -newer /var/tmp/ruta-<name>/pid
    ```
 
-   Any path in the output means the window may show old code.
+   Any path in the output means the window may show old code or old sandbox settings.
 
 4. Check the scene: `RUTA_NAME=<name> ruta log` prints a JSON line whose `scene` is the scene from
    the brief.

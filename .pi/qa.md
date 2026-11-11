@@ -30,23 +30,32 @@ Pick the scenes. `SceneName` in `crates/greppa-ui/src/scenes.rs` lists them.
 For the manager. The `qa` worker cannot build or start anything, and one sandbox shows one scene.
 Run every command from the worktree root.
 
-1. Start one sandbox for each assigned scene, after the last edit:
+The manager starts:
 
-   ```sh
-   RUTA_NAME=<name> cargo xtask sandbox up <scene>
-   ```
+- One sandbox for each assigned scene, after the last edit. It reads no secret, costs nothing, and
+  keeps to its own folder and private display.
 
-   Always set `RUTA_NAME`, and use a name that no other running sandbox has. Without it, every
-   worktree uses the sandbox `greppa`. An `up` on a name that is in use replaces its window. A name
-   starts with a letter or digit and holds at most 32 lowercase letters, digits, and hyphens.
+  ```sh
+  RUTA_NAME=<name> cargo xtask sandbox up <scene>
+  ```
 
-2. Put in the brief: each `RUTA_NAME` with its scene, and whether the scene handles input. Launch
-   `qa` without `url`; a native window has none.
-3. After the worker reports, stop each sandbox:
+  It is up when the command prints `ruta <name> is up`. After the worker reports, stop it:
 
-   ```sh
-   RUTA_NAME=<name> ruta down
-   ```
+  ```sh
+  RUTA_NAME=<name> ruta down
+  ```
+
+  Always set `RUTA_NAME`, and use a name that no other running sandbox has. An `up` on a name that
+  is in use replaces its window. A name starts with a letter or digit and holds at most 32
+  lowercase letters, digits, and hyphens.
+
+Ask the user:
+
+- A sandbox without `RUTA_NAME`: every worktree shares the sandbox `greppa`.
+- `up --headed`: it opens a window on the user's desktop.
+
+Put in the brief: each `RUTA_NAME` with its scene, and whether the scene handles input. Launch `qa`
+without `url`; a native window has none.
 
 ## Scene window
 

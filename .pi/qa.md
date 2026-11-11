@@ -28,7 +28,7 @@ Pick the scenes. `SceneName` in `crates/greppa-ui/src/scenes.rs` lists them.
 ## Before a launch
 
 For the manager. The `qa` worker cannot build or start anything, and one sandbox shows one scene.
-Run every command from the worktree root.
+Run `RUTA_NAME=<name> ruta guide` and follow its rules for the session that starts the sandbox.
 
 The manager starts:
 
@@ -39,19 +39,14 @@ The manager starts:
   RUTA_NAME=<name> cargo xtask sandbox up <scene>
   ```
 
-  It is up when the command prints `ruta <name> is up`. After the worker reports, stop it:
+  It is up when `RUTA_NAME=<name> ruta status` exits 0. After the worker reports, stop it:
 
   ```sh
   RUTA_NAME=<name> ruta down
   ```
 
-  Always set `RUTA_NAME`, and use a name that no other running sandbox has. An `up` on a name that
-  is in use replaces its window. A name starts with a letter or digit and holds at most 32
-  lowercase letters, digits, and hyphens.
-
 Ask the user:
 
-- A sandbox without `RUTA_NAME`: every worktree shares the sandbox `greppa`.
 - `up --headed`: it opens a window on the user's desktop.
 
 Put in the brief: each `RUTA_NAME` with its scene, and whether the scene handles input. Launch `qa`
@@ -61,27 +56,27 @@ without `url`; a native window has none.
 
 ### Reach it
 
-Run every command from the worktree root, with a `RUTA_NAME` from the brief.
+Run `RUTA_NAME=<name> ruta guide` first, with a `RUTA_NAME` from the brief. Follow its rules for
+every session and for a session that did not start the sandbox.
 
-1. Check that the sandbox runs:
+1. Check that the sandbox is up and serves this worktree:
 
    ```sh
-   RUTA_NAME=<name> ruta shot /tmp/<name>-1.png
+   RUTA_NAME=<name> ruta status
    ```
 
-   It prints the file path. When it prints `ruta <name> is not up; run 'ruta up' first`, ask the
+   It must exit 0 and print `ruta <name> is up and serves <worktree root>`. Otherwise ask the
    parent to start the sandbox. Do not start it.
 
-2. Check that the window runs this worktree's binary:
+2. Check that the window runs the current binary:
 
    ```sh
    pid=$(cut -d' ' -f1 /var/tmp/ruta-<name>/pid)
-   readlink /proc/$pid/cwd
    readlink /proc/$pid/exe
    ```
 
-   `cwd` must be this worktree's root. `exe` must be `<worktree>/target/debug/greppa-scene`. An
-   `exe` that ends in `(deleted)` means someone rebuilt the binary after the window opened.
+   It must print `<worktree root>/target/debug/greppa-scene`. A path that ends in `(deleted)`
+   means someone rebuilt the binary after the window opened.
 
 3. Check that no source is newer than the binary:
 
@@ -99,39 +94,13 @@ If step 2, 3, or 4 fails, report it to the parent and test nothing.
 
 ### Use it safely
 
-Besides the checks in this section, use only these commands. Coordinates are window pixels, the same as in a
-shot.
+`ruta guide` lists the commands you may run and the ones you may not. greppa adds these rules:
 
-```sh
-RUTA_NAME=<name> ruta shot <file>
-RUTA_NAME=<name> ruta move <x0> <y0> <x1> <y1>
-RUTA_NAME=<name> ruta click <x> <y> [button]
-RUTA_NAME=<name> ruta drag <x0> <y0> <x1> <y1>
-RUTA_NAME=<name> ruta scroll <x> <y> [notches]
-RUTA_NAME=<name> ruta type <text>
-RUTA_NAME=<name> ruta key <keysym> [modifier]...
-RUTA_NAME=<name> ruta hold <keysym>...
-RUTA_NAME=<name> ruta release <keysym>...
-RUTA_NAME=<name> ruta log
-RUTA_NAME=<name> ruta opened
-```
-
-- Always pass a file to `ruta shot`, under `/tmp`, with a new name for each shot. Without a file,
-  the shot goes into the sandbox folder.
-- The shot is the only view of the window. Read the PNG.
+- Never run `cargo` or `cargo xtask`. They build.
+- Never run `target/debug/greppa-scene` yourself. It opens on the real display.
+- Never write under `/var/tmp/ruta-*`. Write shots under `/tmp`, with a new name for each shot.
 - `ruta log` prints what the app wrote to its output. `ruta opened` lists the links the app tried
   to open; the sandbox opens none of them.
-
-Never:
-
-- Run `cargo` or `cargo xtask`. They build.
-- Run `ruta up`, `ruta restart`, `ruta down`, or `ruta capture`. They start or stop an app.
-- Run a `ruta` command without `RUTA_NAME`. It reaches a sandbox that another worktree may own.
-- Run `target/debug/greppa-scene` yourself. It opens on the real display.
-- Call `xdotool`, `import`, or any other input or capture tool yourself. Outside ruta they reach
-  the real display.
-- Leave a key held. Follow each `ruta hold` with `ruta release` for the same keys.
-- Write under `/var/tmp/ruta-*`.
 
 ### What to check
 

@@ -110,7 +110,7 @@ jobs:
         with:
           tool: cargo-nextest
       - name: Install ruta
-        run: cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta
+        run: cargo install --git https://github.com/sQVe/ruta --tag v0.2.0 --locked ruta
       - name: Run the sandbox end to end
         env:
           GREPPA_E2E_ARTIFACTS: ${{ runner.temp }}/sandbox-end-to-end

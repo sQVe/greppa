@@ -141,7 +141,7 @@ Weston and Xwayland display. Nothing shows on the real desktop, and no input rea
 pointer or keyboard. Install the pinned release:
 
 ```sh
-cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta
+cargo install --git https://github.com/sQVe/ruta --tag v0.2.0 --locked ruta
 ```
 
 `ruta.toml` names the scene binary, JSON ready line, fixed `greppa-scene` title, and 640x480 window.
@@ -157,6 +157,11 @@ cargo xtask sandbox click 200 124
 cargo xtask sandbox drag 100 100 300 200
 cargo xtask sandbox type "hello"
 cargo xtask sandbox key p Control_L
+cargo xtask sandbox scroll 200 124 3
+cargo xtask sandbox hold Shift_L
+cargo xtask sandbox release Shift_L
+cargo xtask sandbox status
+cargo xtask sandbox guide
 cargo xtask sandbox log
 cargo xtask sandbox opened
 cargo xtask sandbox restart
@@ -177,7 +182,11 @@ agent drives it.
 
 `restart [--headed] [scene]` reopens the last scene, or another one. `shot [file]` writes the window
 at its own pixel size, so a coordinate read from a shot matches the `move`, `click`, and `drag`
-coordinates. `log` prints the scene's output. `opened` lists the links that a stub `xdg-open` or
+coordinates. `scroll <x> <y> [notches]` turns the wheel at a point; a positive count scrolls down
+and a negative one up. `hold` keeps keys down for later commands until `release` lets them go.
+`status` exits 0 only when the sandbox is up and was started from this workspace. `guide` prints
+ruta's rules for agents that share a sandbox. `log` prints the scene's output. `opened` lists the
+links that a stub `xdg-open` or
 `open` logged instead of opening. `down` stops every process the sandbox started and removes its
 root folder. A failed `up` cleans up the same way.
 

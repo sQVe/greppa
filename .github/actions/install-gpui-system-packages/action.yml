@@ -1,0 +1,31 @@
+name: Install GPUI system packages
+description: >-
+  Install the Debian and Ubuntu packages that GPUI needs to compile. Use the packages in the
+  workflow cache when they fit the runner image, and the package mirror otherwise.
+
+runs:
+  using: composite
+  steps:
+    # The key is new for every job run, so the restore always takes the newest saved packages
+    # through the prefix, and a job that had to use the mirror can always save.
+    - id: cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/gpui-system-packages
+        key: >-
+          gpui-system-packages-${{ runner.os }}-${{ runner.arch }}-${{
+          hashFiles('.github/actions/install-gpui-system-packages/install.sh')
+          }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+        restore-keys: >-
+          gpui-system-packages-${{ runner.os }}-${{ runner.arch }}-${{
+          hashFiles('.github/actions/install-gpui-system-packages/install.sh') }}-
+    - id: install
+      shell: bash
+      run: |
+        "$GITHUB_ACTION_PATH/install.sh" "$RUNNER_TEMP/gpui-system-packages"
+    # Saved here, not at the end of the job, so a failing build still fills the cache.
+    - if: steps.install.outputs.downloaded == 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/gpui-system-packages
+        key: ${{ steps.cache.outputs.cache-primary-key }}

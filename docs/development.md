@@ -36,7 +36,9 @@ sudo pacman -S --needed alsa-lib fontconfig freetype2 openssl vulkan-headers \
 ```
 
 The `Test (Linux)` and mutation jobs in `.github/workflows/ci.yml` install the Debian and Ubuntu
-list before they build GPUI. The check job does not compile code and needs no display.
+list before they build GPUI. The list for CI is in
+`.github/actions/install-gpui-system-packages/install.sh`. The check job does not compile code and
+needs no display.
 
 ### Debugger builds
 
@@ -246,5 +248,12 @@ advisories fail cargo-deny without a code change.
   `cargo mutants --workspace` and uploads `mutants.out` as an artifact. Survivors and timeouts
   pass the job; other cargo-mutants failures fail it.
 
-Only runs on `main` save the build cache. Renovate updates dependencies, actions, and the toolchain
+Only runs on `main` save the build cache.
+
+The `Test (Linux)` and mutation jobs keep their system packages in the workflow cache and install
+them from there, so they need the Ubuntu package mirror only when the cache has no packages that
+fit the runner image. Every run that downloads from the mirror saves the packages, also on a pull
+request. A pull request reads its own cache, the cache of its base branch, and the cache of `main`.
+
+Renovate updates dependencies, actions, and the toolchain
 every Monday, after a release is three days old.

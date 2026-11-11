@@ -5,27 +5,27 @@ in the scene window, opened in the ruta sandbox. The `greppa` app binary opens n
 
 ## Choose sections
 
-For the manager.
+| Section      | Test it when the change touches                                        |
+| ------------ | ---------------------------------------------------------------------- |
+| Scene window | A scene, a part, or the theme in `crates/greppa-ui`; `greppa-scene.rs` |
 
-| Section      | Test it when the change touches                                                                                                                                                         |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scene window | A scene, a part, or the theme in `crates/greppa-ui`; `vendor/gpui-component`; the `gpui-kit` version or `Cargo.lock`; `rust-toolchain.toml`; `ruta.toml`; `greppa-scene.rs`; the ruta release |
+Cross-effects:
+
+- `vendor/gpui-component`, the `gpui-kit` version, `Cargo.lock`, and `rust-toolchain.toml` can
+  change how every scene draws.
+- `ruta.toml` and the ruta release set the window size and how the sandbox finds the window.
 
 Pick the scenes. `SceneName` in `crates/greppa-ui/src/scenes.rs` lists them.
 
 - A change to one scene: that scene.
 - A change to a part in `crates/greppa-ui/src/parts.rs`: every scene that uses the part.
-- A change to anything else in the table: `smoke-2`, plus one scene for each part the change can
-  reach.
+- Any other change above: `smoke-2`, plus one scene for each part the change can reach.
+
+- A new mock's look needs no `qa` launch. The [judge-mock skill](skills/judge-mock/SKILL.md) gates
+  it from still images.
 - When the impact on a scene is unclear, include the scene.
 
-Do not launch `qa` for these:
-
-- A new mock's look. The [judge-mock skill](skills/judge-mock/SKILL.md) gates it from still images.
-- `cargo xtask`. It runs only through `cargo`, which builds. Run `cargo xtask check` yourself.
-- `crates/greppa` and `crates/greppa-core`. No interface uses them yet.
-
-## Before launch
+## Before a launch
 
 For the manager. The `qa` worker cannot build or start anything, and one sandbox shows one scene.
 Run every command from the worktree root.
@@ -49,6 +49,8 @@ Run every command from the worktree root.
    ```
 
 ## Scene window
+
+Checked: 2026-11-11 at 15f53b6.
 
 ### Reach it
 
@@ -135,12 +137,18 @@ Never:
   report a flaw that the "Design" column of the
   [smoke test table](skills/judge-mock/SKILL.md#smoke-test) names.
 
-Report as not verified: other window sizes, macOS, and GPUI's Wayland backend. The sandbox has one
-window size and runs GPUI's X11 backend on Linux.
-
 ### Recipes
 
 None.
+
+## Not testable
+
+Report each of these as not verified. Do not try one through another path.
+
+- Other window sizes: the sandbox has the one size that `ruta.toml` sets.
+- macOS and GPUI's Wayland backend: the sandbox runs GPUI's X11 backend on Linux.
+- `cargo xtask`: it runs only through `cargo`, which builds. The manager runs `cargo xtask check`.
+- `crates/greppa` and `crates/greppa-core`: no interface uses them yet.
 
 [The development guide](../docs/development.md#sandbox) holds the install steps, the system
 requirements, and every sandbox command.

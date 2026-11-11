@@ -45,7 +45,7 @@ fn run(root: &Path, arguments: &[String]) -> anyhow::Result<ExitCode> {
 fn start_error(error: std::io::Error) -> anyhow::Error {
     if error.kind() == std::io::ErrorKind::NotFound {
         return anyhow::anyhow!(
-            "ruta is not installed. Run: cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta"
+            "ruta is not installed. Run: cargo install --git https://github.com/sQVe/ruta --tag v0.2.0 --locked ruta"
         );
     }
 

@@ -61,7 +61,7 @@ fn missing_ruta_names_the_pinned_install_command() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "ruta is not installed. Run: cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta\n"
+        "ruta is not installed. Run: cargo install --git https://github.com/sQVe/ruta --tag v0.2.0 --locked ruta\n"
     );
     assert_eq!(
         fs::read_dir(folder.path())

@@ -37,7 +37,7 @@ verification.
   and gate it with the judge-mock skill in `.pi/skills/judge-mock/`. See
   [ADR 0005](docs/adr/0005-two-ai-judges-gate-ui-mocks.md).
 - Try and QA greppa only in the ruta sandbox. Install it with
-  `cargo install --git https://github.com/sQVe/ruta --tag v0.1.0 --locked ruta`.
+  `cargo install --git https://github.com/sQVe/ruta --tag v0.2.0 --locked ruta`.
   `cargo xtask sandbox up <scene>` builds the scene binary and calls ruta on a private headless
   display. After a build, you may also run `ruta` directly from the workspace root.
   `RUTA_NAME=<name>` selects a separate sandbox at `/var/tmp/ruta-<name>`.

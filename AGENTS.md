@@ -44,6 +44,8 @@ verification.
   Never send input or run the app against the real display. See
   [the development guide](docs/development.md) and
   [ADR 0009](docs/adr/0009-qa-in-a-private-xwayland-sandbox.md).
+- [The QA guide](.pi/qa.md) tells the manager and the `qa` worker how to reach, drive, and check
+  greppa. Update it in the change that alters how to reach or check the app.
 - The toolchain is pinned in `rust-toolchain.toml`. Lint levels live in `[workspace.lints]`, and CI
   fails on warnings. Add single clippy lints, not whole groups. See
   [ADR 0004](docs/adr/0004-toolchain-and-quality-gates.md).

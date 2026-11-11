@@ -28,6 +28,9 @@ decisions, and code states behavior.
 - A record of local changes to vendored code lives next to that code. It states what each change
   does and why, so the change can be kept on an update or offered upstream. It describes no
   feature.
+- `.pi/qa.md` tells QA agents how to reach, drive, and check greppa in the sandbox. It may link
+  feature recipes under `.pi/qa/`. They give test commands and visible results, not how a feature
+  works. Update them in the change that alters what they test.
 
 ### Adding and changing documents
 

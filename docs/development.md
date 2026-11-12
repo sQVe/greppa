@@ -141,7 +141,7 @@ Weston and Xwayland display. Nothing shows on the real desktop, and no input rea
 pointer or keyboard. Install the pinned release:
 
 ```sh
-cargo install --git https://github.com/sQVe/ruta --tag v0.2.0 --locked ruta
+cargo install --git https://github.com/sQVe/ruta --tag v0.2.1 --locked ruta
 ```
 
 `ruta.toml` names the scene binary, JSON ready line, fixed `greppa-scene` title, and 640x480 window.

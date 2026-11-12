@@ -19,7 +19,7 @@ Keep each round's files in `.tau/judge/<mock>/`. Git ignores that folder.
 Capture uses ruta. Install it before the first round:
 
 ```sh
-cargo install --git https://github.com/sQVe/ruta --tag v0.2.0 --locked ruta
+cargo install --git https://github.com/sQVe/ruta --tag v0.2.1 --locked ruta
 ```
 
 `RUTA_NAME=<name>` selects a separate sandbox at `/var/tmp/ruta-<name>`.

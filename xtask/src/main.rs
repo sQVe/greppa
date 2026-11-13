@@ -1,3 +1,4 @@
+mod adr_index;
 mod check;
 mod mock;
 mod mutation;

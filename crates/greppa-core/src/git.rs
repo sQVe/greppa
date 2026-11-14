@@ -43,8 +43,6 @@ impl Git {
         }
     }
 
-    // Runs `git -C <folder> <arguments>` and returns its standard output without the final
-    // newline.
     pub(crate) fn run<S: AsRef<OsStr>>(&self, arguments: &[S]) -> Result<String, GitError> {
         let mut command = Command::new("git");
 

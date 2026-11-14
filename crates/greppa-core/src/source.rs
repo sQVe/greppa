@@ -4,8 +4,6 @@ use thiserror::Error;
 
 use crate::git::{Git, GitError};
 
-/// What the user asked to review, with the names as typed. It is also the source's identity:
-/// resolving it again after a branch moves gives new SHAs for the same request.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SourceRequest {
     WorkingTree,
@@ -45,7 +43,6 @@ impl ReviewSource {
         &self.base
     }
 
-    /// `None` for the working tree, whose head is the files on disk.
     pub fn head(&self) -> Option<&CommitId> {
         self.head.as_ref()
     }
@@ -54,7 +51,6 @@ impl ReviewSource {
         self.merge_base.as_ref()
     }
 
-    /// The commits from base to head, oldest first.
     pub fn commits(&self) -> &[CommitId] {
         &self.commits
     }
@@ -83,11 +79,6 @@ pub enum ResolveError {
 }
 
 impl SourceRequest {
-    /// Parses the command line arguments after the program name.
-    ///
-    /// # Errors
-    ///
-    /// Returns a [`ParseError`] for more than one argument, `A...B`, or a range with an empty side.
     pub fn parse<S: AsRef<str>>(arguments: &[S]) -> Result<Self, ParseError> {
         match arguments {
             [] => Ok(Self::WorkingTree),
@@ -126,12 +117,6 @@ impl SourceRequest {
         })
     }
 
-    /// Resolves every name to a commit SHA now, so call it again to follow moved branches.
-    ///
-    /// # Errors
-    ///
-    /// Returns a [`ResolveError`] when `folder` is not in a repository, a name is not a commit,
-    /// a branch has no common commit with `HEAD`, or `git` fails.
     pub fn resolve(&self, folder: &Path) -> Result<ReviewSource, ResolveError> {
         let git = Git::new(folder);
         let git_folder = git_folder(&git, folder)?;
@@ -181,7 +166,6 @@ impl SourceRequest {
 
 const HEAD: &str = "HEAD";
 
-/// Git exits with this code when `rev-parse --verify --quiet` or `merge-base` finds nothing.
 const NOT_FOUND_EXIT_CODE: i32 = 1;
 
 struct Revisions {

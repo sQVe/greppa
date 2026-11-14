@@ -3,13 +3,11 @@ use std::process::Command;
 
 use tempfile::TempDir;
 
-// A Git repository in a temporary folder, built with `git` that ignores user and system config.
 pub(crate) struct TestRepository {
     folder: TempDir,
 }
 
 impl TestRepository {
-    // Creates a repository whose first branch is `main`, with no commits.
     pub(crate) fn new() -> Self {
         let folder = tempfile::Builder::new()
             .prefix("greppa-core-test-")
@@ -25,7 +23,6 @@ impl TestRepository {
         self.folder.path()
     }
 
-    // Commits with no file changes and returns the new commit's SHA.
     pub(crate) fn commit(&self, message: &str) -> String {
         self.git(&["commit", "--quiet", "--allow-empty", "--message", message]);
 
@@ -44,7 +41,6 @@ impl TestRepository {
         self.git(&["update-ref", &format!("refs/heads/{name}"), commit]);
     }
 
-    // Replaces a loose object with bytes that are not zlib data, so any command that reads it dies.
     pub(crate) fn corrupt_object(&self, sha: &str) {
         let (directory, file) = sha.split_at(2);
         let path = self.path().join(".git/objects").join(directory).join(file);

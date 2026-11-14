@@ -2,6 +2,12 @@
 //!
 //! This crate must never depend on GPUI, so it builds and tests without a display or GPU.
 
+mod git;
+mod source;
+
+pub use git::GitError;
+pub use source::{CommitId, ParseError, ResolveError, ReviewSource, SourceRequest};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LineRange {
     start: u32,

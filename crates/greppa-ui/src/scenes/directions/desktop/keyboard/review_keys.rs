@@ -108,6 +108,10 @@ pub(super) const RIGHT: &[KeyGroup] = &[
                 label: "Finish review",
                 caps: &["Z Z"],
             },
+            KeyRow {
+                label: "Copy prompt and keep comments",
+                caps: &["y"],
+            },
         ],
     },
     KeyGroup {
@@ -115,7 +119,11 @@ pub(super) const RIGHT: &[KeyGroup] = &[
         rows: &[
             KeyRow {
                 label: "Save",
-                caps: &["Ctrl+Enter"],
+                caps: &["Enter"],
+            },
+            KeyRow {
+                label: "New line",
+                caps: &["Shift+Enter"],
             },
             KeyRow {
                 label: "Cancel",
@@ -148,13 +156,13 @@ pub(super) const RIGHT: &[KeyGroup] = &[
 
 #[cfg(test)]
 mod tests {
-    use super::super::column_height;
+    use super::super::{column_height, help_content_height};
     use super::*;
     use crate::scenes::directions::desktop::{polish::Variant, profile::Profile};
     use gpui_kit::{point, px, size};
 
     #[test]
-    fn review_tool_keys_keep_all_twenty_nine_actions_and_sequences() {
+    fn review_tool_keys_keep_all_thirty_one_actions_and_sequences() {
         let groups: Vec<_> = LEFT.iter().chain(RIGHT).map(|group| group.title).collect();
         assert_eq!(
             groups,
@@ -166,7 +174,7 @@ mod tests {
             .flat_map(|group| group.rows)
             .map(|row| (row.label, row.caps))
             .collect();
-        let expected: [(&str, &[&str]); 29] = [
+        let expected: [(&str, &[&str]); 31] = [
             ("Next pane", &["Tab"]),
             ("Previous pane", &["Shift+Tab"]),
             ("Down", &["j", "↓"]),
@@ -190,7 +198,9 @@ mod tests {
             ("Edit comment", &["i"]),
             ("Delete comment", &["d d"]),
             ("Finish review", &["Z Z"]),
-            ("Save", &["Ctrl+Enter"]),
+            ("Copy prompt and keep comments", &["y"]),
+            ("Save", &["Enter"]),
+            ("New line", &["Shift+Enter"]),
             ("Cancel", &["Esc"]),
             ("Show or hide the file list", &["z f"]),
             ("Show or hide comments", &["z c"]),
@@ -202,19 +212,19 @@ mod tests {
     }
 
     #[test]
-    fn review_tool_keys_fit_the_centered_five_hundred_five_pixel_box() {
+    fn review_tool_keys_fit_the_centered_five_hundred_fifteen_pixel_box() {
         let profile = Profile::base(Variant::Rule);
         let tokens = profile.keyboard;
         let border = profile.tokens.theme.border.width;
         assert_eq!(column_height(LEFT, tokens), px(442.0));
-        assert_eq!(column_height(RIGHT, tokens), px(404.0));
+        assert_eq!(column_height(RIGHT, tokens), px(452.0));
         assert_eq!(tokens.column_width(border), px(289.0));
         let bounds = tokens.box_bounds(
             size(px(1280.0), px(800.0)),
-            column_height(LEFT, tokens),
+            help_content_height(tokens),
             border,
         );
-        assert_eq!(bounds.origin, point(px(320.0), px(147.0)));
-        assert_eq!(bounds.size, size(px(640.0), px(505.0)));
+        assert_eq!(bounds.origin, point(px(320.0), px(142.0)));
+        assert_eq!(bounds.size, size(px(640.0), px(515.0)));
     }
 }

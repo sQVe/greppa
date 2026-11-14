@@ -109,7 +109,7 @@ fn help(profile: Profile, viewport: Size<Pixels>) -> Div {
     let tokens = profile.keyboard;
     let theme = profile.tokens.theme;
     let (left, right) = (review_keys::LEFT, review_keys::RIGHT);
-    let content_height = column_height(left, tokens);
+    let content_height = help_content_height(tokens);
     let bounds = tokens.box_bounds(viewport, content_height, theme.border.width);
     div()
         .absolute()
@@ -254,6 +254,10 @@ fn cap(label: &'static str, profile: Profile) -> Div {
         .font_weight(FontWeight::MEDIUM)
         .text_color(theme.colors.foreground)
         .child(label)
+}
+
+fn help_content_height(tokens: KeyboardTokens) -> Pixels {
+    column_height(review_keys::LEFT, tokens).max(column_height(review_keys::RIGHT, tokens))
 }
 
 fn column_height(groups: &[data::KeyGroup], tokens: KeyboardTokens) -> Pixels {

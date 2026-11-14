@@ -1,34 +1,14 @@
 use std::process::ExitCode;
 
 use gpui_kit::*;
-use greppa_ui::scenes::{SceneName, render_scene};
-use greppa_ui::theme::{layout, theme};
+use greppa_ui::scenes::{Scene, SceneName};
+use greppa_ui::theme::layout;
 
-struct SceneView {
-    name: SceneName,
-}
-
-impl Render for SceneView {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        let current = theme();
-
-        div().size_full().bg(current.colors.background).child(
-            div()
-                .absolute()
-                .left(layout::SCENE_ORIGIN.x)
-                .top(layout::SCENE_ORIGIN.y)
-                .w(layout::SCENE_SIZE.width)
-                .h(layout::SCENE_SIZE.height)
-                .child(render_scene(self.name, &current)),
-        )
-    }
-}
-
-fn window_options(title: &str) -> WindowOptions {
+fn window_options(title: &str, scene: SceneName) -> WindowOptions {
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds::new(
             layout::WINDOW_ORIGIN,
-            layout::WINDOW_SIZE,
+            scene.window_size(),
         ))),
         titlebar: Some(TitlebarOptions {
             title: Some(SharedString::from(title.to_string())),
@@ -39,8 +19,9 @@ fn window_options(title: &str) -> WindowOptions {
 }
 
 fn ready_line(name: SceneName, scale: f32, title: &str) -> String {
-    let origin = layout::SCENE_ORIGIN;
-    let size = layout::SCENE_SIZE;
+    let bounds = name.bounds();
+    let origin = bounds.origin;
+    let size = bounds.size;
 
     format!(
         "{{\"scene\":\"{}\",\"origin\":{{\"x\":{},\"y\":{}}},\"size\":{{\"width\":{},\"height\":{}}},\"scale\":{},\"title\":\"{}\"}}",
@@ -80,13 +61,20 @@ fn main() -> ExitCode {
     };
     let title = "greppa-scene".to_string();
 
-    gpui_kit::application().run(move |cx| {
+    let application = gpui_kit::application();
+    let application = if name.uses_bundled_icons() {
+        application.with_assets(gpui_kit::assets::AllAssets)
+    } else {
+        application
+    };
+    application.run(move |cx| {
         gpui_kit::init(cx);
 
-        let (handle, _view) = gpui_kit::open_window(window_options(&title), cx, move |_, cx| {
-            cx.new(|_| SceneView { name })
-        })
-        .expect("open the scene window");
+        let (handle, _view) =
+            gpui_kit::open_window(window_options(&title, name), cx, move |window, cx| {
+                cx.new(|cx| Scene::new(name, window, cx))
+            })
+            .expect("open the scene window");
 
         handle
             .update(cx, |_, window, _| {

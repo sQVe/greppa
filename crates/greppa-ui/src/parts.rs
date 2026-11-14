@@ -1,3 +1,5 @@
+pub(crate) mod review;
+
 use gpui_kit::base::{h_flex, v_flex};
 use gpui_kit::*;
 
@@ -8,6 +10,8 @@ pub enum FileStatus {
     Added,
     Modified,
     Deleted,
+    Renamed,
+    Binary,
 }
 
 impl FileStatus {
@@ -16,13 +20,16 @@ impl FileStatus {
             FileStatus::Added => "A",
             FileStatus::Modified => "M",
             FileStatus::Deleted => "D",
+            FileStatus::Renamed => "R",
+            FileStatus::Binary => "B",
         }
     }
 
-    fn color(self, theme: &Theme) -> Rgba {
+    pub(crate) fn color(self, theme: &Theme) -> Rgba {
         match self {
             FileStatus::Added => theme.colors.added,
-            FileStatus::Modified => theme.colors.modified,
+            FileStatus::Modified | FileStatus::Renamed => theme.colors.modified,
+            FileStatus::Binary => theme.colors.muted,
             FileStatus::Deleted => theme.colors.deleted,
         }
     }

@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 gpui-kit.workspace = true
+ra-ap-rustc_lexer.workspace = true
 thiserror.workspace = true
 
 [[bin]]

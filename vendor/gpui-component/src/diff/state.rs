@@ -97,6 +97,8 @@ pub enum DiffEvent {
 /// Inputs that determine row heights and content width.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LayoutKey {
+    // GREPPA: Geometry overrides must invalidate cached widths and row-height hints.
+    density: Option<(super::DiffDensity, Pixels)>,
     rem: Pixels,
     font_size: Pixels,
     font_family: SharedString,
@@ -117,6 +119,8 @@ impl LayoutKey {
         soft_wrap: bool,
     ) -> Self {
         Self {
+            // GREPPA: The upstream layout has no density override.
+            density: None,
             rem,
             font_size,
             font_family,
@@ -125,6 +129,14 @@ impl LayoutKey {
             marker_lane,
             soft_wrap,
         }
+    }
+
+    // GREPPA: Include resolved digit width because expanded files can change it.
+    pub(crate) fn with_density(mut self, density: super::DiffDensity, gutter: Pixels) -> Self {
+        if density != super::DiffDensity::default() {
+            self.density = Some((density, gutter));
+        }
+        self
     }
 }
 
@@ -1059,6 +1071,14 @@ impl DiffState {
     /// Records the window that renders this state, for clearing its text selection.
     pub(crate) fn set_window(&mut self, window: WindowId) {
         self.window = Some(window);
+    }
+
+    // GREPPA: Host annotations align with the current digit-dependent number columns.
+    /// Returns `None` before an opt-in density layout has been measured.
+    pub fn number_column_width(&self) -> Option<Pixels> {
+        self.layout
+            .as_ref()
+            .and_then(|layout| layout.density.map(|(_, width)| width))
     }
 
     /// Updates width and row-height measurement when fonts or layout change.

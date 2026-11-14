@@ -54,8 +54,8 @@ without debug info. The binaries go to `target/debugging/`.
 - `crates/greppa-ui` holds the GPUI views. It depends on `gpui-kit`; `greppa-core` never does.
 - `crates/greppa` is the app binary. `cargo run` starts it.
 - `xtask` holds repository tasks, run as `cargo xtask <task>`.
-- `vendor/gpui-component` is the published `gpui-component` crate with one local patch, wired in
-  through `[patch.crates-io]`. `PATCHES.md` describes the change. It is not a workspace member
+- `vendor/gpui-component` is the published `gpui-component` crate with local patches, wired in
+  through `[patch.crates-io]`. Its `PATCHES.md` describes each change. It is not a workspace member
   and is left out of the formatters and linters.
 
 ## Check your work
@@ -71,16 +71,20 @@ clippy, nextest, doctests, and rustdoc, and reports every failed check at the en
 clippy, the tests, and rustdoc. Every Cargo build runs with `--locked`, so a stale `Cargo.lock`
 fails too.
 
-The raw-value check scans `crates/greppa-ui/src/**/*.rs` except `theme.rs`. It fails when a line
-builds a length or color directly, such as `px(3.0)`, `rgb(0x112233)`, `white()`, or a preset
-helper such as `.p_2()` or `.w_64()`. Every size, spacing, radius, text size, and color comes from
-`crates/greppa-ui/src/theme.rs`.
+The raw-value check scans `crates/greppa-ui/src/**/*.rs` except `theme.rs` and all code under
+`scenes/directions/`. That directory isolates visual-direction scenes from the app-wide theme.
+The check fails when another file builds a length or color directly, such as `px(3.0)`,
+`rgb(0x112233)`, `white()`, or a preset helper such as `.p_2()` or `.w_64()`.
+App-wide sizes, spacing, radii, text sizes, and colors come from `crates/greppa-ui/src/theme.rs`.
 
 The contrast test is a `greppa-ui` unit test that nextest runs. It computes the WCAG 2.2 AA
 contrast ratio for each theme text and surface pair: 4.5:1 for text, 3:1 for boundaries and large
 text. It passes only when the failing pairs are exactly the list of known failures. A new failing
 pair fails the test, and a listed pair that starts to pass fails it too. Each failure message names
-both tokens and the ratio.
+both tokens and the ratio. Direction scenes have separate contrast tests with no known-failure
+allowance. UI text, muted text, and plain code on diff backgrounds must reach 4.5:1;
+status marks and controls must reach 3:1. Only syntax tokens in direction scenes are exempt:
+they use Catppuccin Latte's published colors.
 
 `cargo xtask check tidy` runs only the checks that do not compile code. `cargo xtask check build`
 runs only the ones that do.
@@ -144,7 +148,8 @@ pointer or keyboard. Install the pinned release:
 cargo install --git https://github.com/sQVe/ruta --tag v0.2.1 --locked ruta
 ```
 
-`ruta.toml` names the scene binary, JSON ready line, fixed `greppa-scene` title, and 640x480 window.
+`ruta.toml` names the scene binary, JSON ready line, fixed `greppa-scene` title, and 1280x800 window.
+Reference scenes fill that window. Smoke scenes use a 420x300 panel at (60, 60).
 The wrappers require the binary at `target/debug/greppa-scene`; remove `CARGO_TARGET_DIR` or other
 target directory overrides if the build reports another path.
 
@@ -196,8 +201,9 @@ runs with an environment allowlist, so the caller's `DISPLAY`, `WAYLAND_DISPLAY`
 never reach it. `RUTA_NAME=<name>` runs a second sandbox side by side. A command that needs a
 missing tool exits with a message that names the tool.
 
-An ignored test drives the sandbox and `mock capture` end to end. It needs the same tools as the
-sandbox. Run it with `cargo nextest run -p xtask --run-ignored only --test sandbox_end_to_end`.
+Two ignored display tests check sandbox input and teardown, and `mock capture` output files.
+They need the same tools as the sandbox.
+Run them with `cargo nextest run -p xtask --run-ignored only --test sandbox_end_to_end`.
 
 Run the sandbox on Linux. It needs weston with the headless backend and Xwayland, xdotool, and
 ImageMagick 7 with `import`, plus the Vulkan driver that capture needs.

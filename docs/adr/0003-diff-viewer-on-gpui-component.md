@@ -35,6 +35,10 @@ greppa treats as its own code.
 - Apart from its patches, the vendored copy is the published crate unchanged. The import and each
   patch land in separate commits, so a review reads only the patches.
 - greppa offers generic patches upstream, but does not wait for them.
+- Opt-in density settings in `vendor/gpui-component/src/diff/density.rs` let greppa fit compact
+  review layouts without a second renderer. Defaults keep the upstream geometry.
+  `crates/greppa-ui/src/viewer.rs` is their only runtime caller in greppa; the setting list lives
+  in the vendored `PATCHES.md`.
 
 ### One boundary
 

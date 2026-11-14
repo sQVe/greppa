@@ -44,6 +44,15 @@ impl TestRepository {
         self.git(&["update-ref", &format!("refs/heads/{name}"), commit]);
     }
 
+    // Replaces a loose object with bytes that are not zlib data, so any command that reads it dies.
+    pub(crate) fn corrupt_object(&self, sha: &str) {
+        let (directory, file) = sha.split_at(2);
+        let path = self.path().join(".git/objects").join(directory).join(file);
+
+        std::fs::remove_file(&path).expect("delete a loose object");
+        std::fs::write(&path, "not an object").expect("write a corrupt object");
+    }
+
     pub(crate) fn git(&self, arguments: &[&str]) -> String {
         git(self.path(), arguments)
     }

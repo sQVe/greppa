@@ -97,3 +97,24 @@ fn describe<S: AsRef<OsStr>>(folder: &Path, arguments: &[S]) -> String {
 
     words.join(" ")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Git, GitError};
+
+    #[test]
+    fn run_reports_the_command_and_exit_code_of_a_failed_run() {
+        let folder = tempfile::tempdir().expect("create a temporary directory");
+
+        let result = Git::new(folder.path()).run(&["rev-parse", "--absolute-git-dir"]);
+
+        let expected_command = format!(
+            "git -C {} rev-parse --absolute-git-dir",
+            folder.path().display()
+        );
+        assert!(
+            matches!(&result, Err(GitError::Failed { command, exit_code: Some(128), .. }) if *command == expected_command),
+            "gave {result:?}"
+        );
+    }
+}

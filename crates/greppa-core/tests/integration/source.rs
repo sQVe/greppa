@@ -1,4 +1,4 @@
-use greppa_core::{CommitId, ResolveError, SourceRequest};
+use greppa_core::{CommitId, GitError, ResolveError, SourceRequest};
 
 use crate::repository::{TestRepository, git};
 
@@ -225,6 +225,49 @@ fn branch_source_names_both_sides_when_there_is_no_merge_base() {
 
     assert!(
         matches!(&result, Err(ResolveError::NoMergeBase { base, head }) if base == "main" && head == "HEAD"),
+        "gave {result:?}"
+    );
+}
+
+#[test]
+fn resolve_reports_a_failed_ref_lookup_as_a_git_failure() {
+    let repository = TestRepository::new();
+
+    let fork = repository.commit("on main");
+    repository.switch_new_branch("feature");
+    repository.commit("on feature");
+    repository.git(&["branch", "broken", &fork]);
+    repository.corrupt_object(&fork);
+
+    let request = SourceRequest::Branch {
+        base: "broken".to_owned(),
+    };
+    let result = request.resolve(repository.path());
+
+    assert!(
+        matches!(&result, Err(ResolveError::Git(GitError::Failed { command, exit_code, .. })) if command.contains("rev-parse") && *exit_code != Some(1)),
+        "gave {result:?}"
+    );
+}
+
+#[test]
+fn branch_source_reports_a_failed_merge_base_as_a_git_failure() {
+    let repository = TestRepository::new();
+
+    let root = repository.commit("root");
+    repository.commit("on main");
+    repository.switch_new_branch("feature");
+    repository.git(&["reset", "--quiet", "--hard", &root]);
+    repository.commit("on feature");
+    repository.corrupt_object(&root);
+
+    let request = SourceRequest::Branch {
+        base: "main".to_owned(),
+    };
+    let result = request.resolve(repository.path());
+
+    assert!(
+        matches!(&result, Err(ResolveError::Git(GitError::Failed { command, exit_code, .. })) if command.contains("merge-base") && *exit_code != Some(1)),
         "gave {result:?}"
     );
 }

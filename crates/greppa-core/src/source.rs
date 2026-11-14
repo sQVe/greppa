@@ -26,7 +26,6 @@ pub struct ReviewSource {
     git_folder: PathBuf,
     base: CommitId,
     head: Option<CommitId>,
-    merge_base: Option<CommitId>,
     commits: Vec<CommitId>,
 }
 
@@ -48,7 +47,10 @@ impl ReviewSource {
     }
 
     pub fn merge_base(&self) -> Option<&CommitId> {
-        self.merge_base.as_ref()
+        match self.identity {
+            SourceRequest::Branch { .. } => Some(&self.base),
+            SourceRequest::WorkingTree | SourceRequest::Range { .. } => None,
+        }
     }
 
     pub fn commits(&self) -> &[CommitId] {
@@ -124,7 +126,6 @@ impl SourceRequest {
             Self::WorkingTree => Revisions {
                 base: commit(&git, HEAD)?,
                 head: None,
-                merge_base: None,
                 commits: Vec::new(),
             },
             Self::Branch { base } => {
@@ -133,9 +134,8 @@ impl SourceRequest {
                 let commits = commits_between(&git, &merge_base, &head)?;
 
                 Revisions {
-                    base: merge_base.clone(),
+                    base: merge_base,
                     head: Some(head),
-                    merge_base: Some(merge_base),
                     commits,
                 }
             }
@@ -147,7 +147,6 @@ impl SourceRequest {
                 Revisions {
                     base,
                     head: Some(head),
-                    merge_base: None,
                     commits,
                 }
             }
@@ -158,7 +157,6 @@ impl SourceRequest {
             git_folder,
             base: revisions.base,
             head: revisions.head,
-            merge_base: revisions.merge_base,
             commits: revisions.commits,
         })
     }
@@ -171,7 +169,6 @@ const NOT_FOUND_EXIT_CODE: i32 = 1;
 struct Revisions {
     base: CommitId,
     head: Option<CommitId>,
-    merge_base: Option<CommitId>,
     commits: Vec<CommitId>,
 }
 

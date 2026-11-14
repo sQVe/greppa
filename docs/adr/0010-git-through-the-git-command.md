@@ -14,7 +14,7 @@ Every machine that has a Git repository to review also has the `git` command. Gi
 plumbing commands and their explicit output formats stable for scripts.
 
 greppa is MIT, and its dependencies must be compatible with that license. A Rust build that also
-compiles a bundled C library is slower and needs a C toolchain.
+compiles a bundled C library needs a C toolchain.
 
 ## Decision
 
@@ -39,7 +39,7 @@ submodules, and repository formats comes for free with each Git release.
 ### Negative
 
 - greppa needs `git` on the `PATH`, and an old `git` may lack a flag greppa uses.
-- Each Git read starts a process, which costs more than a library call.
+- Each Git read starts a process. Its cost against a library call is not measured.
 - greppa parses text output, so each command must use an explicit, stable format.
 - Tests need a real `git` to build temporary repositories.
 

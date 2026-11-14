@@ -44,6 +44,15 @@ mod tests {
     use super::display_count;
 
     #[test]
+    fn change_counts_use_a_separator_starting_at_one_thousand() {
+        let cases = [(999, "999"), (1000, "1,000"), (12345, "12,345")];
+
+        for (count, expected) in cases {
+            assert_eq!(display_count(count), expected, "count {count}");
+        }
+    }
+
+    #[test]
     fn large_change_counts_keep_their_thousands_separator() {
         assert_eq!(display_count(2400), "2,400");
     }

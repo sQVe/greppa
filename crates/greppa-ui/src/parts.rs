@@ -194,3 +194,23 @@ fn section_header(header: &str, theme: &Theme) -> Div {
         .text_color(theme.colors.foreground)
         .child(header.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::FileStatus;
+
+    #[test]
+    fn file_status_marks_use_the_status_letter() {
+        let cases = [
+            ("added", FileStatus::Added, "A"),
+            ("modified", FileStatus::Modified, "M"),
+            ("deleted", FileStatus::Deleted, "D"),
+            ("renamed", FileStatus::Renamed, "R"),
+            ("binary", FileStatus::Binary, "B"),
+        ];
+
+        for (name, status, expected) in cases {
+            assert_eq!(status.mark(), expected, "{name}");
+        }
+    }
+}

@@ -97,6 +97,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn comment_location_labels_selected_words_lines_and_ranges() {
+        let cases = [
+            ("part line", 12, 12, true, "Line 12 · selected words · new"),
+            ("one line", 12, 12, false, "Line 12 · new"),
+            ("line range", 12, 15, false, "Lines 12–15 · new"),
+        ];
+
+        for (name, start, end, part_line, expected) in cases {
+            let comment = Comment {
+                id: "comment",
+                path: "example.rs",
+                start,
+                end,
+                quote: "selected code",
+                body: "Review this code",
+                part_line,
+            };
+
+            assert_eq!(comment.location(), expected, "{name}");
+        }
+    }
+
+    #[test]
     fn queue_moves_viewed_files_after_unviewed_and_generated_files_last() {
         let mut generated = ReviewFile::new("Cargo.lock", FileStatus::Modified, String::new());
         generated.kind = FileKind::Generated;

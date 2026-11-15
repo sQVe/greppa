@@ -50,24 +50,21 @@ impl Desktop {
     pub(crate) fn new(scene: DesktopScene, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let variant = scene.variant;
         let profile = Profile::for_scene(scene);
-        let mut content = data::content();
-        polish::files::prepare(&mut content);
-        precise::prepare(&mut content);
         let tree_fixture = variant == polish::Variant::Tree;
-        let mut focus = data::FOCUS;
-        if tree_fixture {
-            precise::tree_content(&mut content);
-            focus = precise::DRAFT.path;
-        }
-        let draft = if tree_fixture {
-            Some(precise::DRAFT)
+        let (content, focus, options) = if tree_fixture {
+            let options = ViewerOptions {
+                draft: Some(precise::DRAFT),
+                initial_path: precise::DRAFT.path,
+                initial_line: Some(12),
+            };
+            (data::tree_content(), precise::DRAFT.path, options)
         } else {
-            None
-        };
-        let options = ViewerOptions {
-            draft,
-            initial_path: focus,
-            initial_line: Some(if tree_fixture { 12 } else { 13 }),
+            let options = ViewerOptions {
+                draft: None,
+                initial_path: data::FOCUS,
+                initial_line: Some(13),
+            };
+            (data::content(), data::FOCUS, options)
         };
         let viewer = Viewer::new(content.clone(), options, profile, window, cx);
         Self {

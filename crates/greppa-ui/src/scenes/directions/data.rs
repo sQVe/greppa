@@ -7,27 +7,49 @@ pub(crate) const FOCUS: &str = "crates/greppa-core/src/git.rs";
 pub(super) const PARTS: &str = "crates/greppa-ui/src/parts.rs";
 pub(super) const RENAMED: &str = "crates/greppa-core/src/line_range.rs";
 pub(super) const DELETED: &str = "crates/greppa-ui/src/scenes/changed_files.rs";
-pub(super) const BINARY: &str = "assets/greppa-icon.png";
+pub(super) const BINARY: &str = "assets/branding/application-icons/greppa-icon.png";
+pub(super) const GUIDE: &str = "docs/guides/review-workflows/development.md";
 
 pub(crate) fn content() -> ReviewContent {
-    let mut files = patches::files();
+    ReviewContent {
+        files: review_files(patches::renamed(), true),
+        comments: COMMENTS.to_vec(),
+    }
+}
+
+pub(crate) fn tree_content() -> ReviewContent {
+    ReviewContent {
+        files: review_files(patches::tree_renamed(), false),
+        comments: vec![TREE_COMMENT],
+    }
+}
+
+fn review_files(renamed: ReviewFile, collapse_deleted: bool) -> Vec<ReviewFile> {
+    let mut files = patches::files(renamed);
     for file in &mut files {
         file.viewed = [
             "Cargo.toml",
             "crates/greppa-core/Cargo.toml",
             "crates/greppa-core/src/lib.rs",
             PARTS,
-            "docs/development.md",
+            GUIDE,
         ]
         .contains(&file.path);
         file.collapsed = matches!(file.kind, FileKind::Generated | FileKind::Binary { .. });
-        file.collapsed |= file.status == FileStatus::Deleted;
+        file.collapsed |= collapse_deleted && file.status == FileStatus::Deleted;
     }
-    ReviewContent {
-        files,
-        comments: COMMENTS.to_vec(),
-    }
+    files
 }
+
+const TREE_COMMENT: Comment = Comment {
+    id: "precise-saved",
+    path: RENAMED,
+    start: 13,
+    end: 13,
+    quote: "let invalid = start == 0 || start > end;",
+    body: "Keep the zero-line check before constructing the range.",
+    part_line: false,
+};
 
 const COMMENTS: [Comment; 3] = [
     Comment {

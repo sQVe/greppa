@@ -1,8 +1,8 @@
-use super::{BINARY, DELETED, FOCUS, PARTS, RENAMED};
+use super::{BINARY, DELETED, FOCUS, GUIDE, PARTS, RENAMED};
 use crate::parts::FileStatus;
 use crate::review::{FileKind, ReviewFile};
 
-pub(super) fn files() -> Vec<ReviewFile> {
+pub(super) fn files(renamed: ReviewFile) -> Vec<ReviewFile> {
     let source = include_str!("git.rs.txt");
     let parts = include_str!("parts.patch").to_string();
     let mut files = vec![
@@ -32,7 +32,7 @@ pub(super) fn files() -> Vec<ReviewFile> {
             "    pub deleted: Rgba,\n    pub renamed: Rgba,\n    pub binary: Rgba,\n",
         ),
         modified(
-            "docs/development.md",
+            GUIDE,
             "## Workspace\n",
             "## Workspace\n\nThe Git reader pins diff options and returns unified patches.\n",
         ),
@@ -42,7 +42,7 @@ pub(super) fn files() -> Vec<ReviewFile> {
             "[licenses]\nallow = [\"MIT\", \"Apache-2.0\", \"BSD-3-Clause\"]\n",
         ),
         generated(),
-        renamed(),
+        renamed,
         deleted(),
         binary(),
         added("crates/greppa-core/src/git/status.rs", STATUS_SOURCE),
@@ -89,13 +89,23 @@ fn generated() -> ReviewFile {
     modified("Cargo.lock", &before, &after)
 }
 
-fn renamed() -> ReviewFile {
-    let previous = "crates/greppa-core/src/range.rs";
-    let patch = format!(
-        "diff --git a/{previous} b/{RENAMED}\nsimilarity index 90%\nrename from {previous}\nrename to {RENAMED}\n--- a/{previous}\n+++ b/{RENAMED}\n@@ -12,3 +12,4 @@\n     pub fn new(start: u32, end: u32) -> Option<Self> {{\n-        if start > end {{\n+        let invalid = start == 0 || start > end;\n+        if invalid {{\n             return None;\n"
-    );
+const PREVIOUS: &str = "crates/greppa-core/src/range.rs";
+
+pub(super) fn renamed() -> ReviewFile {
+    renamed_file(format!(
+        "diff --git a/{PREVIOUS} b/{RENAMED}\nsimilarity index 90%\nrename from {PREVIOUS}\nrename to {RENAMED}\n--- a/{PREVIOUS}\n+++ b/{RENAMED}\n@@ -12,3 +12,4 @@\n     pub fn new(start: u32, end: u32) -> Option<Self> {{\n-        if start > end {{\n+        let invalid = start == 0 || start > end;\n+        if invalid {{\n             return None;\n"
+    ))
+}
+
+pub(super) fn tree_renamed() -> ReviewFile {
+    renamed_file(format!(
+        "diff --git a/{PREVIOUS} b/{RENAMED}\nrename from {PREVIOUS}\nrename to {RENAMED}\n--- a/{PREVIOUS}\n+++ b/{RENAMED}\n@@ -12,6 +12,7 @@\n pub fn new(start: u32, end: u32) -> Option<Self> {{\n-    if start > end {{\n+    let invalid = start == 0 || start > end;\n+    if invalid {{\n         return None;\n     }}\n     Some(Self {{ start, end }})\n }}\n"
+    ))
+}
+
+fn renamed_file(patch: String) -> ReviewFile {
     let mut file = ReviewFile::new(RENAMED, FileStatus::Renamed, patch);
-    file.previous_path = Some(previous);
+    file.previous_path = Some(PREVIOUS);
 
     file
 }
@@ -115,7 +125,7 @@ fn binary() -> ReviewFile {
     let patch = format!(
         "diff --git a/{BINARY} b/{BINARY}\nindex 1234567..abcdef0 100644\nBinary files a/{BINARY} and b/{BINARY} differ\n"
     );
-    let mut file = ReviewFile::new(BINARY, FileStatus::Binary, patch);
+    let mut file = ReviewFile::new(BINARY, FileStatus::Added, patch);
     file.kind = FileKind::Binary {
         before_bytes: 24 * 1024,
         after_bytes: 32 * 1024,

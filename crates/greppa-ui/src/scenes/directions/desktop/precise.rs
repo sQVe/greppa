@@ -5,7 +5,7 @@ mod layout;
 pub(crate) mod notes;
 pub(crate) mod ranges;
 
-use crate::review::{Comment, ReviewContent};
+use crate::review::Comment;
 use gpui_kit::{Pixels, px};
 
 pub(crate) fn code_column(number_width: Pixels, columns: usize) -> Pixels {
@@ -22,42 +22,6 @@ pub(crate) const DRAFT: Comment = Comment {
     part_line: false,
 };
 
-pub(crate) fn prepare(content: &mut ReviewContent) {
-    let file = content
-        .files
-        .iter_mut()
-        .find(|file| file.path == "assets/branding/application-icons/greppa-icon.png")
-        .expect("precise fixture contains the added binary file");
-    file.status = crate::parts::FileStatus::Added;
-}
-
-pub(crate) fn tree_content(content: &mut ReviewContent) {
-    let file = content
-        .files
-        .iter_mut()
-        .find(|file| file.path == DRAFT.path)
-        .expect("renamed fixture");
-    file.patch = format!(
-        "diff --git a/crates/greppa-core/src/range.rs b/{path}\nrename from crates/greppa-core/src/range.rs\nrename to {path}\n--- a/crates/greppa-core/src/range.rs\n+++ b/{path}\n@@ -12,6 +12,7 @@\n pub fn new(start: u32, end: u32) -> Option<Self> {{\n-    if start > end {{\n+    let invalid = start == 0 || start > end;\n+    if invalid {{\n         return None;\n     }}\n     Some(Self {{ start, end }})\n }}\n",
-        path = DRAFT.path
-    );
-    content
-        .files
-        .iter_mut()
-        .find(|file| file.status == crate::parts::FileStatus::Deleted)
-        .expect("deleted fixture")
-        .collapsed = false;
-    content.comments = vec![Comment {
-        id: "precise-saved",
-        path: DRAFT.path,
-        start: 13,
-        end: 13,
-        quote: "let invalid = start == 0 || start > end;",
-        body: "Keep the zero-line check before constructing the range.",
-        part_line: false,
-    }];
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::{polish::Variant, profile::Profile};
@@ -66,23 +30,18 @@ mod tests {
 
     #[test]
     fn binary_fixture_keeps_its_kind_and_counts_but_uses_the_added_status() {
-        let mut content = crate::scenes::directions::data::content();
-        super::super::polish::files::prepare(&mut content);
-        let original = content
-            .files
-            .iter()
-            .find(|file| file.path.ends_with("/greppa-icon.png"))
-            .expect("binary fixture")
-            .clone();
-        prepare(&mut content);
+        let content = crate::scenes::directions::data::content();
         let binary = content
             .files
             .iter()
-            .find(|file| file.path == original.path)
-            .expect("prepared binary fixture");
+            .find(|file| file.path.ends_with("/greppa-icon.png"))
+            .expect("binary fixture");
         assert!(matches!(binary.status, FileStatus::Added));
-        assert_eq!(binary.kind, original.kind);
-        assert_eq!(binary.patch, original.patch);
+        assert!(matches!(
+            binary.kind,
+            crate::review::FileKind::Binary { .. }
+        ));
+        assert_eq!(binary.counts(), (0, 0));
         assert_eq!(super::super::files::change_label(binary), "binary");
         assert!(matches!(
             files::status_icon(binary.status),
@@ -109,8 +68,7 @@ mod tests {
 
     #[test]
     fn tree_fixture_uses_minimal_changes_and_keeps_comment_ranges() {
-        let mut content = crate::scenes::directions::data::content();
-        tree_content(&mut content);
+        let content = crate::scenes::directions::data::tree_content();
         let file = content
             .files
             .iter()

@@ -114,8 +114,7 @@ mod tests {
                 .collect::<Vec<_>>(),
             [23, 26, 32]
         );
-        let mut tree = content;
-        super::super::precise::tree_content(&mut tree);
+        let tree = data::tree_content();
         let ordered = ordered_comments(&tree.comments);
         assert_eq!(ordered[0].path, "crates/greppa-core/src/line_range.rs");
         assert_eq!(ordered[0].start, 13);

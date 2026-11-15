@@ -1,5 +1,5 @@
 use super::*;
-use crate::scenes::directions::data::{FOCUS, content};
+use crate::scenes::directions::data::{FOCUS, content, tree_content};
 use crate::scenes::directions::desktop::{polish::Variant, precise::DRAFT};
 use crate::theme::Theme;
 
@@ -42,7 +42,7 @@ fn direction_tints_cover_added_and_deleted_files_without_tinting_modified_contex
     let tokens = Profile::base(Variant::Rule).tokens;
     let decorations = direction_decorations(&content.files, tokens);
 
-    assert_eq!(decorations.len(), 6);
+    assert_eq!(decorations.len(), 7);
     let reader = decorations
         .iter()
         .find(|decoration| decoration.range().path().as_str() == FOCUS)
@@ -57,13 +57,7 @@ fn direction_tints_cover_added_and_deleted_files_without_tinting_modified_contex
 
 #[test]
 fn real_viewer_parses_reference_files_with_matching_counts() {
-    for tree in [false, true] {
-        let mut content = content();
-        crate::scenes::directions::desktop::polish::files::prepare(&mut content);
-        precise::prepare(&mut content);
-        if tree {
-            precise::tree_content(&mut content);
-        }
+    for content in [content(), tree_content()] {
         assert_eq!(content.files.len(), 16);
         for file in &content.files {
             let documents = DiffFile::parse(&file.patch).expect("valid greppa fixture patch");

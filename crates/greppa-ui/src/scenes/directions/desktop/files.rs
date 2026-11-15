@@ -53,7 +53,7 @@ mod tests {
         let binary = content
             .files
             .iter()
-            .find(|file| file.path == "assets/greppa-icon.png")
+            .find(|file| file.path == data::BINARY)
             .expect("binary fixture");
         assert_eq!(change_label(binary), "binary");
         let text = content

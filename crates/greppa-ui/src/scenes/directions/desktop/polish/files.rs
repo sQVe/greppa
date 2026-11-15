@@ -10,32 +10,10 @@ use gpui_kit::{
 use super::super::precise::files as file_row;
 use super::super::{Desktop, Panel};
 use super::{metrics, tree};
-use crate::review::ReviewContent;
 use crate::scenes::directions::data;
 
 pub(super) const ROW: f32 = 24.0;
 pub(super) const GAP: f32 = 4.0;
-
-pub(crate) fn prepare(content: &mut ReviewContent) {
-    for (old, new) in [
-        (
-            "assets/greppa-icon.png",
-            "assets/branding/application-icons/greppa-icon.png",
-        ),
-        (
-            "docs/development.md",
-            "docs/guides/review-workflows/development.md",
-        ),
-    ] {
-        let file = content
-            .files
-            .iter_mut()
-            .find(|file| file.path == old)
-            .expect("the shared fixture contains both path examples");
-        file.path = new;
-        file.patch = file.patch.replace(old, new);
-    }
-}
 
 pub(crate) fn pane(scene: &Desktop, window: &Window, cx: &Context<Desktop>) -> Div {
     let profile = scene.profile;
@@ -287,21 +265,8 @@ mod tests {
     }
 
     #[test]
-    fn long_path_examples_preserve_filenames_counts_and_the_open_diff() {
-        let mut content = data::content();
-        let original = content.clone();
-        prepare(&mut content);
-        assert_eq!(content.files.len(), original.files.len());
-        for (file, original) in content.files.iter().zip(&original.files) {
-            assert_eq!(file.counts(), original.counts());
-            assert_eq!(
-                file.path.rsplit('/').next(),
-                original.path.rsplit('/').next()
-            );
-            if file.path == data::FOCUS {
-                assert_eq!(file.patch, original.patch);
-            }
-        }
+    fn long_path_examples_show_their_nested_folders() {
+        let content = data::content();
         let rows = tree::rows(&content.files, &Default::default(), |_, _, _| true);
         for expected in [
             "assets/branding/application-icons",

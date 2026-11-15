@@ -94,8 +94,7 @@ mod tests {
 
     #[test]
     fn mixed_patch_rows_keep_native_added_and_context_backgrounds() {
-        let mut content = crate::scenes::directions::data::content();
-        super::super::tree_content(&mut content);
+        let content = crate::scenes::directions::data::tree_content();
         let file = content
             .files
             .iter()

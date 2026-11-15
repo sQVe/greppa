@@ -157,7 +157,6 @@ mod row_decorations {
             .gutter_only()
     }
 
-    /// The gutter-only and whole-row backgrounds the row paints.
     fn backgrounds(decorations: &Decorations, selected: bool) -> (Option<Hsla>, Option<Hsla>) {
         let positions = [DiffLinePosition::new("file.txt", DiffSide::Modified, 2)];
         let RowDecorations {

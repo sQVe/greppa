@@ -1236,7 +1236,6 @@ fn conflict_tint(part: Option<ConflictPart>, cx: &App) -> Hsla {
 }
 
 // GREPPA: A host-owned shell shares the pinned header's controls and viewport width.
-/// The host renderer that replaces the whole header shell, when the host opts in.
 fn host_header_shell<'a>(
     density: &DiffDensity,
     content: &'a Option<FileRenderer>,
@@ -1546,8 +1545,7 @@ fn render_cell(
 }
 
 // GREPPA: One-sided files may omit the unused number column without changing stock rows.
-/// The empty side whose number column a one-sided file omits, when the host opts in.
-/// A file with neither side keeps only its `DiffSide::Original` column.
+// A file with neither side keeps only its `DiffSide::Original` column.
 fn omitted_number_column(density: &DiffDensity, document: &DiffFile) -> Option<DiffSide> {
     if !density.omit_empty_number_columns {
         return None;
@@ -1730,8 +1728,6 @@ fn add_annotation_button(
 }
 
 // GREPPA: A gutter-only decoration ends where the change indicator starts.
-/// The decorations a row paints. Without a gutter-only decoration, `whole_row`
-/// covers the gutter too.
 struct RowDecorations<'a> {
     gutter_only: Option<&'a DiffDecoration>,
     whole_row: Option<&'a DiffDecoration>,

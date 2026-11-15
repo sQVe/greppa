@@ -1,0 +1,34 @@
+# Each entry is marked general Rust, GPUI, or greppa-only, so other repositories know which to adopt.
+# Allow a sanctioned use with #[expect(clippy::disallowed_methods, reason = "...")], or
+# clippy::disallowed_types, on the smallest item that needs it.
+
+disallowed-methods = [
+  # general Rust. Result::unwrap is not banned: serde_json's json! macro expands to it.
+  { path = "std::option::Option::unwrap", reason = "Panic only on a bug: use .expect(\"why this cannot be None\"), or return the absence as a Result." },
+  # general Rust
+  { path = "std::env::temp_dir", reason = "Use tempfile, such as tempfile::tempdir(), so a guard removes the folder. In xtask tests, use test_support::temporary_directory()." },
+]
+
+# greppa-only: one module talks to gpui-component's Diff (docs/adr/0003-diff-viewer-on-gpui-component.md).
+disallowed-types = [
+  { path = "gpui_component::diff::Diff", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffAnnotation", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffChangeIndicator", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffConflict", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffConflictResolution", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffDecoration", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffEvent", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffFile", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffFileStatus", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffGutterMarker", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffHoverHighlight", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffHunkSeparator", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffInlineUnit", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffLinePosition", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffLineRange", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffMode", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffParseError", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffParseOptions", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffSide", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+  { path = "gpui_component::diff::DiffState", reason = "Use greppa's viewer module and its own types for files, comments, themes, selections, and clicks." },
+]

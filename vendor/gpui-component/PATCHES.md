@@ -63,6 +63,7 @@ reports 2 insertions and 1 deletion against the upstream file).
 - The crate's own library tests do not compile from the published tarball. Five
   `include_str!` paths point at files outside the crate (`crates/assets`,
   `crates/base`, `examples`, `themes`). They were not run.
-- The change is checked by the phase 1 C5 test in `tests/diff_selection.rs`.
-  It fails without this patch and passes with it. Logs are in
-  `/tmp/gpui-poc-phase3/`.
+- The xtask test `vendor_patches::selection_layer_patch_is_applied`, in
+  `xtask/src/vendor_patches.rs`, fails when `src/diff/selection.rs` lacks the
+  `// GREPPA:` comment and the `layers.insert(0, (` line. It checks the
+  source text, not the painted result.

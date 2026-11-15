@@ -3,6 +3,14 @@ use gpui_kit::{Bounds, Pixels, Rgba, point, px, size};
 use super::super::{hairline, syntax::SyntaxPalette, tokens::DirectionTokens};
 use super::polish::Variant;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct DesktopScene {
+    pub variant: Variant,
+    pub range_marking: super::precise::ranges::RangeMarking,
+    pub keyboard_layer: super::keyboard::KeyboardLayer,
+    pub focus_look: super::focus::FocusLook,
+}
+
 #[derive(Clone, Copy)]
 pub(crate) struct Profile {
     pub tokens: DirectionTokens,
@@ -33,6 +41,15 @@ pub(crate) struct Profile {
 }
 
 impl Profile {
+    pub(crate) fn for_scene(scene: DesktopScene) -> Self {
+        Self {
+            range_marking: scene.range_marking,
+            keyboard_layer: scene.keyboard_layer,
+            focus_look: scene.focus_look,
+            ..Self::base(scene.variant)
+        }
+    }
+
     pub(crate) fn base(variant: Variant) -> Self {
         let mut tokens = hairline::tokens();
         tokens.syntax = SyntaxPalette::latte();

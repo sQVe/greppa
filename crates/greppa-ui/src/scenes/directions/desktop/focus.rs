@@ -10,15 +10,6 @@ pub(crate) enum FocusLook {
     Border,
 }
 
-impl FocusLook {
-    pub(crate) fn from_name(name: &str) -> Self {
-        if name.starts_with("direction-v7-focus-border-") {
-            return Self::Border;
-        }
-        Self::Subtle
-    }
-}
-
 #[derive(Clone, Copy)]
 pub(crate) struct FocusTokens {
     pub focus_header: Rgba,
@@ -54,19 +45,21 @@ impl Profile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scenes::SceneName;
     use crate::scenes::directions::desktop::polish::Variant;
     use crate::theme::contrast::contrast_ratio;
 
     #[test]
     fn border_names_select_stronger_focus() {
-        for (name, expected) in [
-            ("direction-v7-focus-border-files", FocusLook::Border),
-            ("direction-v7-focus-border-diff", FocusLook::Border),
-            ("direction-v7-focus-border-comments", FocusLook::Border),
-            ("direction-v7-keys", FocusLook::Subtle),
-            ("direction-v5-range-gutter", FocusLook::Subtle),
+        for (scene, expected) in [
+            (SceneName::V7BorderFiles, FocusLook::Border),
+            (SceneName::V7BorderDiff, FocusLook::Border),
+            (SceneName::V7BorderComments, FocusLook::Border),
+            (SceneName::V7Keys, FocusLook::Subtle),
+            (SceneName::V5RangeGutter, FocusLook::Subtle),
         ] {
-            assert_eq!(FocusLook::from_name(name), expected, "{name}");
+            let look = scene.desktop().expect("desktop scene").focus_look;
+            assert_eq!(look, expected, "{scene:?}");
         }
     }
 

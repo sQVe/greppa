@@ -47,16 +47,6 @@ impl KeyboardLayer {
             size(width, viewport.height - profile.toolbar),
         ))
     }
-
-    pub(crate) fn from_name(name: &str) -> Self {
-        match name {
-            "direction-v7-focus-border-files" => Self::Files,
-            "direction-v7-focus-border-diff" => Self::Diff,
-            "direction-v7-focus-border-comments" => Self::Comments,
-            "direction-v7-keys" => Self::Keys,
-            _ => Self::None,
-        }
-    }
 }
 
 pub(crate) fn layer(profile: Profile, viewport: Size<Pixels>) -> Div {
@@ -268,34 +258,24 @@ fn column_height(groups: &[data::KeyGroup], tokens: KeyboardTokens) -> Pixels {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scenes::SceneName;
     use gpui_kit::px;
 
     #[test]
     fn pane_border_names_keep_fill_and_select_the_pane() {
-        for (name, pane) in [
-            ("direction-v7-focus-border-files", KeyboardLayer::Files),
-            ("direction-v7-focus-border-diff", KeyboardLayer::Diff),
-            (
-                "direction-v7-focus-border-comments",
-                KeyboardLayer::Comments,
-            ),
+        let layer = |scene: SceneName| scene.desktop().expect("desktop scene").keyboard_layer;
+        for (scene, pane) in [
+            (SceneName::V7BorderFiles, KeyboardLayer::Files),
+            (SceneName::V7BorderDiff, KeyboardLayer::Diff),
+            (SceneName::V7BorderComments, KeyboardLayer::Comments),
         ] {
-            let look = FocusLook::from_name(name);
-            assert_eq!(look, FocusLook::Border);
-            assert_eq!(KeyboardLayer::from_name(name), pane);
-            let mut profile = Profile::base(super::super::polish::Variant::Rule);
-            profile.focus_look = look;
-            profile.keyboard_layer = pane;
-            assert!(profile.focused(pane));
+            let desktop = scene.desktop().expect("desktop scene");
+            assert_eq!(desktop.focus_look, FocusLook::Border);
+            assert_eq!(desktop.keyboard_layer, pane);
+            assert!(Profile::for_scene(desktop).focused(pane));
         }
-        assert_eq!(
-            KeyboardLayer::from_name("direction-v7-keys"),
-            KeyboardLayer::Keys
-        );
-        assert_eq!(
-            KeyboardLayer::from_name("direction-v6-tree"),
-            KeyboardLayer::None
-        );
+        assert_eq!(layer(SceneName::V7Keys), KeyboardLayer::Keys);
+        assert_eq!(layer(SceneName::V6Tree), KeyboardLayer::None);
     }
 
     #[test]

@@ -9,20 +9,6 @@ pub(crate) enum RangeMarking {
     Gutter,
 }
 
-impl RangeMarking {
-    pub(crate) fn from_name(name: &str) -> Self {
-        match name {
-            "direction-v5-range-gutter"
-            | "direction-v6-tree"
-            | "direction-v7-keys"
-            | "direction-v7-focus-border-files"
-            | "direction-v7-focus-border-diff"
-            | "direction-v7-focus-border-comments" => Self::Gutter,
-            _ => Self::Dots,
-        }
-    }
-}
-
 pub(crate) fn marker(profile: Profile, width: Pixels, background: gpui_kit::Rgba) -> Div {
     let lane = profile.tokens.theme.spacing.small;
     let code_offset = lane + profile.gap + profile.bar;
@@ -92,15 +78,17 @@ fn added_line(patch: &str, target: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scenes::SceneName;
 
     #[test]
     fn scene_names_select_one_marking_and_leave_earlier_scenes_on_dots() {
-        for (name, expected) in [
-            ("direction-v5-range-gutter", RangeMarking::Gutter),
-            ("direction-v4-rule", RangeMarking::Dots),
-            ("direction-v4-tree", RangeMarking::Dots),
+        for (scene, expected) in [
+            (SceneName::V5RangeGutter, RangeMarking::Gutter),
+            (SceneName::V4Rule, RangeMarking::Dots),
+            (SceneName::V4Tree, RangeMarking::Dots),
         ] {
-            assert_eq!(RangeMarking::from_name(name), expected, "{name}");
+            let marking = scene.desktop().expect("desktop scene").range_marking;
+            assert_eq!(marking, expected, "{scene:?}");
         }
     }
 

@@ -19,7 +19,7 @@ use gpui_kit::{
 use crate::review::{ReviewContent, ViewerOptions};
 use crate::scenes::directions::data;
 use crate::viewer::Viewer;
-use profile::{Panels, Profile};
+use profile::{DesktopScene, Panels, Profile};
 
 #[derive(Clone, Copy, PartialEq)]
 pub(super) enum Panel {
@@ -47,12 +47,9 @@ pub(crate) struct Desktop {
 }
 
 impl Desktop {
-    pub(crate) fn new(name: &str, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let variant = polish::Variant::from_name(name).expect("registered desktop scene");
-        let mut profile = Profile::base(variant);
-        profile.range_marking = precise::ranges::RangeMarking::from_name(name);
-        profile.keyboard_layer = keyboard::KeyboardLayer::from_name(name);
-        profile.focus_look = focus::FocusLook::from_name(name);
+    pub(crate) fn new(scene: DesktopScene, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let variant = scene.variant;
+        let profile = Profile::for_scene(scene);
         let mut content = data::content();
         polish::files::prepare(&mut content);
         precise::prepare(&mut content);

@@ -7,6 +7,11 @@ use gpui_kit::{
 use thiserror::Error;
 
 use crate::theme::{install_review_theme, layout, theme};
+use directions::desktop::focus::FocusLook::{Border, Subtle};
+use directions::desktop::keyboard::KeyboardLayer;
+use directions::desktop::polish::Variant;
+use directions::desktop::precise::ranges::RangeMarking::{Dots, Gutter};
+use directions::desktop::profile::DesktopScene;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SceneName {
@@ -81,10 +86,27 @@ impl SceneName {
     }
 
     pub fn uses_bundled_icons(self) -> bool {
-        !matches!(
-            self,
-            Self::Smoke1 | Self::Smoke2 | Self::Smoke3 | Self::Smoke4
-        )
+        self.desktop().is_some()
+    }
+
+    pub(crate) fn desktop(self) -> Option<DesktopScene> {
+        let (variant, range_marking, keyboard_layer, focus_look) = match self {
+            Self::Smoke1 | Self::Smoke2 | Self::Smoke3 | Self::Smoke4 => return None,
+            Self::V4Rule => (Variant::Rule, Dots, KeyboardLayer::None, Subtle),
+            Self::V4Tree => (Variant::Tree, Dots, KeyboardLayer::None, Subtle),
+            Self::V5RangeGutter => (Variant::Rule, Gutter, KeyboardLayer::None, Subtle),
+            Self::V6Tree => (Variant::Tree, Gutter, KeyboardLayer::None, Subtle),
+            Self::V7Keys => (Variant::Rule, Gutter, KeyboardLayer::Keys, Subtle),
+            Self::V7BorderFiles => (Variant::Rule, Gutter, KeyboardLayer::Files, Border),
+            Self::V7BorderDiff => (Variant::Rule, Gutter, KeyboardLayer::Diff, Border),
+            Self::V7BorderComments => (Variant::Rule, Gutter, KeyboardLayer::Comments, Border),
+        };
+        Some(DesktopScene {
+            variant,
+            range_marking,
+            keyboard_layer,
+            focus_look,
+        })
     }
 
     pub fn window_size(self) -> gpui_kit::Size<Pixels> {
@@ -111,14 +133,12 @@ pub struct Scene {
 
 impl Scene {
     pub fn new(name: SceneName, window: &mut Window, cx: &mut App) -> Self {
-        let desktop = if name.uses_bundled_icons() {
+        let desktop = name.desktop().map(|scene| {
             install_review_theme(cx);
-            Some(gpui_kit::AppContext::new(cx, |cx| {
-                directions::desktop::Desktop::new(name.as_str(), window, cx)
-            }))
-        } else {
-            None
-        };
+            gpui_kit::AppContext::new(cx, |cx| {
+                directions::desktop::Desktop::new(scene, window, cx)
+            })
+        });
         Self { name, desktop }
     }
 }

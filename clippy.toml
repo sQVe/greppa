@@ -1,7 +1,3 @@
-# Each entry is marked general Rust, GPUI, or greppa-only, so other repositories know which to adopt.
-# Allow a sanctioned use with #[expect(clippy::disallowed_methods, reason = "...")], or
-# clippy::disallowed_types, on the smallest item that needs it.
-
 disallowed-methods = [
   # general Rust. Result::unwrap is not banned: serde_json's json! macro expands to it.
   { path = "std::option::Option::unwrap", reason = "Panic only on a bug: use .expect(\"why this cannot be None\"), or return the absence as a Result." },

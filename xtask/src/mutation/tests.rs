@@ -200,6 +200,30 @@ fn report_runs_the_selected_files_within_the_diff() {
 }
 
 #[test]
+fn report_gives_both_cargo_calls_an_existing_workspace_temp_directory() {
+    let fixture = Fixture::new();
+    let cargo = fixture.tool(
+        "cargo",
+        &format!(
+            "printf '%s\\n' \"$TMPDIR\" >> temp-directories.log\n\
+             if test -d \"$TMPDIR\"; then printf 'exists\\n' >> temp-directories.log; fi\n\
+             case \"$*\" in *--list*) printf '%s' '{LISTING}';; esac"
+        ),
+    );
+
+    let report = fixture.audit(&cargo);
+    let directories = fs::read_to_string(fixture.folder.path().join("temp-directories.log"))
+        .expect("read recorded temporary directories");
+    let expected = fixture.folder.path().join("target/mutants-tmp");
+
+    assert_eq!(status(&report), (Some("pass"), 0));
+    assert_eq!(
+        directories,
+        format!("{0}\nexists\n{0}\nexists\n", expected.display())
+    );
+}
+
+#[test]
 fn report_runs_the_requested_audit_files() {
     let fixture = Fixture::new();
     let cargo = fixture.cargo(r#"[{"file":"a.rs"},{"file":"b.rs"}]"#, 0, "exit 0");

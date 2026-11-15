@@ -54,6 +54,7 @@ enum Outcome {
 }
 
 const OUTPUT_DIRECTORY: &str = "target/mutants";
+const TEMP_DIRECTORY: &str = "target/mutants-tmp";
 const MAX_JOBS: usize = 4;
 
 fn parse_max_mutants(value: Option<&str>) -> anyhow::Result<usize> {
@@ -181,6 +182,7 @@ fn count_mutants(
     scope: &Scope,
 ) -> anyhow::Result<BTreeMap<String, usize>> {
     let listing = Command::new(cargo)
+        .env("TMPDIR", root.join(TEMP_DIRECTORY))
         .args(["mutants", "--workspace", "--list", "--json"])
         .args(scope.arguments())
         .current_dir(root)
@@ -245,6 +247,7 @@ fn job_count() -> usize {
 
 fn run_mutants(cargo: &str, root: &Path, output: &Path, scope: &Scope) -> anyhow::Result<()> {
     let status = Command::new(cargo)
+        .env("TMPDIR", root.join(TEMP_DIRECTORY))
         .args(["mutants", "--workspace", "--no-shuffle", "--jobs"])
         .arg(job_count().to_string())
         .arg("--output")
@@ -350,6 +353,10 @@ fn read_survivors(root: &Path, output: &Path) -> anyhow::Result<Vec<Survivor>> {
 
 fn mutate(root: &Path, request: &Request, cargo: &str, git: &str) -> anyhow::Result<Outcome> {
     let output = root.join(OUTPUT_DIRECTORY);
+    let temporary = root.join(TEMP_DIRECTORY);
+
+    fs::create_dir_all(&temporary)
+        .with_context(|| format!("Could not create {}", temporary.display()))?;
 
     fs::create_dir_all(&output)
         .with_context(|| format!("Could not create {}", output.display()))?;

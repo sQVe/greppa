@@ -246,7 +246,9 @@ Functions that only drive a display or an outside tool carry `#[mutants::skip]` 
 that names the reason. A missed mutant is a
 survivor: add a test that fails when that line changes. The command exits 0 when every mutant is
 caught, 2 for survivors in changed mode, and 1 for an error or an unmutated file. cargo-mutants
-writes its logs to `target/mutants/mutants.out`.
+writes its logs to `target/mutants/mutants.out`. The command creates `target/mutants-tmp` and sets
+`TMPDIR` for cargo-mutants to keep workspace copies and their builds on disk instead of in the
+system temporary folder.
 
 ## CI
 

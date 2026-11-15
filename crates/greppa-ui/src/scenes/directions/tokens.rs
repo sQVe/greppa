@@ -69,7 +69,8 @@ impl DirectionTokens {
         ]
     }
 
-    pub(crate) fn changed_background(&self, foreground: Rgba) -> Rgba {
+    #[cfg(test)]
+    fn changed_background(&self, foreground: Rgba) -> Rgba {
         blend(foreground, self.editor, 0.12)
     }
 

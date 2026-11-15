@@ -144,32 +144,11 @@ impl Viewer {
                 precise_header(file, profile, header_state.clone(), cx).w(width)
             });
         let (markers, highlights) = self.markers_and_highlights();
-        let marker_content = self.content.clone();
-        let marker_draft = self.options.draft;
-        let marker_state = self.state.clone();
         let viewer = viewer
             .gutter_markers(markers)
-            .render_gutter_marker(move |marker, _, cx| {
+            .render_gutter_marker(move |marker, _, _| {
                 if profile.range_marking == ranges::RangeMarking::Gutter {
-                    let position = marker.position();
-                    let comment = marker_content
-                        .comments
-                        .iter()
-                        .chain(marker_draft.iter())
-                        .find(|comment| {
-                            comment.path == position.path().as_str()
-                                && (comment.start..=comment.end).contains(&position.line())
-                        })
-                        .expect("range markers belong to comments");
-                    let file = marker_content
-                        .files
-                        .iter()
-                        .find(|file| file.path == comment.path)
-                        .expect("comment file metadata");
-                    let profile =
-                        profile.for_file(marker_state.read(cx).number_column_width(), file);
-                    let background = ranges::row_background(file, position.line(), profile);
-                    return ranges::marker(profile, width, background);
+                    return div();
                 }
                 precise::notes::marker(marker.id(), profile)
             })
@@ -262,10 +241,7 @@ impl Viewer {
                 comments
                     .iter()
                     .chain(self.options.draft.iter())
-                    .map(|comment| {
-                        DiffDecoration::new(range(comment))
-                            .with_background(profile.tokens.theme.colors.selected)
-                    }),
+                    .map(|comment| gutter_range(comment, profile.tokens)),
             );
         }
         if let Some((path, line, background)) = profile.code_focus_fill() {
@@ -314,6 +290,12 @@ fn documents(files: &[ReviewFile]) -> Vec<DiffFile> {
 
 fn range(comment: &Comment) -> DiffLineRange {
     DiffLineRange::new(comment.path, DiffSide::Modified, comment.start, comment.end)
+}
+
+fn gutter_range(comment: &Comment, tokens: DirectionTokens) -> DiffDecoration {
+    DiffDecoration::new(range(comment))
+        .with_background(tokens.theme.colors.selected)
+        .gutter_only()
 }
 
 fn annotation(comment: &Comment) -> DiffAnnotation {

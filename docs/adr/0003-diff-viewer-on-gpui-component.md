@@ -50,8 +50,8 @@ greppa treats as its own code.
 ### Known limits
 
 - `Diff` cannot anchor a comment to a span inside a line. Its selected text has no offsets, and its
-  decorations color whole lines. A patch must expose the selected range and add a character-range
-  highlight layer. This is not built or measured.
+  decorations color whole lines or only their gutter lanes. A patch must expose the selected range
+  and add a character-range highlight layer. This is not built or measured.
 - `Diff` renders annotations beneath a line, not as widgets inside the text.
 - `Diff` reads unified patches, not old and new strings, so greppa produces patches from Git.
 

@@ -56,6 +56,27 @@ fn direction_tints_cover_added_and_deleted_files_without_tinting_modified_contex
 }
 
 #[test]
+fn decorations_cover_the_whole_row_unless_scoped_to_the_gutter() {
+    let whole_row = DiffDecoration::new(range(&DRAFT));
+
+    assert!(!whole_row.is_gutter_only());
+    assert!(whole_row.gutter_only().is_gutter_only());
+}
+
+#[test]
+fn comment_ranges_mark_only_the_gutter_with_the_selected_color() {
+    let tokens = Profile::base(Variant::Rule).tokens;
+    let decoration = gutter_range(&DRAFT, tokens);
+
+    assert!(decoration.is_gutter_only());
+    assert_eq!(decoration.range(), &range(&DRAFT));
+    assert_eq!(
+        decoration.background(),
+        Some(tokens.theme.colors.selected.into())
+    );
+}
+
+#[test]
 fn real_viewer_parses_reference_files_with_matching_counts() {
     for content in [content(), tree_content()] {
         assert_eq!(content.files.len(), 16);

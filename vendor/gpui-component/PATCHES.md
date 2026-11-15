@@ -70,7 +70,8 @@ reports 2 insertions and 1 deletion against the upstream file).
 
 ## Change 2: opt-in review density
 
-Files: new `src/diff/density.rs`, plus `src/diff/mod.rs` and `src/diff/state.rs`.
+Files: new `src/diff/density.rs`, plus `src/diff/mod.rs` and `src/diff/state.rs`, and
+unit tests at the end of `src/diff/header_tests.rs` and `src/diff/tests.rs`.
 Every changed region has a `// GREPPA:` marker.
 
 `Diff::density(DiffDensity)` accepts optional pixel values and opt-in flags. Pixel values
@@ -126,13 +127,22 @@ code. Both options are opt-in; the default shell and overlay placement remain un
 
 Only `crates/greppa-ui/src/viewer.rs` uses these settings. Its density test checks default
 and explicit row heights, number widths, digit growth, and opt-in defaults. The scene
-capture comparisons check the retained reference layouts. The published crate's own
-test-fixture limitation described above still applies.
+capture comparisons check the retained reference layouts.
+
+Two guards are small functions in `src/diff/mod.rs` so that unit tests can reach them.
+`host_header_shell` decides whether the host renderer replaces the stock header shell.
+`omitted_number_column` decides which empty number column a one-sided file omits. The
+`host_header_shell` module in `src/diff/header_tests.rs` and the `omitted_number_column`
+module in `src/diff/tests.rs` check the unset default and the opt-in case of each.
+These are library tests, so the test-fixture limitation in Checks applies. They run only
+in a copy of the crate placed at `crates/component/` with stub files at the five
+missing `include_str!` and `include_bytes!` paths.
 
 ## Change 3: opt-in gutter-only decorations
 
-Files: `src/diff/decoration.rs` and `src/diff/mod.rs`, in `code_line`. Every changed
-region has a `// GREPPA:` marker.
+Files: `src/diff/decoration.rs` and `src/diff/mod.rs`, in `code_line` and the
+`row_decorations` function before it, and unit tests at the end of
+`src/diff/decoration_tests.rs`. Every changed region has a `// GREPPA:` marker.
 
 `DiffDecoration::gutter_only()` limits a decoration's background to the row's leading
 lanes: the left row padding, the line-number columns, and the marker lane with its gaps.
@@ -152,5 +162,10 @@ the scope in the renderer, the host passes the range and nothing else.
 
 Only `crates/greppa-ui/src/viewer.rs` uses this setting. Its tests check the whole-row
 default and the gutter-only comment ranges. The scene capture comparisons check that the
-reference scenes keep every pixel. The published crate's own test-fixture limitation
-described above still applies.
+reference scenes keep every pixel.
+
+`row_decorations` in `src/diff/mod.rs` picks a row's gutter-only and whole-row
+decorations, so that unit tests can reach the choice. The `row_decorations` module in
+`src/diff/decoration_tests.rs` checks the whole-row default, a gutter-only decoration,
+and both orders of a gutter-only and a whole-row decoration on one row. These tests run
+only in the stubbed crate copy described under Change 2.

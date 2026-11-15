@@ -86,3 +86,36 @@ fn test_diff_builder(cx: &mut TestAppContext) {
     );
     assert_eq!(annotation_calls.borrow().as_slice(), &[position]);
 }
+
+// GREPPA: The host header shell replaces the stock shell only when the host opts in.
+mod host_header_shell {
+    use std::rc::Rc;
+
+    use gpui::{IntoElement as _, div};
+
+    use crate::diff::{DiffDensity, FileRenderer, host_header_shell};
+
+    fn renderer() -> Option<FileRenderer> {
+        Some(Rc::new(|_, _, _| div().into_any_element()))
+    }
+
+    #[test]
+    fn the_default_keeps_the_stock_shell_around_host_content() {
+        let content = renderer();
+
+        assert!(host_header_shell(&DiffDensity::default(), &content).is_none());
+    }
+
+    #[test]
+    fn an_opted_in_host_supplies_the_whole_shell() {
+        let density = DiffDensity {
+            custom_header_shell: true,
+            ..DiffDensity::default()
+        };
+        let content = renderer();
+
+        let shell = host_header_shell(&density, &content);
+
+        assert!(shell.is_some_and(|shell| Rc::ptr_eq(shell, content.as_ref().unwrap())));
+    }
+}

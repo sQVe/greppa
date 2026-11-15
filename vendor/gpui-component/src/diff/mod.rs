@@ -1235,6 +1235,15 @@ fn conflict_tint(part: Option<ConflictPart>, cx: &App) -> Hsla {
     }
 }
 
+// GREPPA: A host-owned shell shares the pinned header's controls and viewport width.
+/// The host renderer that replaces the whole header shell, when the host opts in.
+fn host_header_shell<'a>(
+    density: &DiffDensity,
+    content: &'a Option<FileRenderer>,
+) -> Option<&'a FileRenderer> {
+    content.as_ref().filter(|_| density.custom_header_shell)
+}
+
 fn render_file_header(
     file: usize,
     code: &CodePresentation,
@@ -1248,13 +1257,11 @@ fn render_file_header(
     }
     let document = &code.files[file];
     // GREPPA: A host-owned shell shares the pinned header's controls and viewport width.
-    if code.density.custom_header_shell {
-        if let Some(render) = &code.header.content {
-            return v_flex()
-                .child(render(document, window, cx))
-                .children(file_annotations(file, code, window, cx))
-                .into_any_element();
-        }
+    if let Some(render) = host_header_shell(&code.density, &code.header.content) {
+        return v_flex()
+            .child(render(document, window, cx))
+            .children(file_annotations(file, code, window, cx))
+            .into_any_element();
     }
     let foreground = cx.theme().muted_foreground;
     let border = cx.theme().border;
@@ -1538,6 +1545,22 @@ fn render_cell(
     .into_any_element()
 }
 
+// GREPPA: One-sided files may omit the unused number column without changing stock rows.
+/// The empty side whose number column a one-sided file omits, when the host opts in.
+/// A file with neither side keeps only its `DiffSide::Original` column.
+fn omitted_number_column(density: &DiffDensity, document: &DiffFile) -> Option<DiffSide> {
+    if !density.omit_empty_number_columns {
+        return None;
+    }
+    if document.lines(DiffSide::Modified).is_empty() {
+        return Some(DiffSide::Modified);
+    }
+    if document.lines(DiffSide::Original).is_empty() {
+        return Some(DiffSide::Original);
+    }
+    None
+}
+
 #[allow(clippy::too_many_arguments)]
 fn render_unified_cell(
     file: usize,
@@ -1569,12 +1592,9 @@ fn render_unified_cell(
         ));
     }
     // GREPPA: One-sided files may omit the unused number column without changing stock rows.
-    let omit_original = code.density.omit_empty_number_columns
-        && code.files[file].lines(DiffSide::Original).is_empty();
-    let omit_modified = code.density.omit_empty_number_columns
-        && code.files[file].lines(DiffSide::Modified).is_empty();
-    let only_modified = single_column || omit_original;
-    let gutters = if omit_modified {
+    let omitted = omitted_number_column(&code.density, &code.files[file]);
+    let only_modified = single_column || omitted == Some(DiffSide::Original);
+    let gutters = if omitted == Some(DiffSide::Modified) {
         [Some((DiffSide::Original, original)), None]
     } else if only_modified {
         [Some((DiffSide::Modified, modified)), None]
@@ -1709,6 +1729,39 @@ fn add_annotation_button(
     )
 }
 
+// GREPPA: A gutter-only decoration ends where the change indicator starts.
+/// The decorations a row paints. Without a gutter-only decoration, `whole_row`
+/// covers the gutter too.
+struct RowDecorations<'a> {
+    gutter_only: Option<&'a DiffDecoration>,
+    whole_row: Option<&'a DiffDecoration>,
+}
+
+// GREPPA: The last decoration covering the row decides the gutter, and the source keeps the
+// last whole-row one. A selected row shows neither.
+fn row_decorations<'a>(
+    decorations: &'a Decorations,
+    positions: &[DiffLinePosition],
+    selected: bool,
+) -> RowDecorations<'a> {
+    let decoration = positions
+        .iter()
+        .find_map(|position| decorations.at(position))
+        .filter(|_| !selected);
+    let gutter_only = decoration.filter(|decoration| decoration.is_gutter_only());
+    let whole_row = if gutter_only.is_some() {
+        positions
+            .iter()
+            .find_map(|position| decorations.whole_row_at(position))
+    } else {
+        decoration
+    };
+    RowDecorations {
+        gutter_only,
+        whole_row,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn code_line(
     file: usize,
@@ -1840,19 +1893,11 @@ fn code_line(
         .flatten()
         .filter_map(|(side, ix)| ix.map(|ix| code.position(file, *side, ix)))
         .collect();
-    let decoration = positions
-        .iter()
-        .find_map(|position| code.decorations.at(position))
-        .filter(|_| !selected);
     // GREPPA: A gutter-only decoration ends where the change indicator starts.
-    let gutter_decoration = decoration.filter(|decoration| decoration.is_gutter_only());
-    let decoration = if gutter_decoration.is_some() {
-        positions
-            .iter()
-            .find_map(|position| code.decorations.whole_row_at(position))
-    } else {
-        decoration
-    };
+    let RowDecorations {
+        gutter_only: gutter_decoration,
+        whole_row: decoration,
+    } = row_decorations(&code.decorations, &positions, selected);
     let marker_lane_width = if code.gutter_marker_content.is_some() {
         code.lane_width + code.density.marker_gap.unwrap_or(px(0.)) * 2.
     } else {

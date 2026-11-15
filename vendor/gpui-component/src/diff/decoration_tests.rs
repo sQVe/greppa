@@ -133,3 +133,71 @@ fn gutter_markers_activate_without_selecting_lines(cx: &mut TestAppContext) {
     assert_eq!(*clicked.borrow(), [position(DiffSide::Modified, 2)]);
     assert!(cx.update(|_, cx| state.read(cx).selected_lines().is_none()));
 }
+
+// GREPPA: A gutter-only decoration takes the gutter and leaves the source to whole-row ones.
+mod row_decorations {
+    use gpui::Hsla;
+
+    use crate::diff::{
+        DiffDecoration, DiffLinePosition, DiffLineRange, DiffSide, RowDecorations,
+        decoration::Decorations, row_decorations,
+    };
+
+    fn line() -> DiffLineRange {
+        DiffLineRange::new("file.txt", DiffSide::Modified, 2, 2)
+    }
+
+    fn whole_row(background: Hsla) -> DiffDecoration {
+        DiffDecoration::new(line()).with_background(background)
+    }
+
+    fn gutter_only(background: Hsla) -> DiffDecoration {
+        DiffDecoration::new(line())
+            .with_background(background)
+            .gutter_only()
+    }
+
+    /// The gutter-only and whole-row backgrounds the row paints.
+    fn backgrounds(decorations: &Decorations, selected: bool) -> (Option<Hsla>, Option<Hsla>) {
+        let positions = [DiffLinePosition::new("file.txt", DiffSide::Modified, 2)];
+        let RowDecorations {
+            gutter_only,
+            whole_row,
+        } = row_decorations(decorations, &positions, selected);
+        let background =
+            |decoration: Option<&DiffDecoration>| decoration.and_then(DiffDecoration::background);
+
+        (background(gutter_only), background(whole_row))
+    }
+
+    #[test]
+    fn the_default_decoration_covers_the_whole_row() {
+        let decorations = Decorations::new([whole_row(gpui::red())]);
+
+        assert_eq!(backgrounds(&decorations, false), (None, Some(gpui::red())));
+    }
+
+    #[test]
+    fn an_opted_in_decoration_covers_only_the_gutter() {
+        let decorations = Decorations::new([gutter_only(gpui::blue())]);
+
+        assert_eq!(backgrounds(&decorations, false), (Some(gpui::blue()), None));
+    }
+
+    #[test]
+    fn a_later_gutter_only_decoration_takes_the_gutter_and_the_source_keeps_the_whole_row() {
+        let decorations = Decorations::new([whole_row(gpui::red()), gutter_only(gpui::blue())]);
+
+        assert_eq!(
+            backgrounds(&decorations, false),
+            (Some(gpui::blue()), Some(gpui::red()))
+        );
+    }
+
+    #[test]
+    fn a_later_whole_row_decoration_covers_the_gutter_too() {
+        let decorations = Decorations::new([gutter_only(gpui::blue()), whole_row(gpui::red())]);
+
+        assert_eq!(backgrounds(&decorations, false), (None, Some(gpui::red())));
+    }
+}

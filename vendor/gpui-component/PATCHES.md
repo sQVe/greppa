@@ -21,7 +21,8 @@ changes below. Cargo uses it through `[patch.crates-io]` in the root `Cargo.toml
 - Upstream revision: `7591a35eced761e3613c01e71ff04c10129dae1a`, as recorded
   in the crate's `.cargo_vcs_info.json`.
 - Upstream paths of the patched files are under `crates/component/src/diff/`:
-  `selection.rs`, `mod.rs`, and `state.rs`. `density.rs` is a local addition.
+  `selection.rs`, `mod.rs`, `state.rs`, and `decoration.rs`. `density.rs` is a
+  local addition.
 - License: Apache-2.0. The crate's license file is `LICENSE-APACHE`, kept in
   this directory.
 
@@ -127,3 +128,29 @@ Only `crates/greppa-ui/src/viewer.rs` uses these settings. Its density test chec
 and explicit row heights, number widths, digit growth, and opt-in defaults. The scene
 capture comparisons check the retained reference layouts. The published crate's own
 test-fixture limitation described above still applies.
+
+## Change 3: opt-in gutter-only decorations
+
+Files: `src/diff/decoration.rs` and `src/diff/mod.rs`, in `code_line`. Every changed
+region has a `// GREPPA:` marker.
+
+`DiffDecoration::gutter_only()` limits a decoration's background to the row's leading
+lanes: the left row padding, the line-number columns, and the marker lane with its gaps.
+The lanes end where the change indicator starts. The change indicator and source then show
+the last whole-row decoration covering the line, if any, over the stock change background.
+`DiffDecoration::is_gutter_only()` reports the setting. A new decoration is whole-row, so
+callers that never call `gutter_only()` keep the upstream single overlay.
+
+The last supplied decoration still decides the gutter, so a gutter-only decoration
+supplied after a file tint wins there. A selected line still shows the selection instead
+of any decoration.
+
+Reason: greppa marks a comment range in the gutter while the source keeps its added,
+removed, or context background. A whole-row decoration hid that background, so the host
+had to parse the patch again and repaint each source background from its marker. With
+the scope in the renderer, the host passes the range and nothing else.
+
+Only `crates/greppa-ui/src/viewer.rs` uses this setting. Its tests check the whole-row
+default and the gutter-only comment ranges. The scene capture comparisons check that the
+reference scenes keep every pixel. The published crate's own test-fixture limitation
+described above still applies.

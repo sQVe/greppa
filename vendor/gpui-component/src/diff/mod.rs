@@ -1843,12 +1843,29 @@ fn code_line(
     let decoration = positions
         .iter()
         .find_map(|position| code.decorations.at(position))
-        .filter(|_| !selected)
-        .map(|decoration| {
-            decoration
-                .background()
-                .unwrap_or_else(|| cx.theme().warning.opacity(0.2))
-        });
+        .filter(|_| !selected);
+    // GREPPA: A gutter-only decoration ends where the change indicator starts.
+    let gutter_decoration = decoration.filter(|decoration| decoration.is_gutter_only());
+    let decoration = if gutter_decoration.is_some() {
+        positions
+            .iter()
+            .find_map(|position| code.decorations.whole_row_at(position))
+    } else {
+        decoration
+    };
+    let marker_lane_width = if code.gutter_marker_content.is_some() {
+        code.lane_width + code.density.marker_gap.unwrap_or(px(0.)) * 2.
+    } else {
+        px(0.)
+    };
+    let gutter_end = code.rem / 2. + gutters_width + marker_lane_width;
+    let decoration_background = |decoration: &DiffDecoration| {
+        decoration
+            .background()
+            .unwrap_or_else(|| cx.theme().warning.opacity(0.2))
+    };
+    let gutter_decoration = gutter_decoration.map(decoration_background);
+    let decoration = decoration.map(decoration_background);
     let marker_lane = code.gutter_marker_content.clone().map(|render| {
         let marker = positions
             .iter()
@@ -1893,7 +1910,26 @@ fn code_line(
         })
         // An overlay, so the change background shows through a translucent fill.
         .when_some(decoration, |this, background| {
-            this.child(div().absolute().inset_0().bg(background))
+            this.child(
+                div()
+                    .absolute()
+                    .inset_0()
+                    // GREPPA: Leave the leading lanes to a gutter-only decoration.
+                    .when(gutter_decoration.is_some(), |this| this.left(gutter_end))
+                    .bg(background),
+            )
+        })
+        // GREPPA: Paint a gutter-only decoration over the numbers and marker lane only.
+        .when_some(gutter_decoration, |this, background| {
+            this.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .left_0()
+                    .w(gutter_end)
+                    .bg(background),
+            )
         })
         .when(selected, |this| this.bg(cx.theme().selection))
         .when(hover_line && !selected, |this| {

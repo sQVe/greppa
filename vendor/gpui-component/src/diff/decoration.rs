@@ -14,6 +14,8 @@ use super::{DiffLinePosition, DiffLineRange, DiffSide};
 pub struct DiffDecoration {
     range: DiffLineRange,
     background: Option<Hsla>,
+    // GREPPA: Opt-in scope that leaves the source column to the decoration below.
+    gutter_only: bool,
 }
 
 impl DiffDecoration {
@@ -25,6 +27,8 @@ impl DiffDecoration {
         Self {
             range,
             background: None,
+            // GREPPA: Decorations cover the whole row unless a caller opts in.
+            gutter_only: false,
         }
     }
     /// Sets the background, which defaults to a translucent warning color.
@@ -38,6 +42,18 @@ impl DiffDecoration {
     /// The background set with [`Self::with_background`].
     pub fn background(&self) -> Option<Hsla> {
         self.background
+    }
+    // GREPPA: Limit the background to the row's leading lanes, before the change indicator.
+    /// Paints the background only over the line numbers and marker lane.
+    /// The change indicator and source show the last whole-row decoration
+    /// covering the line, if any.
+    pub fn gutter_only(mut self) -> Self {
+        self.gutter_only = true;
+        self
+    }
+    /// Whether [`Self::gutter_only`] was set.
+    pub fn is_gutter_only(&self) -> bool {
+        self.gutter_only
     }
 
     fn contains(&self, side: DiffSide, line: usize) -> bool {
@@ -114,6 +130,18 @@ impl Decorations {
             .get(position.path())?
             .iter()
             .rev()
+            .find(|decoration| decoration.contains(position.side(), position.line()))
+    }
+
+    // GREPPA: The source column skips gutter-only decorations.
+    /// The whole-row decoration shown on a line: the last supplied one
+    /// covering it that is not gutter-only.
+    pub(super) fn whole_row_at(&self, position: &DiffLinePosition) -> Option<&DiffDecoration> {
+        self.files
+            .get(position.path())?
+            .iter()
+            .rev()
+            .filter(|decoration| !decoration.gutter_only)
             .find(|decoration| decoration.contains(position.side(), position.line()))
     }
 }

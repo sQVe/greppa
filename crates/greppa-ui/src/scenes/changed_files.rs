@@ -38,6 +38,7 @@ fn variant(name: SceneName) -> Variant {
         SceneName::Smoke2 => Variant::Clean,
         SceneName::Smoke3 => Variant::BlankLabels,
         SceneName::Smoke4 => Variant::SmallRow,
+        _ => unreachable!("reference scenes do not render a smoke panel"),
     }
 }
 

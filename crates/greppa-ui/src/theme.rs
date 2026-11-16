@@ -8,6 +8,7 @@ pub struct Theme {
     pub text: TextSizes,
     pub border: Border,
     pub sizing: Sizing,
+    pub review: ReviewSizing,
 }
 
 #[derive(Clone, Copy)]
@@ -61,6 +62,14 @@ pub struct Sizing {
     pub none: Pixels,
 }
 
+#[derive(Clone, Copy)]
+pub struct ReviewSizing {
+    pub checkbox: Pixels,
+    pub code: Pixels,
+    pub line_height: Pixels,
+    pub rem: Pixels,
+}
+
 impl Theme {
     pub fn light() -> Theme {
         Theme {
@@ -99,12 +108,47 @@ impl Theme {
                 row_height_small: px(30.0),
                 none: px(0.0),
             },
+            review: ReviewSizing {
+                checkbox: px(16.0),
+                code: px(13.0),
+                line_height: px(18.0),
+                rem: px(16.0),
+            },
         }
     }
 }
 
+#[cfg(test)]
+pub(crate) mod contrast;
+
 pub fn theme() -> Theme {
     Theme::light()
+}
+
+pub(crate) fn install_review_theme(cx: &mut gpui_kit::App) {
+    use gpui_kit::component::{Theme as ComponentTheme, ThemeMode};
+
+    ComponentTheme::change(ThemeMode::Light, None, cx);
+    let current = theme();
+    let component = ComponentTheme::global_mut(cx);
+    component.mono_font_size = current.review.code;
+    component.font_size = current.review.rem;
+    component.background = current.colors.surface.into();
+    component.foreground = current.colors.foreground.into();
+    component.muted = current.colors.background.into();
+    component.muted_foreground = current.colors.muted.into();
+    component.border = current.colors.border.into();
+    component.input = current.colors.border.into();
+    component.ring = current.colors.accent.into();
+    component.caret = current.colors.accent.into();
+    component.list_hover = current.colors.selected.into();
+    component.radius = current.radius.small;
+    component.radius_lg = current.radius.medium;
+    component.primary = current.colors.accent.into();
+    component.primary_foreground = current.colors.surface.into();
+    component.selection = current.colors.selected.into();
+    component.success = current.colors.added.into();
+    component.danger = current.colors.deleted.into();
 }
 
 /// Fixed scene geometry. The window is larger than the scene so a shot has context, and the scene
@@ -112,7 +156,7 @@ pub fn theme() -> Theme {
 pub mod layout {
     use gpui_kit::{Pixels, Point, Size, point, px, size};
 
-    pub const WINDOW_SIZE: Size<Pixels> = size(px(640.0), px(480.0));
+    pub const WINDOW_SIZE: Size<Pixels> = size(px(1280.0), px(800.0));
     pub const WINDOW_ORIGIN: Point<Pixels> = point(px(0.0), px(0.0));
     pub const SCENE_ORIGIN: Point<Pixels> = point(px(60.0), px(60.0));
     pub const SCENE_SIZE: Size<Pixels> = size(px(420.0), px(300.0));
@@ -121,6 +165,8 @@ pub mod layout {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+
+    use super::contrast::{contrast_ratio, luminance};
 
     use super::*;
 
@@ -191,39 +237,9 @@ mod tests {
             pairs.push(pair("border", surface, 3.0));
         }
 
+        pairs.push(pair("surface", "accent", 4.5));
+
         pairs
-    }
-
-    fn channels(color: Rgba) -> (f32, f32, f32) {
-        let hex = u32::from(color);
-        let red = ((hex >> 24) & 0xFF) as f32 / 255.0;
-        let green = ((hex >> 16) & 0xFF) as f32 / 255.0;
-        let blue = ((hex >> 8) & 0xFF) as f32 / 255.0;
-
-        (red, green, blue)
-    }
-
-    fn linear(channel: f32) -> f32 {
-        if channel <= 0.04045 {
-            channel / 12.92
-        } else {
-            ((channel + 0.055) / 1.055).powf(2.4)
-        }
-    }
-
-    fn luminance(color: Rgba) -> f32 {
-        let (red, green, blue) = channels(color);
-
-        0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
-    }
-
-    fn contrast_ratio(first: Rgba, second: Rgba) -> f32 {
-        let first = luminance(first);
-        let second = luminance(second);
-        let lighter = first.max(second);
-        let darker = first.min(second);
-
-        (lighter + 0.05) / (darker + 0.05)
     }
 
     fn lookup(palette: &[(&'static str, Rgba)], name: &str) -> Rgba {

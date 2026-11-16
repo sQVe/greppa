@@ -29,9 +29,11 @@ verification.
   from its patches. See [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
 - Only one module talks to `Diff`. Everything else uses greppa's own types for files, comments,
   themes, selections, and clicks. See [ADR 0003](docs/adr/0003-diff-viewer-on-gpui-component.md).
-- Every size, spacing, corner radius, text size, and color in `greppa-ui` comes from
-  `crates/greppa-ui/src/theme.rs`. `cargo xtask check` rejects a raw value anywhere else in
-  `greppa-ui`, and a contrast test checks the theme's text and control pairs.
+- App-wide sizes, spacing, corner radii, text sizes, and colors in `greppa-ui` come from
+  `crates/greppa-ui/src/theme.rs`. Visual-direction scenes keep their values under
+  `crates/greppa-ui/src/scenes/directions/`. The raw-value check exempts that whole directory
+  and `theme.rs`; `cargo xtask check` rejects raw values elsewhere in `greppa-ui`.
+  Contrast tests check the app theme and the direction scenes' text and control pairs.
 - Design new UI as a mock scene first, with real greppa parts and fake data. Open a scene in the
   sandbox with `cargo xtask sandbox up <scene>`, capture it with `cargo xtask mock capture <scene>`,
   and gate it with the judge-mock skill in `.pi/skills/judge-mock/`. See

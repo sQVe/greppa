@@ -122,7 +122,7 @@ fn build_commands_refuse_an_executable_outside_the_configured_target() {
 }
 
 const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
-const SCENE_WINDOW_SIZE: (u32, u32) = (640, 480);
+const SCENE_WINDOW_SIZE: (u32, u32) = (1280, 800);
 
 struct Sandbox {
     name: String,

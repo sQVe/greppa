@@ -78,10 +78,11 @@ fn scan_directory(root: &Path, directory: &Path) -> anyhow::Result<Vec<String>> 
     files.sort();
 
     let theme_file = directory.join(THEME_FILE);
+    let direction_directory = root.join(UI_SOURCE).join("scenes/directions");
     let mut failures = Vec::new();
 
     for file in files {
-        if file == theme_file {
+        if file == theme_file || file.starts_with(&direction_directory) {
             continue;
         }
 

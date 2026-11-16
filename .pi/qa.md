@@ -16,6 +16,16 @@ Cross-effects:
 - `ruta.toml` and the ruta release set the window size and how the sandbox finds the window.
 
 Pick the scenes. `SceneName` in `crates/greppa-ui/src/scenes.rs` lists them.
+The registry has four smoke scenes and eight reference scenes:
+
+- `direction-v4-rule` and `direction-v4-tree`
+- `direction-v5-range-gutter` and `direction-v6-tree`
+- `direction-v7-focus-border-files`, `direction-v7-focus-border-diff`, and
+  `direction-v7-focus-border-comments`
+- `direction-v7-keys`
+
+All scene windows are 1280x800. Smoke panels stay 420x300 at (60, 60).
+Reference scenes fill the window and use fixed review data.
 
 - A change to one scene: that scene.
 - A change to a part in `crates/greppa-ui/src/parts.rs`: every scene that uses the part.
@@ -119,7 +129,17 @@ If step 2, 3, or 4 fails, report it to the parent and test nothing.
 
 ### Recipes
 
-None.
+For a reference scene, check the controls that the change touches:
+
+- Click a file or comment to jump to its diff.
+- Switch between the file list and folder tree. Collapse and expand a folder.
+- Drag a pane divider, hide the pane with its toolbar toggle, then show it again.
+  Its width should stay the same.
+- Expand the generated file and return to a source file. Comment bands should still align
+  with the code after the line-number column grows.
+
+The focus scenes show fixed focus marks. `direction-v7-keys` shows reference key text, not
+implemented keyboard bindings. These scenes do not save a review or comments.
 
 ## Not testable
 

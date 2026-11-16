@@ -628,3 +628,52 @@ fn setting_or_clearing_a_syntax_highlighter_prepares_the_files_again(cx: &mut Te
             .any(|style| style.font_style == Some(FontStyle::Italic))
     );
 }
+
+// GREPPA: A one-sided file omits its empty number column only when the host opts in.
+mod omitted_number_column {
+    use crate::diff::{DiffDensity, DiffSide, document::fixture, omitted_number_column};
+
+    fn omitting() -> DiffDensity {
+        DiffDensity {
+            omit_empty_number_columns: true,
+            ..DiffDensity::default()
+        }
+    }
+
+    #[test]
+    fn the_default_keeps_both_columns_of_an_added_file() {
+        let added = fixture::document(None, Some(("added.txt", "one\n")));
+
+        assert_eq!(omitted_number_column(&DiffDensity::default(), &added), None);
+    }
+
+    #[test]
+    fn the_default_keeps_both_columns_of_a_deleted_file() {
+        let deleted = fixture::document(Some(("deleted.txt", "one\n")), None);
+
+        assert_eq!(
+            omitted_number_column(&DiffDensity::default(), &deleted),
+            None
+        );
+    }
+
+    #[test]
+    fn an_opted_in_added_file_omits_the_original_column() {
+        let added = fixture::document(None, Some(("added.txt", "one\n")));
+
+        assert_eq!(
+            omitted_number_column(&omitting(), &added),
+            Some(DiffSide::Original)
+        );
+    }
+
+    #[test]
+    fn an_opted_in_deleted_file_omits_the_modified_column() {
+        let deleted = fixture::document(Some(("deleted.txt", "one\n")), None);
+
+        assert_eq!(
+            omitted_number_column(&omitting(), &deleted),
+            Some(DiffSide::Modified)
+        );
+    }
+}

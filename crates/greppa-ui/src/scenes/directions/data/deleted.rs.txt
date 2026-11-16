@@ -1,0 +1,41 @@
+use crate::parts::{ChangedFileRow, FileStatus};
+
+pub fn mock_files() -> Vec<ChangedFileRow> {
+    vec![
+        ChangedFileRow::new("src/main.rs", FileStatus::Added)
+            .lines(42, 0),
+        ChangedFileRow::new("src/lib.rs", FileStatus::Modified)
+            .lines(12, 5),
+        ChangedFileRow::new("README.md", FileStatus::Deleted)
+            .lines(0, 18),
+    ]
+}
+
+pub fn selected_files() -> Vec<ChangedFileRow> {
+    let mut files = mock_files();
+
+    files[0] = files[0].clone().selected();
+    files
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn includes_added_modified_and_deleted_files() {
+        let files = mock_files();
+
+        assert_eq!(files.len(), 3);
+        assert_eq!(files[0].added_lines, 42);
+        assert_eq!(files[2].deleted_lines, 18);
+    }
+
+    #[test]
+    fn selects_only_the_first_file() {
+        let files = selected_files();
+
+        assert!(files[0].selected);
+        assert!(!files[1].selected);
+    }
+}

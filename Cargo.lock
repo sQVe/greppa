@@ -2634,6 +2634,7 @@ name = "greppa-ui"
 version = "0.0.0"
 dependencies = [
  "gpui-kit",
+ "ra-ap-rustc_lexer",
  "thiserror 2.0.21",
 ]
 

@@ -1,0 +1,36 @@
+diff --git a/crates/greppa-ui/src/parts.rs b/crates/greppa-ui/src/parts.rs
+--- a/crates/greppa-ui/src/parts.rs
++++ b/crates/greppa-ui/src/parts.rs
+@@ -1,3 +1,4 @@
+ use gpui_kit::base::{h_flex, v_flex};
+ use gpui_kit::*;
++use greppa_core::git::ChangedFile;
+ 
+@@ -10,3 +11,5 @@
+     Modified,
+     Deleted,
++    Renamed,
++    Binary,
+ }
+@@ -37,3 +40,4 @@
+ pub struct ChangedFileRow {
+     pub label: String,
++    pub previous_path: Option<String>,
+     pub status: FileStatus,
+@@ -52,3 +56,4 @@
+         Self {
+             label: label.into(),
++            previous_path: None,
+             status,
+@@ -75,3 +80,6 @@
+     fn render(&self, theme: &Theme) -> Div {
++        let path = self.previous_path.as_ref()
++            .map(|previous| format!("{previous} → {}", self.label))
++            .unwrap_or_else(|| self.label.clone());
+         let height = match self.size {
+             RowSize::Medium => theme.sizing.row_height,
+@@ -105,3 +113,3 @@
+             .child(mark(self.status, theme))
+-            .child(label.child(self.label.clone()))
++            .child(label.child(path))
+             .child(counts(self, theme))

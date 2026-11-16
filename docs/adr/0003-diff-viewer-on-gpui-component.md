@@ -35,6 +35,10 @@ greppa treats as its own code.
 - Apart from its patches, the vendored copy is the published crate unchanged. The import and each
   patch land in separate commits, so a review reads only the patches.
 - greppa offers generic patches upstream, but does not wait for them.
+- Opt-in density settings in `vendor/gpui-component/src/diff/density.rs` let greppa fit compact
+  review layouts without a second renderer. Defaults keep the upstream geometry.
+  `crates/greppa-ui/src/viewer.rs` is their only runtime caller in greppa; the setting list lives
+  in the vendored `PATCHES.md`.
 
 ### One boundary
 
@@ -46,8 +50,8 @@ greppa treats as its own code.
 ### Known limits
 
 - `Diff` cannot anchor a comment to a span inside a line. Its selected text has no offsets, and its
-  decorations color whole lines. A patch must expose the selected range and add a character-range
-  highlight layer. This is not built or measured.
+  decorations color whole lines or only their gutter lanes. A patch must expose the selected range
+  and add a character-range highlight layer. This is not built or measured.
 - `Diff` renders annotations beneath a line, not as widgets inside the text.
 - `Diff` reads unified patches, not old and new strings, so greppa produces patches from Git.
 

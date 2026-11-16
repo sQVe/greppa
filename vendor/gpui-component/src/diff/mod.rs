@@ -3,6 +3,9 @@
 //! [`DiffState`] for all of them in the owner, and build [`Diff`] during rendering.
 mod conflict;
 mod decoration;
+// GREPPA: Expose optional density settings without changing the stock layout.
+mod density;
+pub use density::DiffDensity;
 mod document;
 mod parser;
 #[cfg(test)]
@@ -222,6 +225,8 @@ struct Annotations {
 #[derive(IntoElement)]
 pub struct Diff {
     state: Entity<DiffState>,
+    // GREPPA: Density is opt-in; defaults retain upstream geometry.
+    density: DiffDensity,
     style: StyleRefinement,
     line_number: bool,
     syntax_highlight: bool,
@@ -254,6 +259,8 @@ impl Diff {
     pub fn new(state: &Entity<DiffState>) -> Self {
         Self {
             state: state.clone(),
+            // GREPPA: No density override for existing callers.
+            density: DiffDensity::default(),
             style: StyleRefinement::default(),
             line_number: true,
             syntax_highlight: true,
@@ -274,6 +281,13 @@ impl Diff {
             on_line_hover: None,
         }
     }
+
+    // GREPPA: Hosts can budget code, gutter, annotation and header geometry independently.
+    pub fn density(mut self, density: DiffDensity) -> Self {
+        self.density = density;
+        self
+    }
+
     /// Shows the original and modified line-number lanes. Default is true.
     pub fn line_number(mut self, value: bool) -> Self {
         self.line_number = value;
@@ -511,22 +525,31 @@ fn render_diff(
     let rem = window.rem_size();
     let font_size = rem * (f32::from(cx.theme().mono_font_size) / 16.);
     let font_family = cx.theme().mono_font_family.clone();
-    let row_height = font_size * 1.6;
+    // GREPPA: Code-row height can use an explicit host budget.
+    let row_height = props.density.resolved_row_height(font_size);
+    // GREPPA: Compact gutters measure expanded files, not a collapsed generated file.
     let digits = state
         .files()
         .iter()
+        .filter(|file| props.density.number_padding.is_none() || !state.is_file_collapsed(file.path()))
         .map(|file| file.line_number_digits())
         .max()
         .unwrap_or(1);
     let gutter_width = if props.line_number {
-        font_size * 0.7 * digits as f32 + rem
+        // GREPPA: Optional number padding retains the digit-dependent width.
+        props.density.resolved_number_width(font_size, rem, digits)
     } else {
         px(0.)
     };
     let mode = state.mode();
     let soft_wrap = props.soft_wrap;
     let marker_lane = !props.gutter_markers.is_empty() && props.gutter_marker_content.is_some();
-    let lane_width = if marker_lane { row_height } else { px(0.) };
+    // GREPPA: A comment marker need not reserve a full code-row width.
+    let lane_width = if marker_lane {
+        props.density.marker_width.unwrap_or(row_height)
+    } else {
+        px(0.)
+    };
     let layout = LayoutKey::new(
         rem,
         font_size,
@@ -535,7 +558,9 @@ fn render_diff(
         props.line_number,
         marker_lane,
         soft_wrap,
-    );
+    )
+    // GREPPA: Density changes invalidate cached measurement and selection geometry.
+    .with_density(props.density, gutter_width);
     if state.update_layout(layout, row_height) {
         // Wrapped rows take the viewport width instead of their longest line.
         let width = if soft_wrap {
@@ -546,7 +571,8 @@ fn render_diff(
                 font_size,
                 &font_family,
                 gutter_width,
-                lane_width,
+                // GREPPA: Marker clearance is part of the scrollable row width.
+                lane_width + props.density.marker_gap.unwrap_or(px(0.)) * 2.,
                 mode,
                 window,
                 cx,
@@ -562,6 +588,8 @@ fn render_diff(
         content_width
     };
     let code = Rc::new(CodePresentation {
+        // GREPPA: Pass opt-in geometry to every rendered row.
+        density: props.density,
         files: state.files().to_vec(),
         presentations: state.presentations().to_vec(),
         mode,
@@ -596,6 +624,9 @@ fn render_diff(
         geometry: state.geometry().clone(),
         state: cx.entity(),
     });
+    // GREPPA: Reserved rails keep scrollbar ink outside the code viewport.
+    let scrollbar_gutter = props.density.scrollbar_gutter.unwrap_or(px(0.));
+    let reserved_scrollbars = scrollbar_gutter > px(0.);
     let rows = state.rows().clone();
     let scrollbar = state.list().clone();
     let horizontal = state.horizontal_scroll().clone();
@@ -643,7 +674,8 @@ fn render_diff(
                 ScrollableMask::new(Axis::Horizontal, &horizontal).id("diff-horizontal-wheel"),
             )
         })
-        .when(has_rows, |this| {
+        // GREPPA: Reserved scrollbar rails replace the upstream overlay scrollbars.
+        .when(has_rows && !reserved_scrollbars, |this| {
             this.child(
                 div()
                     .absolute()
@@ -794,7 +826,20 @@ fn render_diff(
         .text_sm()
         .border_1()
         .border_color(cx.theme().border)
-        .child(body)
+        // GREPPA: One shared vertical list and one horizontal handle serve every file.
+        .child(if reserved_scrollbars {
+            h_flex().flex_1().min_h_0().min_w_0().items_stretch()
+                .child(body)
+                .child(div().relative().w(scrollbar_gutter).h_full().flex_shrink_0()
+                    .child(Scrollbar::vertical(&scrollbar).viewport_from_layout()))
+                .into_any_element()
+        } else {
+            body.into_any_element()
+        })
+        .when(reserved_scrollbars && !soft_wrap, |this| {
+            this.child(div().relative().h(scrollbar_gutter).mr(scrollbar_gutter).flex_shrink_0()
+                .child(Scrollbar::horizontal(&horizontal).viewport_from_layout()))
+        })
         .refine_style(&props.style)
         .into_any_element()
 }
@@ -809,6 +854,8 @@ fn body_focused(state: &DiffState, window: &Window, cx: &mut Context<DiffState>)
 }
 
 struct CodePresentation {
+    // GREPPA: Shared optional row and shell geometry.
+    density: DiffDensity,
     files: Vec<DiffFile>,
     presentations: Vec<Option<Arc<FilePresentation>>>,
     mode: DiffMode,
@@ -1188,6 +1235,14 @@ fn conflict_tint(part: Option<ConflictPart>, cx: &App) -> Hsla {
     }
 }
 
+// GREPPA: A host-owned shell shares the pinned header's controls and viewport width.
+fn host_header_shell<'a>(
+    density: &DiffDensity,
+    content: &'a Option<FileRenderer>,
+) -> Option<&'a FileRenderer> {
+    content.as_ref().filter(|_| density.custom_header_shell)
+}
+
 fn render_file_header(
     file: usize,
     code: &CodePresentation,
@@ -1200,6 +1255,13 @@ fn render_file_header(
             .into_any_element();
     }
     let document = &code.files[file];
+    // GREPPA: A host-owned shell shares the pinned header's controls and viewport width.
+    if let Some(render) = host_header_shell(&code.density, &code.header.content) {
+        return v_flex()
+            .child(render(document, window, cx))
+            .children(file_annotations(file, code, window, cx))
+            .into_any_element();
+    }
     let foreground = cx.theme().muted_foreground;
     let border = cx.theme().border;
     let collapsed = code.state.read(cx).is_file_collapsed(document.path());
@@ -1273,6 +1335,8 @@ fn render_file_header(
                 .pl_1()
                 .pr_3()
                 .py_1()
+                // GREPPA: Remove the native padding layer when the host budgets a total header height.
+                .when_some(code.density.header_padding, |this, padding| this.px(padding).py(padding))
                 .gap_1()
                 .child(
                     Button::new("collapse-file")
@@ -1365,6 +1429,8 @@ fn render_gutter(
         .flex_shrink_0()
         .w(code.gutter_width)
         .pr_1()
+        // GREPPA: Small gutters must not retain the stock number insets.
+        .when_some(code.density.number_inset, |this, inset| this.pr(inset))
         .when(hover, |this| {
             this.hover(|this| this.bg(cx.theme().list_hover))
         })
@@ -1381,6 +1447,8 @@ fn render_gutter(
                     .w_full()
                     .h(code.row_height)
                     .px_1()
+                    // GREPPA: Keep the selectable number inside its compact lane.
+                    .when_some(code.density.number_inset, |this, inset| this.px(inset))
                     .flex()
                     .items_center()
                     .justify_end()
@@ -1476,6 +1544,21 @@ fn render_cell(
     .into_any_element()
 }
 
+// GREPPA: One-sided files may omit the unused number column without changing stock rows.
+// A file with neither side keeps only its `DiffSide::Original` column.
+fn omitted_number_column(density: &DiffDensity, document: &DiffFile) -> Option<DiffSide> {
+    if !density.omit_empty_number_columns {
+        return None;
+    }
+    if document.lines(DiffSide::Modified).is_empty() {
+        return Some(DiffSide::Modified);
+    }
+    if document.lines(DiffSide::Original).is_empty() {
+        return Some(DiffSide::Original);
+    }
+    None
+}
+
 #[allow(clippy::too_many_arguments)]
 fn render_unified_cell(
     file: usize,
@@ -1506,7 +1589,12 @@ fn render_unified_cell(
             cx,
         ));
     }
-    let gutters = if single_column {
+    // GREPPA: One-sided files may omit the unused number column without changing stock rows.
+    let omitted = omitted_number_column(&code.density, &code.files[file]);
+    let only_modified = single_column || omitted == Some(DiffSide::Original);
+    let gutters = if omitted == Some(DiffSide::Modified) {
+        [Some((DiffSide::Original, original)), None]
+    } else if only_modified {
         [Some((DiffSide::Modified, modified)), None]
     } else {
         [
@@ -1639,6 +1727,37 @@ fn add_annotation_button(
     )
 }
 
+// GREPPA: A gutter-only decoration ends where the change indicator starts.
+struct RowDecorations<'a> {
+    gutter_only: Option<&'a DiffDecoration>,
+    whole_row: Option<&'a DiffDecoration>,
+}
+
+// GREPPA: The last decoration covering the row decides the gutter, and the source keeps the
+// last whole-row one. A selected row shows neither.
+fn row_decorations<'a>(
+    decorations: &'a Decorations,
+    positions: &[DiffLinePosition],
+    selected: bool,
+) -> RowDecorations<'a> {
+    let decoration = positions
+        .iter()
+        .find_map(|position| decorations.at(position))
+        .filter(|_| !selected);
+    let gutter_only = decoration.filter(|decoration| decoration.is_gutter_only());
+    let whole_row = if gutter_only.is_some() {
+        positions
+            .iter()
+            .find_map(|position| decorations.whole_row_at(position))
+    } else {
+        decoration
+    };
+    RowDecorations {
+        gutter_only,
+        whole_row,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn code_line(
     file: usize,
@@ -1726,9 +1845,11 @@ fn code_line(
     } else {
         px(0.)
     };
+    // GREPPA: Indicator lane and visible bar widths are independent host settings.
     let indicator = match code.change_indicator {
         DiffChangeIndicator::Signs => div()
             .w_4()
+            .when_some(code.density.indicator_width, |this, width| this.w(width))
             .flex_shrink_0()
             .text_color(if changed {
                 status
@@ -1740,10 +1861,15 @@ fn code_line(
                 (true, DiffSide::Original) => "−",
                 (true, DiffSide::Modified) => "+",
             }),
-        DiffChangeIndicator::Bars => div().w_4().h_full().flex_shrink_0().when(changed, |this| {
-            this.child(div().w(px(3.)).h_full().bg(status))
-        }),
-        DiffChangeIndicator::None => div().w_2().flex_shrink_0(),
+        // GREPPA: Override the bar lane and ink independently, preserving stock defaults.
+        DiffChangeIndicator::Bars => div().w_4().h_full().flex_shrink_0()
+            .when_some(code.density.indicator_width, |this, width| this.w(width))
+            .when(changed, |this| {
+                this.child(div().w(code.density.bar_width.unwrap_or(px(3.))).h_full().bg(status))
+            }),
+        // GREPPA: An empty indicator lane follows the host's width too.
+        DiffChangeIndicator::None => div().w_2().flex_shrink_0()
+            .when_some(code.density.indicator_width, |this, width| this.w(width)),
     };
     let hover_line = matches!(
         code.hover_highlight,
@@ -1763,15 +1889,24 @@ fn code_line(
         .flatten()
         .filter_map(|(side, ix)| ix.map(|ix| code.position(file, *side, ix)))
         .collect();
-    let decoration = positions
-        .iter()
-        .find_map(|position| code.decorations.at(position))
-        .filter(|_| !selected)
-        .map(|decoration| {
-            decoration
-                .background()
-                .unwrap_or_else(|| cx.theme().warning.opacity(0.2))
-        });
+    // GREPPA: A gutter-only decoration ends where the change indicator starts.
+    let RowDecorations {
+        gutter_only: gutter_decoration,
+        whole_row: decoration,
+    } = row_decorations(&code.decorations, &positions, selected);
+    let marker_lane_width = if code.gutter_marker_content.is_some() {
+        code.lane_width + code.density.marker_gap.unwrap_or(px(0.)) * 2.
+    } else {
+        px(0.)
+    };
+    let gutter_end = code.rem / 2. + gutters_width + marker_lane_width;
+    let decoration_background = |decoration: &DiffDecoration| {
+        decoration
+            .background()
+            .unwrap_or_else(|| cx.theme().warning.opacity(0.2))
+    };
+    let gutter_decoration = gutter_decoration.map(decoration_background);
+    let decoration = decoration.map(decoration_background);
     let marker_lane = code.gutter_marker_content.clone().map(|render| {
         let marker = positions
             .iter()
@@ -1780,6 +1915,10 @@ fn code_line(
             .id("marker-lane")
             .flex_shrink_0()
             .size(code.row_height)
+            // GREPPA: Paint the marker in the same lane used for width measurement.
+            .when_some(code.density.marker_width, |this, width| this.w(width))
+            // GREPPA: Separate marker ink from both number ink and the change bar.
+            .when_some(code.density.marker_gap, |this, gap| this.ml(gap).mr(gap))
             .flex()
             .items_center()
             .justify_center()
@@ -1812,7 +1951,26 @@ fn code_line(
         })
         // An overlay, so the change background shows through a translucent fill.
         .when_some(decoration, |this, background| {
-            this.child(div().absolute().inset_0().bg(background))
+            this.child(
+                div()
+                    .absolute()
+                    .inset_0()
+                    // GREPPA: Leave the leading lanes to a gutter-only decoration.
+                    .when(gutter_decoration.is_some(), |this| this.left(gutter_end))
+                    .bg(background),
+            )
+        })
+        // GREPPA: Paint a gutter-only decoration over the numbers and marker lane only.
+        .when_some(gutter_decoration, |this, background| {
+            this.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .left_0()
+                    .w(gutter_end)
+                    .bg(background),
+            )
         })
         .when(selected, |this| this.bg(cx.theme().selection))
         .when(hover_line && !selected, |this| {
@@ -1837,6 +1995,10 @@ fn code_line(
         .child(
             div()
                 .id("source")
+                // GREPPA: Optical alignment moves text and its selection geometry together.
+                .when_some(code.density.source_offset, |this, offset| {
+                    this.relative().left(offset)
+                })
                 .test_support()
                 .map(|this| {
                     if code.soft_wrap {
@@ -1953,8 +2115,14 @@ fn annotation_elements(
                 .w_full()
                 .px_3()
                 .py_3()
+                // GREPPA: The host may own the single annotation padding layer.
+                .when_some(code.density.annotation_padding, |this, padding| this.px(padding).py(padding))
                 .border_t_1()
                 .border_b_1()
+                // GREPPA: A host-owned band must paint its rule through its own border rows.
+                .when_some(code.density.annotation_border, |this, border| {
+                    this.border_t(border).border_b(border)
+                })
                 .border_color(cx.theme().border)
                 .bg(cx.theme().muted.opacity(0.18))
                 .child(render(annotation, window, cx))

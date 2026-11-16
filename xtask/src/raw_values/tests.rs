@@ -168,6 +168,35 @@ fn scan_directory_exempts_theme_file() {
 }
 
 #[test]
+fn scan_directory_exempts_only_the_direction_token_directory() {
+    let directory = crate::test_support::temporary_directory();
+    let source = directory.path().join(UI_SOURCE);
+    let paths = [
+        "scenes/directions/koja.rs",
+        "scenes/directions/nested/palette.rs",
+        "scenes/directions.rs",
+        "scenes/directions_extra/scene.rs",
+        "other/scenes/directions/scene.rs",
+        "scenes/other/palette.rs",
+    ];
+    for path in paths {
+        let file = source.join(path);
+        fs::create_dir_all(file.parent().expect("source parent")).expect("create source directory");
+        fs::write(file, "let color = rgb(0x112233);\n").expect("write source");
+    }
+
+    let failures = scan_directory(directory.path(), &source).expect("scan sources");
+
+    assert_eq!(failures.len(), 4, "{failures:?}");
+    for path in &paths[2..] {
+        assert!(
+            failures.iter().any(|failure| failure.contains(path)),
+            "missing {path}"
+        );
+    }
+}
+
+#[test]
 fn scan_directory_scans_a_nested_theme_file() {
     let directory = crate::test_support::temporary_directory();
     fs::create_dir_all(directory.path().join("scenes")).expect("create scenes");

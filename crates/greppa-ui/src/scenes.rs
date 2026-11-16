@@ -1,9 +1,17 @@
 mod changed_files;
+pub(crate) mod directions;
 
-use gpui_kit::Div;
+use gpui_kit::{
+    App, Bounds, Context, IntoElement, ParentElement, Pixels, Render, Styled, Window, div,
+};
 use thiserror::Error;
 
-use crate::theme::Theme;
+use crate::theme::{install_review_theme, layout, theme};
+use directions::desktop::focus::FocusLook::{Border, Subtle};
+use directions::desktop::keyboard::KeyboardLayer;
+use directions::desktop::polish::Variant;
+use directions::desktop::precise::ranges::RangeMarking::{Dots, Gutter};
+use directions::desktop::profile::DesktopScene;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SceneName {
@@ -11,6 +19,14 @@ pub enum SceneName {
     Smoke2,
     Smoke3,
     Smoke4,
+    V4Rule,
+    V4Tree,
+    V5RangeGutter,
+    V6Tree,
+    V7Keys,
+    V7BorderFiles,
+    V7BorderDiff,
+    V7BorderComments,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -22,126 +38,134 @@ pub enum SceneError {
 }
 
 impl SceneName {
-    pub const ALL: [SceneName; 4] = [
-        SceneName::Smoke1,
-        SceneName::Smoke2,
-        SceneName::Smoke3,
-        SceneName::Smoke4,
+    pub const ALL: [SceneName; 12] = [
+        Self::Smoke1,
+        Self::Smoke2,
+        Self::Smoke3,
+        Self::Smoke4,
+        Self::V4Rule,
+        Self::V4Tree,
+        Self::V5RangeGutter,
+        Self::V6Tree,
+        Self::V7Keys,
+        Self::V7BorderFiles,
+        Self::V7BorderDiff,
+        Self::V7BorderComments,
     ];
 
     pub fn from_argument(argument: Option<&str>) -> Result<SceneName, SceneError> {
         let Some(name) = argument.map(str::trim) else {
             return Err(SceneError::Missing);
         };
-
         if name.is_empty() {
             return Err(SceneError::Missing);
         }
-
-        SceneName::from_name(name).ok_or_else(|| SceneError::Unknown {
-            name: name.to_string(),
-        })
+        Self::ALL
+            .into_iter()
+            .find(|scene| scene.as_str() == name)
+            .ok_or_else(|| SceneError::Unknown {
+                name: name.to_string(),
+            })
     }
 
     pub fn as_str(self) -> &'static str {
         match self {
-            SceneName::Smoke1 => "smoke-1",
-            SceneName::Smoke2 => "smoke-2",
-            SceneName::Smoke3 => "smoke-3",
-            SceneName::Smoke4 => "smoke-4",
+            Self::Smoke1 => "smoke-1",
+            Self::Smoke2 => "smoke-2",
+            Self::Smoke3 => "smoke-3",
+            Self::Smoke4 => "smoke-4",
+            Self::V4Rule => "direction-v4-rule",
+            Self::V4Tree => "direction-v4-tree",
+            Self::V5RangeGutter => "direction-v5-range-gutter",
+            Self::V6Tree => "direction-v6-tree",
+            Self::V7Keys => "direction-v7-keys",
+            Self::V7BorderFiles => "direction-v7-focus-border-files",
+            Self::V7BorderDiff => "direction-v7-focus-border-diff",
+            Self::V7BorderComments => "direction-v7-focus-border-comments",
         }
     }
 
-    fn from_name(name: &str) -> Option<SceneName> {
-        SceneName::ALL
-            .into_iter()
-            .find(|scene| scene.as_str() == name)
+    pub fn uses_bundled_icons(self) -> bool {
+        self.desktop().is_some()
+    }
+
+    pub(crate) fn desktop(self) -> Option<DesktopScene> {
+        let (variant, range_marking, keyboard_layer, focus_look) = match self {
+            Self::Smoke1 | Self::Smoke2 | Self::Smoke3 | Self::Smoke4 => return None,
+            Self::V4Rule => (Variant::Rule, Dots, KeyboardLayer::None, Subtle),
+            Self::V4Tree => (Variant::Tree, Dots, KeyboardLayer::None, Subtle),
+            Self::V5RangeGutter => (Variant::Rule, Gutter, KeyboardLayer::None, Subtle),
+            Self::V6Tree => (Variant::Tree, Gutter, KeyboardLayer::None, Subtle),
+            Self::V7Keys => (Variant::Rule, Gutter, KeyboardLayer::Keys, Subtle),
+            Self::V7BorderFiles => (Variant::Rule, Gutter, KeyboardLayer::Files, Border),
+            Self::V7BorderDiff => (Variant::Rule, Gutter, KeyboardLayer::Diff, Border),
+            Self::V7BorderComments => (Variant::Rule, Gutter, KeyboardLayer::Comments, Border),
+        };
+        Some(DesktopScene {
+            variant,
+            range_marking,
+            keyboard_layer,
+            focus_look,
+        })
+    }
+
+    pub fn window_size(self) -> gpui_kit::Size<Pixels> {
+        if self.uses_bundled_icons() {
+            directions::desktop::profile::bounds().size
+        } else {
+            layout::WINDOW_SIZE
+        }
+    }
+
+    pub fn bounds(self) -> Bounds<Pixels> {
+        if self.uses_bundled_icons() {
+            directions::desktop::profile::bounds()
+        } else {
+            Bounds::new(layout::SCENE_ORIGIN, layout::SCENE_SIZE)
+        }
     }
 }
 
-pub fn render_scene(name: SceneName, theme: &Theme) -> Div {
-    changed_files::render(name, theme)
+pub struct Scene {
+    name: SceneName,
+    desktop: Option<gpui_kit::Entity<directions::desktop::Desktop>>,
+}
+
+impl Scene {
+    pub fn new(name: SceneName, window: &mut Window, cx: &mut App) -> Self {
+        let desktop = name.desktop().map(|scene| {
+            install_review_theme(cx);
+            gpui_kit::AppContext::new(cx, |cx| {
+                directions::desktop::Desktop::new(scene, window, cx)
+            })
+        });
+        Self { name, desktop }
+    }
+}
+
+impl Render for Scene {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        if let Some(desktop) = &self.desktop {
+            return div().size_full().child(desktop.clone());
+        }
+        let current = theme();
+        let bounds = self.name.bounds();
+        div().size_full().bg(current.colors.background).child(
+            div()
+                .absolute()
+                .left(bounds.origin.x)
+                .top(bounds.origin.y)
+                .w(bounds.size.width)
+                .h(bounds.size.height)
+                .child(changed_files::render(self.name, &current)),
+        )
+    }
 }
 
 fn known_scenes() -> String {
     let names: Vec<&str> = SceneName::ALL.into_iter().map(SceneName::as_str).collect();
-
     names.join(", ")
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn from_argument_reads_every_scene_name_and_trims() {
-        for scene in SceneName::ALL {
-            let name = scene.as_str();
-
-            assert_eq!(SceneName::from_argument(Some(name)), Ok(scene));
-            assert_eq!(
-                SceneName::from_argument(Some(&format!("  {name}  "))),
-                Ok(scene)
-            );
-        }
-    }
-
-    #[test]
-    fn from_argument_reports_a_missing_name() {
-        assert_eq!(SceneName::from_argument(None), Err(SceneError::Missing));
-        assert_eq!(
-            SceneName::from_argument(Some("  ")),
-            Err(SceneError::Missing)
-        );
-    }
-
-    #[test]
-    fn from_argument_reports_an_unknown_name_with_its_trimmed_name() {
-        assert_eq!(
-            SceneName::from_argument(Some("smoke-9")),
-            Err(SceneError::Unknown {
-                name: "smoke-9".to_string()
-            })
-        );
-        assert_eq!(
-            SceneName::from_argument(Some("  smoke-9  ")),
-            Err(SceneError::Unknown {
-                name: "smoke-9".to_string()
-            })
-        );
-    }
-
-    #[test]
-    fn unknown_scene_error_names_the_rejected_name() {
-        let error = SceneError::Unknown {
-            name: "smoke-9".to_string(),
-        };
-
-        assert!(
-            error.to_string().contains("smoke-9"),
-            "the message does not name the rejected scene"
-        );
-    }
-
-    #[test]
-    fn scene_errors_name_every_scene() {
-        let errors = [
-            SceneError::Missing,
-            SceneError::Unknown {
-                name: "smoke-9".to_string(),
-            },
-        ];
-
-        for error in errors {
-            let message = error.to_string();
-
-            for scene in SceneName::ALL {
-                assert!(
-                    message.contains(scene.as_str()),
-                    "the {error:?} message does not name the scene {}",
-                    scene.as_str()
-                );
-            }
-        }
-    }
-}
+mod tests;

@@ -1,0 +1,62 @@
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use thiserror::Error;
+
+mod patch;
+mod status;
+
+#[derive(Debug, Error)]
+pub enum GitError {
+    #[error("Git failed: {0}")]
+    Command(String),
+    #[error("cannot start Git: {0}")]
+    Spawn(#[from] std::io::Error),
+}
+
+pub fn read_range(repository: &Path, range: &str) -> Result<Vec<ChangedFile>, GitError> {
+    let output = Command::new("git")
+        .current_dir(repository)
+        .args(["diff", "--numstat", "-z", range])
+        .output()?;
+    if !output.status.success() {
+        return Err(GitError::Command("git diff failed".to_string()));
+    }
+
+    let paths = String::from_utf8_lossy(&output.stdout);
+    let files = status::parse(&paths)?;
+    Ok(files)
+}
+
+pub fn read_patch(repository: &Path, path: &Path) -> Result<String, GitError> {
+    let output = Command::new("git")
+        .current_dir(repository)
+        .args(["diff", "--no-ext-diff", "--unified=3", "HEAD", "--"])
+        .arg(path)
+        .output()?;
+
+    if !output.status.success() {
+        return Err(GitError::Command("cannot read patch".to_string()));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+#[derive(Clone, Debug)]
+pub struct ChangedFile {
+    pub path: PathBuf,
+    pub added_lines: usize,
+    pub deleted_lines: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preserves_spaces_in_paths() {
+        let files = status::parse("1\t0\tsrc/my file.rs\0").expect("valid numstat");
+
+        assert_eq!(files[0].path, PathBuf::from("src/my file.rs"));
+    }
+}

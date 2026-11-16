@@ -47,9 +47,15 @@ project skill runs each round and holds the procedure, so the procedure can chan
 
 ### Theme values
 
-- Every size, spacing, corner radius, text size, and color in `greppa-ui` comes from one theme
-  module. `cargo xtask check` rejects a raw value anywhere else in `greppa-ui`.
-- A contrast test computes the WCAG 2.2 AA ratio of each theme text and control pair.
+- App-wide sizes, spacing, radii, text sizes, and colors come from `greppa-ui`'s theme module.
+- Visual-direction scenes keep their values under `crates/greppa-ui/src/scenes/directions/`.
+  This isolates reference designs from the app-wide theme. The raw-value check exempts all code
+  under that directory and `theme.rs`, and rejects raw values elsewhere in `greppa-ui`.
+- Contrast tests compute WCAG 2.2 AA ratios for the app theme and direction scenes.
+  Direction UI text, muted text, and plain code on diff backgrounds need 4.5:1;
+  status marks and controls need 3:1. Direction tests have no known-failure allowance.
+- Syntax tokens in direction scenes keep the published Catppuccin Latte colors and are exempt
+  from the text contrast threshold. This exception does not apply to UI text or plain code.
 
 ### Findings
 
@@ -74,11 +80,13 @@ project skill runs each round and holds the procedure, so the procedure can chan
 
 A hard failure fails the mock on its own, whatever the findings. There are five kinds:
 
-- `contrast`: text or control contrast below WCAG 2.2 AA. It comes from `cargo xtask check`. The
-  check lists the theme's current failing pairs as known failures, which pass until a theme change
-  fixes them. A new failing pair, or a listed pair that starts to pass, fails the check.
-- `rawValue`: a size, radius, text size, or color that does not come from the theme module. It
-  comes from `cargo xtask check`.
+- `contrast`: text or control contrast below WCAG 2.2 AA, except syntax tokens in direction
+  scenes. It comes from `cargo xtask check`. The app theme's current failing pairs are known
+  failures, which pass until a theme change fixes them. A new failing pair, or a listed pair that
+  starts to pass, fails the check. Direction contrast tests have no known-failure allowance.
+- `rawValue`: a raw size, radius, text size, or color outside the theme module and
+  `scenes/directions/`. The exemption covers all code under that directory, not only token files.
+  It comes from `cargo xtask check`.
 - `hiddenTaskInformation`: information the task needs is hidden or absent. The judges flag it.
 - `unclearFocusOrMode`: the user cannot tell which pane has focus or which mode is active. The
   judges flag it.
@@ -97,7 +105,8 @@ must give. Changing a judge model or the judge instructions requires a smoke tes
 - One lenient judge cannot pass a mock.
 - Each finding names a location and a fix, so a judge says what to change.
 - `cargo xtask check` stops clear faults before any model runs.
-- A scene uses the same parts and theme as the app, so a passing mock shows what the app will draw.
+- Scenes use real UI parts. Outside the direction scenes, they also use the app theme;
+  direction scenes keep their own values to isolate reference designs.
 
 ### Negative
 
@@ -108,7 +117,9 @@ must give. Changing a judge model or the judge instructions requires a smoke tes
 - Capture needs ruta on Linux with Weston, Xwayland, xdotool, ImageMagick, and a Vulkan driver,
   so mocks cannot be captured on macOS.
 - The pass rule is strict. One severity 2 finding from either judge fails the mock.
-- The raw-value rule is strict. A one-off size still needs a theme token.
+- Outside `scenes/directions/`, a one-off size still needs a theme token.
+- Published syntax colors in direction scenes can fall below 4.5:1 on diff backgrounds.
+  This exception does not apply to UI text or plain code.
 
 ## Alternatives considered
 
@@ -133,6 +144,11 @@ enough, not which of two is better. Judges can also favor the option they see fi
 Draw each mock as an HTML page or an image, styled with greppa's theme values. Rejected because
 theme values stop wrong values but not wrong parts. A copy of each greppa part in another toolkit
 would be a second set of parts that drifts from the real one.
+
+### Darken syntax colors to meet 4.5:1
+
+Rejected for the direction scenes because this changes the chosen Catppuccin Latte palette.
+Keep its published syntax colors, but keep contrast tests for plain code and the surrounding UI.
 
 ### Judges check contrast and theme values
 

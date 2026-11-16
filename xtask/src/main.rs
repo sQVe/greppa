@@ -9,6 +9,8 @@ mod ruta;
 mod scene;
 #[cfg(test)]
 mod test_support;
+#[cfg(test)]
+mod vendor_patches;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;

@@ -224,6 +224,26 @@ fn report_gives_both_cargo_calls_an_existing_workspace_temp_directory() {
 }
 
 #[test]
+fn report_stops_git_discovery_at_the_workspace_temp_directory() {
+    let fixture = Fixture::new();
+    let cargo = fixture.tool(
+        "cargo",
+        &format!(
+            "printf '%s\\n' \"$GIT_CEILING_DIRECTORIES\" >> git-ceilings.log\n\
+             case \"$*\" in *--list*) printf '%s' '{LISTING}';; esac"
+        ),
+    );
+
+    let report = fixture.audit(&cargo);
+    let ceilings = fs::read_to_string(fixture.folder.path().join("git-ceilings.log"))
+        .expect("read recorded Git ceiling directories");
+    let expected = fixture.folder.path().join("target/mutants-tmp");
+
+    assert_eq!(status(&report), (Some("pass"), 0));
+    assert_eq!(ceilings, format!("{0}\n{0}\n", expected.display()));
+}
+
+#[test]
 fn report_runs_the_requested_audit_files() {
     let fixture = Fixture::new();
     let cargo = fixture.cargo(r#"[{"file":"a.rs"},{"file":"b.rs"}]"#, 0, "exit 0");

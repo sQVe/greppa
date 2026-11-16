@@ -54,6 +54,7 @@ enum Outcome {
 }
 
 const OUTPUT_DIRECTORY: &str = "target/mutants";
+// Inside the repository, so it is also a Git ceiling: tests' temporary folders must find no repo.
 const TEMP_DIRECTORY: &str = "target/mutants-tmp";
 const MAX_JOBS: usize = 4;
 
@@ -183,6 +184,7 @@ fn count_mutants(
 ) -> anyhow::Result<BTreeMap<String, usize>> {
     let listing = Command::new(cargo)
         .env("TMPDIR", root.join(TEMP_DIRECTORY))
+        .env("GIT_CEILING_DIRECTORIES", root.join(TEMP_DIRECTORY))
         .args(["mutants", "--workspace", "--list", "--json"])
         .args(scope.arguments())
         .current_dir(root)
@@ -248,6 +250,7 @@ fn job_count() -> usize {
 fn run_mutants(cargo: &str, root: &Path, output: &Path, scope: &Scope) -> anyhow::Result<()> {
     let status = Command::new(cargo)
         .env("TMPDIR", root.join(TEMP_DIRECTORY))
+        .env("GIT_CEILING_DIRECTORIES", root.join(TEMP_DIRECTORY))
         .args(["mutants", "--workspace", "--no-shuffle", "--jobs"])
         .arg(job_count().to_string())
         .arg("--output")

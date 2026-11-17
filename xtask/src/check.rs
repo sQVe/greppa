@@ -67,6 +67,7 @@ fn steps() -> Vec<Step> {
             group: Group::Tidy,
             action: Action::AdrIndex,
         },
+        command("stomme", Group::Tidy, "stomme", &["check"], &[]),
         command("typos", Group::Tidy, "typos", &[], &[]),
         command(
             "taplo",
@@ -255,6 +256,7 @@ mod tests {
                 "rustfmt",
                 "raw-values",
                 "adr-index",
+                "stomme",
                 "typos",
                 "taplo",
                 "cargo-deny",

@@ -10,7 +10,15 @@
    cargo install --locked cargo-nextest cargo-deny cargo-shear cargo-mutants typos-cli taplo-cli prek
    ```
 
-3. Install the Git hooks:
+3. Install [mise](https://mise.jdx.dev) and the tools it pins:
+
+   ```sh
+   mise install
+   ```
+
+   `mise.toml` pins the `stomme` binary that the check runs.
+
+4. Install the Git hooks:
 
    ```sh
    prek install
@@ -66,10 +74,10 @@ Run every check before you open a pull request:
 cargo xtask check
 ```
 
-It changes no files. It runs rustfmt, the raw-value check, typos, taplo, cargo-deny, cargo-shear,
-clippy, nextest, doctests, and rustdoc, and reports every failed check at the end. Warnings fail
-clippy, the tests, and rustdoc. Every Cargo build runs with `--locked`, so a stale `Cargo.lock`
-fails too.
+It changes no files. It runs rustfmt, the raw-value check, stomme, typos, taplo, cargo-deny,
+cargo-shear, clippy, nextest, doctests, and rustdoc, and reports every failed check at the end.
+Warnings fail clippy, the tests, and rustdoc. Every Cargo build runs with `--locked`, so a stale
+`Cargo.lock` fails too.
 
 The raw-value check scans `crates/greppa-ui/src/**/*.rs` except `theme.rs` and all code under
 `scenes/directions/`. That directory isolates visual-direction scenes from the app-wide theme.
@@ -256,7 +264,8 @@ temporary folder does not find greppa's repository.
 `.github/workflows/ci.yml` runs on pull requests, on pushes to `main`, and weekly, so new security
 advisories fail cargo-deny without a code change.
 
-- `Check` runs `cargo xtask check tidy` on Linux.
+- `Check` runs `cargo xtask check tidy` on Linux. The job installs the `mise.toml` pin before it
+  runs the check.
 - `Test (Linux)` and `Test (macOS)` run `cargo xtask check build`. greppa does not support
   Windows; see [ADR 0007](adr/0007-linux-and-macos-only.md).
 - `Mutation (changed)` runs on pull requests. It runs `cargo xtask mutation changed` against the

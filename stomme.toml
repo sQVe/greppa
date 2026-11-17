@@ -1,0 +1,56 @@
+schema = 1
+version = "0.1.0"
+language = "rust"
+layers = ["gpui", "gpui-component"]
+
+[roles]
+core = "crates/greppa-core"
+ui = "crates/greppa-ui"
+app = "crates/greppa"
+
+[modules.git]
+entry = "crates/greppa-core/src/git.rs"
+
+[modules.source]
+entry = "crates/greppa-core/src/source.rs"
+imports = ["git"]
+
+[modules.parts]
+entry = "crates/greppa-ui/src/parts.rs"
+public = ["crates/greppa-ui/src/parts/review.rs"]
+imports = ["review", "theme"]
+
+[modules.review]
+entry = "crates/greppa-ui/src/review.rs"
+imports = ["parts"]
+
+[modules.scenes]
+entry = "crates/greppa-ui/src/scenes.rs"
+public = [
+  "crates/greppa-ui/src/scenes/directions/desktop/parts.rs",
+  "crates/greppa-ui/src/scenes/directions/desktop/polish.rs",
+  "crates/greppa-ui/src/scenes/directions/desktop/precise.rs",
+  "crates/greppa-ui/src/scenes/directions/desktop/precise/ranges.rs",
+  "crates/greppa-ui/src/scenes/directions/desktop/profile.rs",
+  "crates/greppa-ui/src/scenes/directions/syntax.rs",
+  "crates/greppa-ui/src/scenes/directions/tokens.rs",
+]
+imports = ["parts", "review", "theme", "viewer"]
+
+[modules.theme]
+entry = "crates/greppa-ui/src/theme.rs"
+public = ["crates/greppa-ui/src/theme/contrast.rs"]
+
+[modules.viewer]
+entry = "crates/greppa-ui/src/viewer.rs"
+imports = ["parts", "review", "scenes", "theme"]
+
+[[violations]]
+path = "crates/greppa-ui/src/bin/greppa-scene.rs"
+rule = "rust-file-case"
+key = "greppa-scene.rs"
+
+[[violations]]
+path = "crates/greppa"
+rule = "role-folder"
+key = "app:greppa"

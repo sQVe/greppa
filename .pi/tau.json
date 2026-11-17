@@ -4,5 +4,14 @@
   "tdd": {
     "runner": "nextest",
     "excludedGlobs": ["**/{target,.git}/**", "vendor/**"]
+  },
+  "verification": {
+    "targets": {
+      "sandbox": {
+        "launch": ["cargo", "xtask", "sandbox", "up"],
+        "doctor": ["cargo", "xtask", "sandbox", "doctor"],
+        "stop": ["cargo", "xtask", "sandbox", "down"]
+      }
+    }
   }
 }

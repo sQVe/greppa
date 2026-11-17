@@ -35,39 +35,44 @@ Reference scenes fill the window and use fixed review data.
   it from still images.
 - When the impact on a scene is unclear, include the scene.
 
+## Journeys
+
+| Journey | Goal | Run it when the change touches | Test |
+| ------- | ---- | ------------------------------ | ---- |
+| [Find the file that changed](qa/journeys/find-the-file-that-changed.md) | Find the file that changed and read its diff. | `crates/greppa-ui/src/scenes/`, `crates/greppa-ui/src/parts.rs` | by hand |
+
 ## Before a launch
 
 For the manager. The `qa` worker cannot build or start anything, and one sandbox shows one scene.
-Run `RUTA_NAME=<name> ruta guide` and follow its rules for the session that starts the sandbox.
 
-The manager starts:
+Build the scene before the first launch, so the launch's build is a no-op:
 
-- One sandbox for each assigned scene, after the last edit. It reads no secret, costs nothing, and
-  keeps to its own folder and private display.
+```sh
+cargo build --locked --package greppa-ui --bin greppa-scene
+```
 
-  ```sh
-  RUTA_NAME=<name> cargo xtask sandbox up <scene>
-  ```
-
-  It is up when `RUTA_NAME=<name> ruta status` exits 0. After the worker reports, stop it:
-
-  ```sh
-  RUTA_NAME=<name> ruta down
-  ```
+The manager launches the `sandbox` target with the `verification` tool. Write the scene name to
+`.tau/scene` first. The target builds the scene, starts the sandbox, and checks that it serves
+this worktree. The sandbox name is `greppa-` followed by the run in lowercase, where `<run>` is
+the run the tool returns. After the worker reports, stop the run with the tool.
 
 Ask the user:
 
 - `up --headed`: it opens a window on the user's desktop.
 
-Put in the brief: each `RUTA_NAME` with its scene, and whether the scene handles input. Launch `qa`
-without `url`; a native window has none.
+Put in the brief: the run, the sandbox name, the scene, and whether the scene handles input.
+Launch `qa` without `url`; a native window has none.
 
 ## Scene window
+
+Target: `sandbox`
 
 ### Reach it
 
 Run `RUTA_NAME=<name> ruta guide` first, with a `RUTA_NAME` from the brief. Follow its rules for
 every session and for a session that did not start the sandbox.
+
+The `sandbox` target's doctor checked the build at launch. Run the steps below again before you drive.
 
 1. Check that the sandbox is up and serves this worktree:
 

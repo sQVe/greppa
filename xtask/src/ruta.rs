@@ -22,8 +22,7 @@ pub(crate) fn sandbox(root: &Path, arguments: &[String]) -> anyhow::Result<ExitC
     let arguments = with_scene_from_file(root, run.as_deref(), arguments)?;
 
     if needs_build(&arguments) {
-        scene::build(root)?;
-        write_fingerprint(root)?;
+        build_and_stamp(root, scene::build)?;
     }
 
     if arguments.first().map(String::as_str) == Some("doctor") {
@@ -211,9 +210,27 @@ fn collect_files(path: &Path, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn write_fingerprint(root: &Path) -> anyhow::Result<()> {
+fn build_and_stamp(
+    root: &Path,
+    build: impl FnOnce(&Path) -> anyhow::Result<PathBuf>,
+) -> anyhow::Result<()> {
+    let before = source_fingerprint(root)?;
+
+    build(root)?;
+
+    let after = source_fingerprint(root)?;
+
+    if before != after {
+        anyhow::bail!(
+            "The scene sources changed during the build, so the binary may not match the checkout. Run the command again."
+        );
+    }
+
+    write_fingerprint(root, after)
+}
+
+fn write_fingerprint(root: &Path, fingerprint: u64) -> anyhow::Result<()> {
     let path = root.join(FINGERPRINT_FILE);
-    let fingerprint = source_fingerprint(root)?;
 
     std::fs::write(&path, format!("{fingerprint}\n"))
         .with_context(|| format!("Could not write {}", path.display()))
@@ -406,6 +423,30 @@ mod tests {
         let after = source_fingerprint(root.path()).expect("fingerprint the checkout again");
 
         assert_ne!(before, after);
+    }
+
+    #[test]
+    fn a_source_change_during_the_build_stops_the_stamp() {
+        let root = scene_source_root();
+        let source = root.path().join("crates/greppa-ui/scene.rs");
+        std::fs::write(&source, "before").expect("write a scene source");
+
+        let error = build_and_stamp(root.path(), |root| {
+            std::fs::write(root.join("crates/greppa-ui/scene.rs"), "after")
+                .expect("edit the scene source during the build");
+
+            Ok(root.join("target/debug/greppa-scene"))
+        })
+        .expect_err("a source change during the build fails");
+
+        assert!(
+            error.to_string().contains("changed during the build"),
+            "unexpected error: {error}"
+        );
+        assert!(
+            !root.path().join(FINGERPRINT_FILE).exists(),
+            "the fingerprint must not be written"
+        );
     }
 
     #[test]

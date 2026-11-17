@@ -1,6 +1,7 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
-use std::time::SystemTime;
 
 use anyhow::Context as _;
 
@@ -14,12 +15,15 @@ const SCENE_SOURCES: &[&str] = &[
     "rust-toolchain.toml",
 ];
 
+const FINGERPRINT_FILE: &str = "target/debug/greppa-scene.fingerprint";
+
 pub(crate) fn sandbox(root: &Path, arguments: &[String]) -> anyhow::Result<ExitCode> {
     let run = std::env::var("TAU_VERIFICATION_RUN").ok();
     let arguments = with_scene_from_file(root, run.as_deref(), arguments)?;
 
     if needs_build(&arguments) {
         scene::build(root)?;
+        write_fingerprint(root)?;
     }
 
     if arguments.first().map(String::as_str) == Some("doctor") {
@@ -100,9 +104,7 @@ fn run_ruta(root: &Path, run: Option<&str>, arguments: &[String]) -> anyhow::Res
 }
 
 fn doctor(root: &Path, run: Option<&str>) -> anyhow::Result<ExitCode> {
-    let Some(name) = sandbox_name(run) else {
-        anyhow::bail!("TAU_VERIFICATION_RUN is not set, so the sandbox name is unknown.");
-    };
+    let name = require_sandbox_name(run)?;
     let sandbox_directory = PathBuf::from(format!("/var/tmp/ruta-{name}"));
 
     let output = Command::new("ruta")
@@ -135,13 +137,11 @@ fn doctor(root: &Path, run: Option<&str>) -> anyhow::Result<ExitCode> {
         );
     }
 
-    let newer = newer_files(root, &expected_executable)?;
+    let stored = read_fingerprint(root)?;
+    let current = source_fingerprint(root)?;
 
-    if !newer.is_empty() {
-        anyhow::bail!(
-            "These files are newer than the running binary: {}.",
-            display_paths(&newer)
-        );
+    if stored != current {
+        anyhow::bail!("The checkout changed since the scene was built. Restart the sandbox.");
     }
 
     if is_newer(&root.join("ruta.toml"), &sandbox_directory.join("pid"))? {
@@ -151,17 +151,12 @@ fn doctor(root: &Path, run: Option<&str>) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn newer_files(root: &Path, binary: &Path) -> anyhow::Result<Vec<PathBuf>> {
-    let modified = std::fs::metadata(binary)
-        .with_context(|| format!("Could not read {}", binary.display()))?
-        .modified()
-        .with_context(|| {
-            format!(
-                "Could not read the modification time of {}",
-                binary.display()
-            )
-        })?;
-    let mut newer = Vec::new();
+fn require_sandbox_name(run: Option<&str>) -> anyhow::Result<String> {
+    sandbox_name(run).context("TAU_VERIFICATION_RUN is not set, so the sandbox name is unknown.")
+}
+
+fn source_fingerprint(root: &Path) -> anyhow::Result<u64> {
+    let mut files = Vec::new();
 
     for source in SCENE_SOURCES {
         let path = root.join(source);
@@ -170,17 +165,32 @@ fn newer_files(root: &Path, binary: &Path) -> anyhow::Result<Vec<PathBuf>> {
             anyhow::bail!("{} is missing.", path.display());
         }
 
-        collect_newer(&path, modified, &mut newer)?;
+        collect_files(&path, &mut files)?;
     }
 
-    Ok(newer)
+    files.sort();
+
+    let mut hasher = DefaultHasher::new();
+
+    for file in &files {
+        let relative = file.strip_prefix(root).with_context(|| {
+            format!(
+                "{} is outside the workspace root {}.",
+                file.display(),
+                root.display()
+            )
+        })?;
+        let content =
+            std::fs::read(file).with_context(|| format!("Could not read {}", file.display()))?;
+
+        relative.hash(&mut hasher);
+        content.hash(&mut hasher);
+    }
+
+    Ok(hasher.finish())
 }
 
-fn collect_newer(
-    path: &Path,
-    binary_time: SystemTime,
-    newer: &mut Vec<PathBuf>,
-) -> anyhow::Result<()> {
+fn collect_files(path: &Path, files: &mut Vec<PathBuf>) -> anyhow::Result<()> {
     let metadata =
         std::fs::metadata(path).with_context(|| format!("Could not read {}", path.display()))?;
 
@@ -190,21 +200,40 @@ fn collect_newer(
 
         for entry in entries {
             let entry = entry.with_context(|| format!("Could not list {}", path.display()))?;
-            collect_newer(&entry.path(), binary_time, newer)?;
+            collect_files(&entry.path(), files)?;
         }
 
         return Ok(());
     }
 
-    let modified = metadata
-        .modified()
-        .with_context(|| format!("Could not read the modification time of {}", path.display()))?;
-
-    if modified > binary_time {
-        newer.push(path.to_path_buf());
-    }
+    files.push(path.to_path_buf());
 
     Ok(())
+}
+
+fn write_fingerprint(root: &Path) -> anyhow::Result<()> {
+    let path = root.join(FINGERPRINT_FILE);
+    let fingerprint = source_fingerprint(root)?;
+
+    std::fs::write(&path, format!("{fingerprint}\n"))
+        .with_context(|| format!("Could not write {}", path.display()))
+}
+
+fn read_fingerprint(root: &Path) -> anyhow::Result<u64> {
+    let path = root.join(FINGERPRINT_FILE);
+    let contents = std::fs::read_to_string(&path).with_context(|| {
+        format!(
+            "Could not read the scene fingerprint from {}. Restart the sandbox.",
+            path.display()
+        )
+    })?;
+
+    contents.trim().parse().with_context(|| {
+        format!(
+            "Could not parse the scene fingerprint in {}. Restart the sandbox.",
+            path.display()
+        )
+    })
 }
 
 fn read_pid(path: &Path) -> anyhow::Result<u32> {
@@ -231,15 +260,6 @@ fn is_newer(path: &Path, than: &Path) -> anyhow::Result<bool> {
         .with_context(|| format!("Could not read the modification time of {}", than.display()))?;
 
     Ok(modified > than_modified)
-}
-
-fn display_paths(paths: &[PathBuf]) -> String {
-    let shown: Vec<String> = paths
-        .iter()
-        .map(|path| path.display().to_string())
-        .collect();
-
-    shown.join(", ")
 }
 
 fn start_error(error: std::io::Error) -> anyhow::Error {
@@ -350,8 +370,73 @@ mod tests {
     }
 
     #[test]
-    fn newer_files_lists_only_sources_newer_than_the_binary() {
-        use std::time::Duration;
+    fn read_pid_reads_the_first_field() {
+        let root = crate::test_support::temporary_directory();
+        let path = root.path().join("pid");
+        std::fs::write(&path, "123 456\n").expect("write a pid file");
+
+        assert_eq!(read_pid(&path).expect("read the pid"), 123);
+    }
+
+    fn scene_source_root() -> tempfile::TempDir {
+        let root = crate::test_support::temporary_directory();
+
+        for source in SCENE_SOURCES {
+            let path = root.path().join(source);
+            let is_file = Path::new(source).extension().is_some();
+
+            if is_file {
+                std::fs::write(&path, "").expect("write a scene source");
+            } else {
+                std::fs::create_dir_all(&path).expect("create a scene source folder");
+            }
+        }
+
+        root
+    }
+
+    #[test]
+    fn source_fingerprint_changes_when_a_file_is_deleted() {
+        let root = scene_source_root();
+        let source = root.path().join("crates/greppa-ui/scene.rs");
+        std::fs::write(&source, "scene").expect("write a scene source");
+        let before = source_fingerprint(root.path()).expect("fingerprint the checkout");
+
+        std::fs::remove_file(&source).expect("delete the scene source");
+        let after = source_fingerprint(root.path()).expect("fingerprint the checkout again");
+
+        assert_ne!(before, after);
+    }
+
+    #[test]
+    fn source_fingerprint_fails_when_a_source_is_missing() {
+        let root = scene_source_root();
+        std::fs::remove_dir_all(root.path().join("vendor/gpui-component"))
+            .expect("remove a scene source");
+
+        let error = source_fingerprint(root.path()).expect_err("a missing scene source fails");
+
+        assert!(
+            error.to_string().contains("vendor/gpui-component"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn read_fingerprint_fails_when_missing() {
+        let root = crate::test_support::temporary_directory();
+
+        let error = read_fingerprint(root.path()).expect_err("a missing fingerprint fails");
+
+        assert!(
+            error.to_string().contains(FINGERPRINT_FILE),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn is_newer_compares_modification_times() {
+        use std::time::{Duration, SystemTime};
 
         fn set_modified(path: &Path, time: SystemTime) {
             let file = std::fs::File::options()
@@ -362,40 +447,30 @@ mod tests {
         }
 
         let root = crate::test_support::temporary_directory();
-        let sources = root.path().join("crates/greppa-ui");
-        std::fs::create_dir_all(&sources).expect("create the source folder");
-        std::fs::create_dir_all(root.path().join("vendor/gpui-component"))
-            .expect("create the vendor folder");
-        let old = sources.join("old.rs");
-        std::fs::write(&old, "old").expect("write an old source");
-        for source in ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml"] {
-            std::fs::write(root.path().join(source), "").expect("write a scene source");
-        }
-        let binary = root.path().join("greppa-scene");
-        std::fs::write(&binary, "binary").expect("write the binary");
-        let new = sources.join("new.rs");
-        std::fs::write(&new, "new").expect("write a new source");
-
+        let first = root.path().join("first");
+        let second = root.path().join("second");
+        std::fs::write(&first, "").expect("write the first file");
+        std::fs::write(&second, "").expect("write the second file");
         let now = SystemTime::now();
-        set_modified(&old, now - Duration::from_secs(10));
-        for source in ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml"] {
-            set_modified(&root.path().join(source), now - Duration::from_secs(10));
-        }
-        set_modified(&binary, now - Duration::from_secs(5));
-        set_modified(&new, now);
 
-        assert_eq!(
-            newer_files(root.path(), &binary).expect("list newer files"),
-            [new]
-        );
+        set_modified(&first, now);
+        set_modified(&second, now - Duration::from_secs(10));
+        assert!(is_newer(&first, &second).expect("compare the times"));
+
+        set_modified(&first, now - Duration::from_secs(20));
+        assert!(!is_newer(&first, &second).expect("compare the times again"));
     }
 
     #[test]
-    fn read_pid_reads_the_first_field() {
-        let root = crate::test_support::temporary_directory();
-        let path = root.path().join("pid");
-        std::fs::write(&path, "123 456\n").expect("write a pid file");
-
-        assert_eq!(read_pid(&path).expect("read the pid"), 123);
+    fn require_sandbox_name_refuses_a_missing_run() {
+        let error = require_sandbox_name(None).expect_err("a missing run fails");
+        assert!(
+            error.to_string().contains("TAU_VERIFICATION_RUN"),
+            "unexpected error: {error}"
+        );
+        assert_eq!(
+            require_sandbox_name(Some("sandbox-abc123")).expect("name the sandbox"),
+            "greppa-sandbox-abc123"
+        );
     }
 }

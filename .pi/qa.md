@@ -72,7 +72,7 @@ Target: `sandbox`
 Run `RUTA_NAME=<name> ruta guide` first, with a `RUTA_NAME` from the brief. Follow its rules for
 every session and for a session that did not start the sandbox.
 
-The `sandbox` target's doctor ran steps 1 to 3 at launch. Run them again before you drive.
+The `sandbox` target's doctor checked the build at launch. Run the steps below again before you drive.
 
 1. Check that the sandbox is up and serves this worktree:
 

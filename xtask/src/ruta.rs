@@ -17,6 +17,14 @@ const SCENE_SOURCES: &[&str] = &[
 
 const FINGERPRINT_FILE: &str = "target/debug/greppa-scene.fingerprint";
 
+#[derive(Debug, thiserror::Error)]
+enum BuildError {
+    #[error(
+        "The scene sources changed during the build, so the binary may not match the checkout. Run the command again."
+    )]
+    SourcesChanged,
+}
+
 pub(crate) fn sandbox(root: &Path, arguments: &[String]) -> anyhow::Result<ExitCode> {
     let run = std::env::var("TAU_VERIFICATION_RUN").ok();
     let arguments = with_scene_from_file(root, run.as_deref(), arguments)?;
@@ -221,9 +229,7 @@ fn build_and_stamp(
     let after = source_fingerprint(root)?;
 
     if before != after {
-        anyhow::bail!(
-            "The scene sources changed during the build, so the binary may not match the checkout. Run the command again."
-        );
+        return Err(BuildError::SourcesChanged.into());
     }
 
     write_fingerprint(root, after)
@@ -440,7 +446,10 @@ mod tests {
         .expect_err("a source change during the build fails");
 
         assert!(
-            error.to_string().contains("changed during the build"),
+            matches!(
+                error.downcast_ref::<BuildError>(),
+                Some(BuildError::SourcesChanged)
+            ),
             "unexpected error: {error}"
         );
         assert!(

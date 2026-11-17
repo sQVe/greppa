@@ -3,7 +3,7 @@ use std::process::{Command, ExitCode};
 
 use thiserror::Error;
 
-use crate::{adr_index, raw_values};
+use crate::raw_values;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Group {
@@ -19,7 +19,6 @@ enum Action {
         environment: &'static [(&'static str, &'static str)],
     },
     RawValues,
-    AdrIndex,
 }
 
 struct Step {
@@ -62,11 +61,7 @@ fn steps() -> Vec<Step> {
             group: Group::Tidy,
             action: Action::RawValues,
         },
-        Step {
-            name: "adr-index",
-            group: Group::Tidy,
-            action: Action::AdrIndex,
-        },
+        command("stomme", Group::Tidy, "stomme", &["check"], &[]),
         command("typos", Group::Tidy, "typos", &[], &[]),
         command(
             "taplo",
@@ -165,7 +160,6 @@ fn run_step(root: &Path, step: &Step) -> bool {
             }
         }
         Action::RawValues => reported(raw_values::check(root)),
-        Action::AdrIndex => reported(adr_index::check(root)),
     }
 }
 
@@ -254,7 +248,7 @@ mod tests {
             [
                 "rustfmt",
                 "raw-values",
-                "adr-index",
+                "stomme",
                 "typos",
                 "taplo",
                 "cargo-deny",
@@ -390,31 +384,6 @@ mod tests {
         fs::write(root.path().join("marker"), "").expect("write the marker");
 
         assert!(run_step(root.path(), &step));
-    }
-
-    #[test]
-    fn run_step_runs_the_adr_index_check_on_the_root() {
-        let root = crate::test_support::temporary_directory();
-        let directory = root.path().join("docs/adr");
-        let step = steps()
-            .into_iter()
-            .find(|step| step.name == "adr-index")
-            .expect("the adr-index step exists");
-
-        fs::create_dir_all(&directory).expect("create docs/adr");
-        fs::write(
-            directory.join("README.md"),
-            "## Index\n\n- [0001: Scope](./0001-scope.md)\n",
-        )
-        .expect("write the index");
-        fs::write(directory.join("0001-scope.md"), "# ADR 0001: Scope\n").expect("write an ADR");
-
-        assert!(run_step(root.path(), &step));
-
-        fs::write(directory.join("0001-other.md"), "# ADR 0001: Other\n")
-            .expect("write a duplicate ADR");
-
-        assert!(!run_step(root.path(), &step));
     }
 
     #[test]

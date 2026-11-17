@@ -59,6 +59,13 @@ testing with cargo-mutants as advice.
   before a commit.
 - `cargo xtask check` is the one entry point for the full set of checks.
 
+### Shared checks and lint policy
+
+- `cargo xtask check` also runs `stomme check`, which checks `stomme.toml`, the synced tree, the
+  module table, and the shared lint policy.
+- The lint levels in `[workspace.lints]` and the bans in `clippy.toml` follow stomme's shared
+  policy. greppa adds single bans next to them.
+
 ### Mutation testing
 
 - cargo-mutants mutates greppa-core, greppa-ui, and `xtask`. `.cargo/mutants.toml` leaves out the

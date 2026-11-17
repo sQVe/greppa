@@ -10,7 +10,6 @@ permissions:
 jobs:
   sync:
     uses: sQVe/stomme/.github/workflows/sync-update.yml@v0.1.0
-    # Both secrets are added by hand to the repository.
     secrets:
       app-id: ${{ secrets.STOMME_APP_ID }}
       app-private-key: ${{ secrets.STOMME_APP_PRIVATE_KEY }}

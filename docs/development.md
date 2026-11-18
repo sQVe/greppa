@@ -10,9 +10,11 @@
    cargo install --locked cargo-nextest cargo-deny cargo-shear cargo-mutants typos-cli taplo-cli prek
    ```
 
-3. Install [mise](https://mise.jdx.dev) and the tools it pins:
+3. Install [mise](https://mise.jdx.dev) and the tools it pins. Trust the project's `mise.toml`
+   first:
 
    ```sh
+   mise trust mise.toml
    mise install
    ```
 

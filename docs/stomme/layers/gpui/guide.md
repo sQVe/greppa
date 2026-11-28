@@ -14,7 +14,7 @@ them to paths in the `[roles]` table of `stomme.toml`.
 - `gpui-app-lifetime`: One module of the `app` role owns the GPUI application, its windows, action
   and key registration, background tasks, and shutdown. The entry point composes dependencies and
   starts that module. Every exit path, such as quit, the last window closing, or a system quit
-  request, runs the same shutdown path once.
+  request, runs the same shutdown path once. <!-- role:app -->
 
 ## Names
 

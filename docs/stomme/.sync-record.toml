@@ -1,5 +1,5 @@
 schema = 1
-version = "0.2.7"
+version = "0.2.8"
 agents = "59dbc0061ee07d5fc1e6353bb2349f34ec4fba7ba8fafaa0ea6afd6a344a18a2"
 
 [files]
